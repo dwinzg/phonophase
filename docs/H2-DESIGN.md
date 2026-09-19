@@ -71,10 +71,23 @@ effect holds in 8 of 13 attacks.
 
 ### griffin_lim is a positive control, and should be named as one
 
-Griffin-Lim reconstructs phase iteratively from magnitude alone. It has no
-learned phase model at all. Under the hypothesis it should therefore show the
-**largest** phase deficit of any system in the set, and the sonorant pattern
-should be at its clearest there.
+**Unresolved, and this section previously overstated it.** Griffin-Lim as an
+algorithm reconstructs phase iteratively from magnitude alone, with no learned
+phase model. If MLAAD's `griffin_lim` applies it to the *original* audio's
+magnitude, then real and fake share speaker, content and magnitude and differ
+essentially only in phase, which would be the cleanest test in the study. If it
+instead vocodes a mel predicted by an acoustic model, it preserves nothing and
+is merely the extreme phase case.
+
+The metadata says `training_data: none` and `architecture: griffin_lim`, which
+is consistent with the first reading but does not establish it. A duration test
+did not discriminate, griffin_lim at mean 7.44s against Edge-TTS at 7.05 and
+xtts_v2 at 7.30. Settle it by comparing magnitude spectrograms of one
+griffin_lim file against the M-AILABS file its `original_file` names, and do not
+rely on it as a control until then.
+
+Under the first reading it should show the **largest** phase deficit of any
+system in the set, and the sonorant pattern should be at its clearest there.
 
 This is worth naming in the pre-registration as a prediction, because it is a
 cheap and severe test. If a method with no phase model does not show the effect
