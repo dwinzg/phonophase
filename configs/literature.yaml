@@ -249,3 +249,120 @@ open_questions:
       Weak until a prior check is done. An AUC below chance on a test set that
       size is more often a score orientation bug than a real finding. Rule that
       out first or there is nothing here.
+
+# ==========================================================================
+# Second search pass, 2026-09-19
+#
+# The registry above was written on 2026-09-18 from sources known up to
+# May 2026, so four months of literature were missing from it. This pass
+# was the one repeatedly flagged and never done.
+#
+# How each entry below was checked. Search results were read, then the paper's
+# HTML or PDF was fetched and questioned directly. That is stronger than a
+# search snippet and weaker than reading the paper. Entries are marked
+# `verification: fetched` to say exactly that, and anything load bearing in a
+# write up must be upgraded to a full reading first. This project has already
+# shipped one wrong claim taken from a search summary.
+#
+# Searches run, recorded so the next pass can differ from this one
+#   phoneme-level analysis speech deepfake detection artifacts sonorant vowel
+#     fricative 2026
+#   group delay phase features anti-spoofing ASVspoof phoneme class conditioned
+#     analysis 2026
+#   cross-lingual language-independent articulatory features speech deepfake
+#     detection transfer 2026 arxiv
+#   voiced OR periodicity vocoder phase artifact sonorant deepfake detection
+#     which phonemes phase information 2026
+# ==========================================================================
+
+mosaic2026_phase_tokens:
+  cite: "MOSAIC: Interpretable Multi-Token Cross-Attention of Biophonetic and Self-Supervised Representations for Unified Voice Anti-Spoofing (2026)."
+  url: "https://arxiv.org/abs/2607.04314"
+  date: "2026-07-05"
+  verification: fetched
+  claims: >-
+    Fuses handcrafted biophonetic descriptors with SSL representations through
+    multi token cross attention. The phase token is seven dimensional, phase
+    entropy, instantaneous frequency and group delay statistics. Reports that
+    biophonetic and phase tokens activate more on bonafide speech while
+    spectral and channel tokens activate more on spoofed speech.
+  forecloses: >-
+    The bare observation that phase statistics run bonafide-high and magnitude
+    statistics run spoof-high. That is now published, at utterance level, and
+    cannot be presented here as new.
+  leaves_open: >-
+    No phoneme conditioning of any kind, and no articulatory analysis. It says
+    phase favours bonafide. It does not say WHERE in the utterance, which is
+    the entire question here.
+  why_it_matters: >-
+    The closest paper found to our direction result, and it corroborates it
+    independently. Corroboration is worth more than priority. It also means the
+    contribution must be stated as the phoneme conditioning, not as the
+    direction.
+
+profiling_the_voice_2026:
+  cite: "Profiling the Voice: Speaker-Specific Phoneme Fingerprinting for Speech Deepfake Detection (2026)."
+  url: "https://arxiv.org/abs/2605.17737"
+  verification: search_summary
+  claims: >-
+    Speaker specific phoneme level fingerprints from WavLM for detection.
+  forecloses: "Phoneme level fingerprinting tied to a speaker."
+  note: "Not fetched. Registered so the next pass does not rediscover it."
+
+phonemedf_2026:
+  cite: "PhonemeDF: A Synthetic Speech Dataset for Audio Deepfake Detection and Naturalness Evaluation (2026)."
+  url: "https://arxiv.org/abs/2603.15037"
+  verification: search_summary
+  claims: "A dataset built for phoneme level deepfake work."
+  leaves_open: >-
+    Worth checking before building anything ourselves. A purpose built
+    phoneme level corpus may be a better instrument bed than ASVspoof.
+
+lrl_spoof_2026:
+  cite: "When Spoof Detectors Travel: Evaluation Across 66 Languages in the Low-Resource Language Spoofing Corpus (2026)."
+  url: "https://arxiv.org/abs/2603.02364"
+  verification: fetched
+  claims: >-
+    A 66 language spoofing corpus with many synthesis systems, several of them
+    multilingual, and an evaluation of how detection travels across languages.
+  forecloses: >-
+    "Nobody has measured detector performance across many languages." That is
+    now done at 66 languages.
+  leaves_open: >-
+    No phoneme class, articulatory feature or phase analysis found in it. It
+    measures whether detectors transfer, not what the artifact is indexed to.
+  see_also: "configs/datasets.yaml, lrl_spoof"
+
+# --------------------------------------------------------------------------
+# What the pass did NOT find, which is the novelty statement and its limits
+# --------------------------------------------------------------------------
+
+novelty_position_2026_09_19:
+  what_was_not_found: >-
+    No paper conditioning a PHASE domain measure on phoneme class or on
+    articulatory features. Every phoneme level paper found works on magnitude,
+    SSL embeddings or handcrafted spectral features. The one paper using phase,
+    MOSAIC, does no phoneme conditioning. No paper separating sonority from
+    voicing as independent variables in a spoofing artifact. No paper
+    explaining cross system heterogeneity of a phonetic effect by how the
+    synthesiser produced its waveform.
+  the_uncomfortable_part: >-
+    The two 2026 phoneme level papers both rank obstruents ABOVE sonorants.
+    Phonetically Explainable, 2606.15454, ranks stops, fricatives, affricates,
+    nasals and closures most discriminative and puts vowels and semivowels
+    lower. The emotional conditions paper reports fricatives and diphthongs.
+    Our ordering is the other way round. That is only consistent because the
+    quantities differ, theirs is magnitude domain discriminativeness and ours
+    is the phase advantage OVER magnitude, so the same corpus can give both.
+    But the two must be stated side by side, and the claim must be the
+    asymmetry rather than "sonorants are where the artifact is", which as
+    written would contradict two published results.
+  what_this_does_not_prove: >-
+    Absence. Four searches cannot prove a negative, the field is moving
+    monthly, and MOSAIC and the 66 language corpus both post dated the previous
+    pass by weeks. Two of the entries above are search summaries rather than
+    readings.
+  next_pass_should: >-
+    Read MOSAIC and Phonetically Explainable in full rather than fetched.
+    Search specifically for phase or group delay conditioned on voicing, and
+    for articulatory feature decomposition of any synthesis artifact.

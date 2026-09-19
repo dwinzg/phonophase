@@ -224,3 +224,40 @@ mailabs:
     genuine from synthetic speech. Spanish was added to the language set so
     speaker diversity varies deliberately from 2 to 21 and can be measured
     rather than assumed away.
+
+lrl_spoof:
+  name: "LRLspoof, Low-Resource Language Spoofing Corpus"
+  status: candidate
+  serves: >-
+    H2, as an alternative or a complement to MLAAD. 66 languages against MLAAD's
+    54, ungated, and MIT licensed rather than non commercial.
+  priority: medium
+  languages_count: 66
+  utterances_synthetic: 1304455
+  # Verified 2026-09-19 against the HuggingFace dataset card.
+  bonafide_included: false
+  access: "public, not gated, tarball download"
+  landing_page: "https://huggingface.co/datasets/lab260/LRLspoof"
+  paper: "https://arxiv.org/abs/2603.02364"
+  licence: "MIT on the card. The paper text says CC-BY-SA 4.0."
+  licence_verified: false
+  licence_note: >-
+    The card and the paper disagree, MIT against CC-BY-SA 4.0. Resolve with the
+    authors before use. Either is more permissive than MLAAD's CC-BY-NC 4.0.
+  system_metadata: >-
+    The synthesis system is identifiable per sample from the path,
+    language/tts_model/file.wav, and data/labels.parquet carries utterance_id
+    and label.
+  blocking_issue: >-
+    Spoof only, exactly like MLAAD, so it does not solve the problem that
+    actually constrains H2. The real side is the constraint. M-AILABS supplies
+    it for four languages with 2 to 5 speakers each, and MLAAD's original_file
+    gives utterance level pairing to the specific recording each sample was
+    derived from. Unless LRLspoof records an equivalent pairing, adopting it
+    would trade a paired design for a larger language count, which is the wrong
+    trade for a study whose speaker confound is already its weakest point.
+  before_using: >-
+    Check whether it records which real recording each sample came from, and
+    from what corpus. If it does not, any real side has to come from a
+    different corpus, and recording channel would then be confounded with
+    bonafide against spoof, which is a worse confound than the one being fixed.
