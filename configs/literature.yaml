@@ -94,7 +94,7 @@ jung2022_aasist:
   claims: "0.83% EER with 297K parameters. AASIST-L reaches 0.99% with 85K."
   forecloses: >-
     Lightweight and accurate as a contribution. AASIST-L is twenty times
-    smaller than PADS at width 256 and ten times better on ASVspoof 2019 LA.
+    smaller than anything proposed here, and far more accurate on ASVspoof 2019 LA.
 
 zhang2023_silence:
   cite: "Zhang, Y., Li, Z., Lu, J., Hua, H., Wang, W., Zhang, P. (2023)."

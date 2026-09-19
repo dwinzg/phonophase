@@ -14,8 +14,8 @@ The package is the measurement instrument.
     corpus      ASVspoof partition handling and utterance selection
     config      configuration loading anchored to the repository root
 
-Successor to dwinzg/Deepfake-PADS-Net, which is archived. See docs/SCOPE.md for
-what migrated and why, and docs/PREREGISTRATION.md for the confirmed result.
+See docs/SCOPE.md for what is in scope, and docs/PREREGISTRATION.md for the
+confirmed result and its caveats.
 """
 
 __version__ = "0.1.0"

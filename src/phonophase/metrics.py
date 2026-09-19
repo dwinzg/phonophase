@@ -1,5 +1,5 @@
 """
-Evaluation metrics for PADS.
+Evaluation metrics.
 
 Why this file exists
     05_train.py reports loss and accuracy only. Accuracy on ASVspoof 2019 LA is
@@ -124,8 +124,8 @@ def evaluate_scores(
 
 def format_report(metrics: dict, title: str = "FINAL EVALUATION RESULTS") -> str:
     """
-    Render the metric block in the layout used in the April 2026 research
-    update, so old and new results can be compared line by line.
+    Render the metric block in a fixed layout, so results from different runs
+    can be compared line by line.
     """
     bar = "=" * 50
     return "\n".join(

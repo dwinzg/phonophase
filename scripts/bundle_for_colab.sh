@@ -41,4 +41,4 @@ echo "wrote $OUT"
 echo "size $(du -h "$OUT" | cut -f1)"
 echo
 echo "Upload this in the notebook's setup cell, or run:"
-echo "  unzip -q phonophase-colab.zip -d Deepfake-PADS-Net"
+echo "  unzip -q phonophase-colab.zip -d phonophase"

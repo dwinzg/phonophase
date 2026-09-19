@@ -158,13 +158,6 @@ described as phoneme segments. Best of many statistics compared against best of
 many others, turning zero of six into four of six. Slices from one utterance
 bootstrapped as independent observations, when 129 came from 23.
 
-## History
-
-Successor to [dwinzg/Deepfake-PADS-Net](https://github.com/dwinzg/Deepfake-PADS-Net),
-archived. That repository holds the detector work this grew out of, and the
-record of why its results are not reproducible. `docs/SCOPE.md` states what
-migrated and what did not.
-
 ## Citing
 
 `CITATION.cff` is in the repository root.

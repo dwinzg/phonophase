@@ -1,5 +1,5 @@
 """
-Shared feature front end for PADS.
+Shared feature front end.
 
 Why this file exists
     Three different feature implementations had drifted apart in this repo.
@@ -175,7 +175,7 @@ def mel_compress(spectrogram: np.ndarray, sr: int, n_fft: int, n_mels: int) -> n
 
 class FusedFeatureExtractor:
     """
-    Builds the two channel input plane used by PADS.
+    Builds the two channel input plane.
 
     Channel 0 is MFCC, standing in for phonetic and prosodic structure.
     Channel 1 is Modified Group Delay, standing in for signal phase physics.

@@ -54,10 +54,66 @@ baseline being subtracted.
 MLAAD ships synthetic audio only and pairs with M-AILABS for the real side, so
 languages are limited to those M-AILABS covers.
 
+## Feasibility, verified 2026-09-18
+
+The design is viable and better powered than assumed. Verified against the
+HuggingFace tree API, not taken from the paper.
+
+**18 models produce audio in all three target languages**, each with 1000
+utterances per language. A further 20 span exactly two. English has 143 model
+directories, French 42, Polish 21.
+
+The 18 span a wide range of eras, from classical Griffin-Lim through GAN era
+bark and xtts to recent LLM based TTS such as MOSS-TTS and Llasa. That spread
+lets us ask whether the effect is architecture dependent, which connects
+directly to the unexplained heterogeneity already seen in English where the
+effect holds in 8 of 13 attacks.
+
+### griffin_lim is a positive control, and should be named as one
+
+Griffin-Lim reconstructs phase iteratively from magnitude alone. It has no
+learned phase model at all. Under the hypothesis it should therefore show the
+**largest** phase deficit of any system in the set, and the sonorant pattern
+should be at its clearest there.
+
+This is worth naming in the pre-registration as a prediction, because it is a
+cheap and severe test. If a method with no phase model does not show the effect
+most strongly, the account is wrong and no amount of averaging over the other
+17 systems will rescue it.
+
+### One access blocker
+
+MLAAD is gated. Directory listings are public but everything under `fake/` needs
+the account to be authorized. That blocks `architecture`, `is_original_language`
+and `reference_speaker`, which are precisely the three covariates this design
+needs to control. Resolve before the run, not during.
+
+## The real side, and why it changed the language set
+
+Verified 2026-09-18. M-AILABS supplies the genuine speech and is usable. Modified
+BSD three clause licence, already mono 16 kHz, and MLAAD's `original_file` gives
+utterance level pairing. The original host is dead, the live route is
+`https://ics.tau-ceti.space/data/Training/stt_tts/{lang}.tgz`.
+
+The problem is speaker counts. **Polish has 2 real speakers, English 3, French
+unknown**, and M-AILABS documents none of this. With two voices on the real
+side, a real versus synthetic separation risks separating those two particular
+voices from TTS voices rather than genuine from synthetic speech.
+
+**Spanish is added as a fourth language in response.** The identical 18 models
+that span English, French and Polish also span Spanish, so coverage costs
+nothing, and Spanish has 21 M-AILABS speakers against Polish's 2.
+
+That turns the confound into a control rather than a caveat. Speaker diversity
+now varies deliberately across the set, from 2 to 21. If the effect holds at the
+same magnitude in Spanish as in Polish, speaker diversity is not driving it. If
+it does not, that is itself a finding. Dropping Polish would have been weaker,
+since it would have discarded the phonological contrast that justified it.
+
 ## Language selection
 
-Two or three, chosen to maximise contrast in the features the hypothesis is
-about rather than for convenience.
+Four, chosen to vary both phonology and speaker diversity rather than for
+convenience.
 
 **English.** The anchor. The profile is already measured here.
 
@@ -69,9 +125,15 @@ English does not have.
 **Polish.** A rich sibilant and affricate inventory, so it loads the obstruent
 side where the hypothesis predicts little signal. If separation stays low there
 under a fixed synthesiser, that is the negative half of the prediction holding.
+Only 2 real speakers, so it is also the speaker poor end of the control.
 
-Between them these cover both arms of the claim. Adding more languages before
-the design is validated buys noise.
+**Spanish.** Added for speaker diversity, 21 real speakers against Polish's 2,
+with a comparatively simple phonology. It is the speaker rich end of the
+control, and the same 18 systems cover it.
+
+Between them these cover both arms of the phonological claim and both ends of
+the speaker diversity control. Adding further languages before the design is
+validated buys noise.
 
 ## Measurement
 

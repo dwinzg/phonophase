@@ -9,35 +9,43 @@ its licence and source.
 
 ---
 
-## 1. Where the project actually stands
+## 1. What the literature has already taken
 
-Five claims the project has made, and their status.
+Checked rather than assumed, and logged per paper in `configs/literature.yaml`.
+Written so a reviewer's objections are met here first.
 
-**Lightweight and accurate.** Not available. AASIST-L reaches 0.99% EER on
-ASVspoof 2019 LA eval with 85,000 parameters. Full AASIST reaches 0.83% with
-297,000. PADS at width 256 has 1,763,618 parameters and reports 10.0%. Twenty
-times larger, ten times worse. Comparing only against wav2vec 2.0 at 6.84% made
-this look defensible when it is not.
+**Lightweight and accurate detection.** Closed. AASIST-L reaches 0.99% EER on
+ASVspoof 2019 LA eval with 85,000 parameters and full AASIST reaches 0.83% with
+297,000. Any detection framing here competes with that and loses.
 
-**Phoneme level analysis.** Not available. Zhang et al. AAAI 2025 for features,
-Salvi et al. ICCV workshops 2025 for speaker conditioned, Taylor et al. 2026 for
-explainability.
+**Phoneme level analysis for detection.** Closed. Zhang et al. AAAI 2025 for
+features, Salvi et al. ICCV workshops 2025 for speaker conditioned analysis.
 
-**Fricatives and plosives are where synthesis leaks.** Not available, and worse,
-the probe below suggests it is wrong for phase. This finding is already
-published across several papers.
+**Phoneme level explainability.** Closed. Taylor et al. 2026, from the ASVspoof
+organisers.
 
-**Zero shot cross lingual detection.** Not available. Ba et al. ACM WWW 2023 for
-transfer, Kim et al. 2026 for the strict unseen setting. The latter was posted
-three days before this document.
+**Which phoneme classes carry the strongest cues.** Closed. That fricatives,
+plosives and diphthongs lead is published, across several papers, in the
+magnitude and embedding domains.
 
-**Spectral Collapse as evidence.** Currently unevidenced. Every figure
-supporting it came through a feature path whose phase channel was a linear time
-ramp, correlating with frame index at 0.999999. Those artifacts need
-regenerating before they mean anything.
+**Cross lingual transfer, and zero shot cross lingual.** Closed. Ba et al. ACM
+WWW 2023 for transfer, Kim et al. 2026 for the strict unseen setting, the latter
+posted three days before this document was written.
 
-That is four foreclosed claims and one invalidated one. The project needs a
-different contribution, not a better framing of the existing one.
+**Vocoder attribution.** Closed. Model specific fingerprints in generated
+waveforms are established, with residual based methods reportedly above 99
+percent AUROC.
+
+What no side of this has stated is **where in speech the phase deficit lands**.
+The synthesis literature reports that phase is the weaker half of vocoding and
+that some vocoders do not constrain it in their loss at all, so a deficit is
+predicted rather than merely observed. Neither literature says which sounds
+carry it, and none of the phoneme level work above operates in the phase domain.
+That is the gap this occupies.
+
+Caveat on all of the above. Searches cannot prove absence, and the search pass
+behind this section has a knowledge boundary. One deliberate pass is required
+before anything is written up.
 
 ---
 
@@ -193,9 +201,9 @@ this project can actually make and defend.
 Report EER, t-DCF and per attack breakdowns because they are needed for
 credibility, not because the numbers are the contribution.
 
-Compare against AASIST-L honestly as context, and say plainly that PADS is not
-competitive as a general detector. Stating that first removes a reviewer's main
-objection before they raise it.
+Compare against AASIST-L honestly as context, and say plainly that nothing here
+is competitive as a general detector. Stating that first removes a reviewer's
+main objection before they raise it.
 
 Put the effort into measurement quality. Sample sizes, held out partitions,
 multiple comparison correction, confound controls. That is where an analysis

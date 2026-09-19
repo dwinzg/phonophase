@@ -17,7 +17,7 @@ def code(t): return {"cell_type": "code", "execution_count": None, "metadata": {
 
 cells = [
 md("""
-# PADS confirmatory run
+# PhonoPhase confirmatory run
 
 One job. Align and slice the ASVspoof 2019 LA **eval** partition, reduce every
 phoneme slice to nine statistics, and bring back one CSV.
@@ -70,7 +70,7 @@ REFRESH = False # True replaces code already in the runtime with a fresh upload
 
 import os, shutil, subprocess
 
-TARGET = "/content/Deepfake-PADS-Net"
+TARGET = "/content/phonophase"
 
 # Reusing a session after a failed run is the easy way to keep running stale
 # code. Rebuild the bundle locally after ANY change to scripts or src, then set
@@ -94,7 +94,7 @@ else:
     import getpass
     token = getpass.getpass("GitHub token (hidden): ").strip()
     r = subprocess.run(["git", "clone",
-                        f"https://{token}@github.com/dwinzg/Deepfake-PADS-Net.git",
+                        f"https://{token}@github.com/dwinzg/phonophase.git",
                         TARGET], capture_output=True, text=True)
     # Never echo the output, it carries the token in the remote URL.
     print("clone ok" if r.returncode == 0 else "clone failed, check the token")
@@ -257,7 +257,7 @@ from google.colab import drive
 import shutil, os
 
 drive.mount("/content/drive")
-os.makedirs("/content/drive/MyDrive/pads", exist_ok=True)
+os.makedirs("/content/drive/MyDrive/phonophase", exist_ok=True)
 shutil.copy("results/eval_slices.csv", "/content/drive/MyDrive/phonophase/eval_slices.csv")
 print("saved to Drive")
 """),

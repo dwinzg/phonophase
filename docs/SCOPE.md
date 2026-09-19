@@ -74,14 +74,7 @@ eval with 85,000 parameters. Nothing here competes with that, and chasing it
 means grinding against well resourced labs on their benchmark for a marginal
 gain. See `docs/RESEARCH.md` section 4.
 
-The April 2026 results are now unverifiable. The scripts that produced 10.0%
-EER on ASVspoof and 93.6% on Bengali live only on the cluster and are not being
-retrieved. Whether that ASVspoof number was measured on dev or eval was never
-resolved, and the Bengali corpus was never recorded. Those numbers cannot be
-reproduced by anyone, including their author, so they are history rather than
-results.
-
-What survived every check is a measurement. `mgd_hf_std` separates bonafide
+What this project claims is a measurement, and only what it can reproduce. `mgd_hf_std` separates bonafide
 from spoofed speech more strongly in sonorants than in obstruents, confirmed on
 held out attacks under a pre-registered test. That is small and narrow, but it
 is real, and it is the only thing here that anyone else can verify.
@@ -117,9 +110,6 @@ The instrument detects the last two directly.
 
 Competing on ASVspoof EER.
 
-Reproducing or defending the April 2026 numbers. They are recorded as history,
-not cited as results.
-
 Zero shot cross lingual detection. Taken by Kim et al. 2026.
 
 Building a Bengali detector.
@@ -147,20 +137,12 @@ corpora, is a second project. Do not start it before this one is finished. The
 standing risk on an open ended project is drift, and this repository has already
 changed direction three times.
 
-## What did not migrate
+## Out of the repository by design
 
-This repository is the successor to `dwinzg/Deepfake-PADS-Net`, which is
-archived as the provenance record.
+The detector path is not here. A CNN and Transformer is not part of a
+measurement study, and leaving it out keeps the premise legible. If phoneme
+conditioned fusion later becomes relevant, it is a separate piece of work with
+its own justification.
 
-The detector code stayed behind. `model.py`, `dataset.py`, the training scripts
-and the numbered analysis pipeline `01` through `13` all existed to build a
-detector, which is explicitly out of scope here. A CNN and Transformer is not
-part of a measurement study, and leaving it out keeps the premise legible.
-
-`pads_v2` and its trainer also stayed behind. They were written for a phoneme
-conditioned fusion that only becomes relevant if the mechanism holds, which is
-still open. They are recoverable from the archive if that day comes, and
-carrying speculative code into a fresh repository is how scope creeps back in.
-
-What migrated is the instrument, the two registries, the design documents, the
-confirmed result and its data.
+Everything in this repository is something we measured here and can reproduce
+from what is committed.

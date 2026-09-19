@@ -1,5 +1,5 @@
 # ==========================================================================
-# Dataset registry for PADS
+# Dataset registry for PhonoPhase
 # ==========================================================================
 #
 # Why this file exists
@@ -84,8 +84,23 @@ mlaad:
   priority: high
   languages_count: 54
   source_languages: [english, french, german, italian, polish, russian, spanish, ukrainian]
-  hours_synthetic: 1153.6
-  tts_systems: 205
+  # The 2024 paper reports 205 systems and 1153.6 hours. Those figures no longer
+  # describe the live dataset, which was last modified 2026-08-28 and has grown
+  # substantially. Verified 2026-09-18 against the HuggingFace tree API:
+  #   fake/en 143 model directories
+  #   fake/fr  42
+  #   fake/pl  21
+  #   18 models span all three, 1000 utterances each per language
+  # Cite the paper for the method, not for the size of what you can download.
+  hours_synthetic_paper: 1153.6
+  tts_systems_paper: 205
+  models_en_verified: 143
+  models_spanning_en_fr_pl: 18
+  utterances_per_model_per_language: 1000
+  access: >-
+    Gated, gated auto. Directory listings are public, everything under fake/ needs
+    the account to be on the authorized list. Accept the terms while signed in
+    before attempting to read meta.csv.
   landing_page: "https://huggingface.co/datasets/mueller91/MLAAD"
   mirror: "https://deepfake-total.com/mlaad"
   paper: "https://arxiv.org/abs/2401.09512"
@@ -96,6 +111,7 @@ mlaad:
     code licence, so it constrains anything trained on it.
   citation: "Müller et al. 2024, IJCNN, arXiv:2401.09512"
   requires: "M-AILABS for the bonafide side. MLAAD ships only the synthetic audio."
+  real_side: "mailabs, see the entry below"
   note: >-
     The single most relevant candidate. The project's central claim is cross
     lingual generalisation, currently evidenced by one language. 54 languages
@@ -135,18 +151,18 @@ in_the_wild:
   note: >-
     Real world audio rather than studio recordings, with background noise,
     codec artifacts and channel effects. Directly addresses the concern already
-    raised in April 2026 that clean datasets flatter results.
+    that clean datasets flatter results.
 
 bengali_candidates:
   name: "Bengali corpora, candidates for the one actually used"
   status: candidate
-  serves: "identifying the corpus behind the April 2026 result, and H2 for Bengali"
+  serves: "H2 for Bengali, if an Indic language is added to the set"
   languages: [bengali]
   licence_verified: false
   candidates:
     - name: "Bengali Real and Deepfake Audio Dataset"
       landing_page: "https://ieee-dataport.org/documents/bengali-real-and-deepfake-audio-dataset-deepfake-detection"
-      note: "Most likely the corpus behind the April 2026 Bengali result. Confirm on import."
+      note: "A purpose built Bengali deepfake corpus. Licence not yet verified."
     - name: "BanglaFake"
       paper: "https://arxiv.org/abs/2505.10885"
       note: "Purpose built Bengali deepfake audio dataset."
@@ -177,3 +193,34 @@ xmad_bench:
     A benchmark rather than a corpus. Useful as an evaluation protocol for the
     cross lingual claim, so results are comparable to other work rather than
     self reported.
+
+mailabs:
+  name: "M-AILABS Speech Dataset"
+  status: in_use
+  serves: "the genuine speech side for H2. MLAAD ships synthetic audio only."
+  languages: [german, english_us, english_uk, spanish, italian, ukrainian, russian, french, polish]
+  landing_page: "https://github.com/imdatceleste/m-ailabs-dataset"
+  # The original host caito.de is DNS dead, as are m-ailabs.bayern and
+  # data.solak.de. Verified 2026-09-18, this route returns http 200 with correct
+  # sizes. The most discoverable HuggingFace French mirror is a dead pointer.
+  direct_url_pattern: "https://ics.tau-ceti.space/data/Training/stt_tts/{lang}.tgz"
+  sizes_gib: {en_US: 7.47, en_UK: 3.47, fr_FR: 14.78, pl_PL: 4.24}
+  hours: {en_US: 102, en_UK: 46, fr_FR: 190, pl_PL: 54}
+  format: "mono wav, 16 kHz, no resampling needed"
+  licence: "modified BSD three clause, permits research use and redistribution"
+  licence_verified: true
+  # The reason the language set gained Spanish. M-AILABS publishes no speaker
+  # counts, these were reconstructed from papers that used the corpus.
+  speakers:
+    polish: 2
+    english_us: 3
+    russian: 3
+    spanish: 21
+    german: "5 plus others"
+    french: "UNKNOWN, could not be determined, must be listed from the archive"
+  note: >-
+    Small speaker pools are a real confound. With two Polish voices a real
+    versus synthetic separation may be separating those voices rather than
+    genuine from synthetic speech. Spanish was added to the language set so
+    speaker diversity varies deliberately from 2 to 21 and can be measured
+    rather than assumed away.
