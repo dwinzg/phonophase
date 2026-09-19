@@ -1,0 +1,29 @@
+# Corpora are large and public, fetch them with scripts/ rather than storing them
+data/
+
+# Virtual environments
+.venv/
+venv/
+
+# Colab bundle, rebuilt by scripts/bundle_for_colab.sh
+phonophase-colab.zip
+
+# Exported audio subsets
+*_subset.zip
+
+# Model checkpoints belong in Releases or an artifact store, not in git history
+*.pth
+*.pt
+
+# Python and macOS noise
+__pycache__/
+*.pyc
+.pytest_cache/
+.DS_Store
+**/.DS_Store
+
+
+# Build artefacts
+*.egg-info/
+build/
+dist/

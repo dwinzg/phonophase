@@ -1,0 +1,251 @@
+# ==========================================================================
+# Literature registry
+# ==========================================================================
+#
+# Why this file exists
+#   A novelty claim is only as good as the search behind it. This records what
+#   has been checked, what each paper actually claims, and specifically what it
+#   forecloses for this project. It is meant to be uncomfortable to read.
+#
+#   forecloses  the claim this paper makes unavailable to us
+#   leaves_open what it does not cover, where that is defensible
+#
+# Every entry was fetched and confirmed on 2026-09-18. Absence from this file
+# is not evidence of absence in the literature. Two search passes cannot prove
+# a negative, and the space is moving fast. Kim et al. below was posted three
+# days before this file was written.
+# ==========================================================================
+
+zhang2025_phoneme_discrepancies:
+  cite: "Zhang, K., Hua, Z., Lan, R., Zhang, Y., Guo, Y. (2025). AAAI."
+  url: "https://arxiv.org/abs/2412.12619"
+  code: "https://github.com/RedamancyAY/PLFD-ADD"
+  claims: >-
+    Adaptive phoneme pooling over frame level features, graph attention over
+    phoneme level temporal dependencies, random phoneme substitution
+    augmentation. Four benchmarks.
+  forecloses: "Phoneme level features for deepfake detection, as a method contribution."
+  note: "This is the paper that caused the pivot away from phoneme analysis."
+
+salvi2025_poi:
+  cite: "Salvi, D., Negroni, V., Mandelli, S., Bestagini, P., Tubaro, S. (2025). ICCV Workshops."
+  url: "https://arxiv.org/abs/2507.08626"
+  claims: "Phoneme level analysis for person of interest speech deepfake detection."
+  forecloses: "Phoneme level analysis tied to speaker identity."
+
+taylor2026_explainable:
+  cite: "Taylor, A., Panariello, M., Todisco, M., Galdi, C., Evans, N., Matrouf, D. (2026)."
+  url: "https://arxiv.org/abs/2607.08586"
+  claims: >-
+    Post hoc phoneme level explainability. Grad-CAM with speech recognition to
+    align saliency to phonemes and pauses. wav2vec 2.0 and HuBERT embeddings.
+    Evaluated on ASVspoof 5. Reports statistically significant attack and
+    speaker dependent phonetic cues.
+  forecloses: "Phoneme level explainability of deepfake detectors."
+  leaves_open: >-
+    Uses SSL embeddings, not phase. Post hoc explanation of an existing
+    detector rather than a phase based account of why particular phonemes leak.
+  note: "Todisco and Evans are ASVspoof organisers. This is the core group."
+
+emotional_phoneme_2026:
+  cite: "Phoneme-Level Deepfake Detection Across Emotional Conditions Using Self-Supervised Embeddings (2026)."
+  url: "https://arxiv.org/abs/2605.03079"
+  claims: >-
+    Reports which phoneme classes are discriminative. Diphthongs, fricatives
+    and plosives emerge consistently across systems and feature types. SSL
+    embeddings emphasise transient consonants, handcrafted spectral features
+    such as LogSpec and LFCC highlight fricatives and diphthongs.
+  forecloses: >-
+    The finding that fricatives and plosives are where synthesis leaks. This is
+    published. It cannot be presented as a new result.
+  note: >-
+    Directly overlaps the February 2026 framing, which proposed identifying
+    fricatives and plosives as the vulnerable classes.
+
+phonetically_explainable_2026:
+  cite: "Phonetically Explainable Speech Deepfake Detection (2026)."
+  url: "https://arxiv.org/abs/2606.15454"
+  forecloses: "Phonetic explainability framing."
+
+ba2023_cross_lingual:
+  cite: "Transferring Audio Deepfake Detection Capability across Languages. ACM Web Conference 2023."
+  url: "https://dl.acm.org/doi/10.1145/3543507.3583222"
+  claims: >-
+    Adversarial domain adaptation that learns real versus fake while shedding
+    language dependency.
+  forecloses: "Cross lingual transfer of deepfake detection as a new problem statement."
+
+kim2026_language_orthogonalization:
+  cite: "Kim, M., Um, J. S., Kim, H. (2026)."
+  url: "https://arxiv.org/abs/2609.16458"
+  claims: >-
+    Language orthogonalization. A target free ridge map removing self
+    supervised speech model variation projected onto language identification
+    embeddings. Six languages, six backbones, leave N out. Consistently reduces
+    EER on unseen languages, with larger gains at greater linguistic distance.
+  forecloses: >-
+    Zero shot cross lingual audio deepfake detection, in the strict unseen
+    setting. This is the space the original project goal occupied.
+  note: "Posted 2026-09-15, three days before this registry was written."
+
+jung2022_aasist:
+  cite: "Jung, J. W. et al. (2022). ICASSP."
+  url: "https://arxiv.org/abs/2110.01200"
+  claims: "0.83% EER with 297K parameters. AASIST-L reaches 0.99% with 85K."
+  forecloses: >-
+    Lightweight and accurate as a contribution. AASIST-L is twenty times
+    smaller than PADS at width 256 and ten times better on ASVspoof 2019 LA.
+
+zhang2023_silence:
+  cite: "Zhang, Y., Li, Z., Lu, J., Hua, H., Wang, W., Zhang, P. (2023)."
+  url: "https://arxiv.org/abs/2309.11827"
+  claims: >-
+    Silence proportion in TTS speech is lower than in bonafide speech. Removing
+    silence degrades anti spoofing sharply. Attackers can exploit this by
+    concatenating silence.
+  forecloses: "Nothing. This is a methodological warning we must answer."
+  note: >-
+    Our fixed 4.0 second padding sits directly in this failure mode. Until the
+    trim_silence run is done, we cannot rule out that results came from padding.
+
+# ------------------------------------------------------------------
+# The synthesis side. Added 2026-09-18. These matter because they are
+# the mechanism, independently arrived at by the people building
+# vocoders rather than the people detecting them.
+# ------------------------------------------------------------------
+
+gaznepoglu2026_phasiness:
+  cite: "Gaznepoğlu, Ü. E., Zalkow, F., Joshaghani, M., Habets, E. A. P., Peters, N., Dittmar, C. (2026)."
+  url: "https://arxiv.org/abs/2607.24323"
+  claims: >-
+    Revisiting Vocos. A state of the art time frequency neural vocoder is
+    "effective for magnitude modeling, but less so for phase". They adapt it to
+    predict phase differences and find 1D convolutional layers hinder accurate
+    phase prediction.
+  forecloses: "Nothing."
+  why_it_matters: >-
+    Independent confirmation from the synthesis side that phase is the weaker
+    half of vocoding. Our detection side result says the same thing from the
+    other direction. Two literatures meeting on one mechanism is a much stronger
+    story than an unexplained asymmetry.
+  leaves_open: >-
+    The abstract does not say WHICH sounds are worst affected. Whether the
+    deficit concentrates in periodic, voiced, harmonic content is exactly the
+    question we are asking, and it is not answered here.
+
+vocoder_phase_difficulty:
+  cite: "Several, see url list."
+  urls:
+    - "https://arxiv.org/abs/2311.11545"   # APNet2, direct amplitude and phase prediction
+    - "https://arxiv.org/abs/2306.00814"   # Vocos, Fourier based vocoder
+    - "https://arxiv.org/abs/2403.17378"   # neural phase prediction, anti wrapping losses
+    - "https://arxiv.org/abs/2609.12918"   # PhaseGAN, decoupled amplitude and phase
+  claims: >-
+    A consistent theme across neural vocoding. Accurate phase reconstruction is
+    the main remaining challenge, predicting phase compatible with ground truth
+    magnitude is markedly harder than predicting magnitude, periodicity
+    artifacts are common in time domain GAN vocoders, and some vocoders do not
+    constrain predicted phase in their loss at all.
+  why_it_matters: >-
+    If some vocoders never constrain phase in training, a phase deficit is not
+    an incidental artifact, it is a structural consequence of the objective.
+    That is a far better mechanistic account than "synthesis is imperfect".
+  caution: >-
+    Individual claims here come from search summaries rather than full readings.
+    Verify each before any of it appears in a write up.
+
+zhang2023_vocoder_fingerprints:
+  cite: "Zhang, C. Y., Yi, J., Tao, J., Wang, C., Yan, X. (2023). CCL 2024."
+  url: "https://arxiv.org/abs/2309.06780"
+  claims: >-
+    Vocoders and acoustic models impart distinct, model specific fingerprints in
+    generated waveforms, and the vocoder fingerprint is the more dominant of the
+    two.
+  forecloses: >-
+    Vocoder fingerprinting as a new idea. Model attribution from synthetic
+    speech is an established subfield with strong results, reportedly above 99
+    percent AUROC using low pass or EnCodec residual fingerprints.
+  leaves_open: >-
+    No phonetic conditioning. The fingerprint is a signal level residual, not a
+    statement about which sounds a given model fails on. Whether a vocoder
+    fingerprint is phonetically structured, and whether that structure survives
+    a change of language, appears unasked.
+
+vocoder_attribution_family:
+  cite: "Several, see url list."
+  urls:
+    - "https://arxiv.org/abs/2208.10489"   # audio deepfake attribution dataset
+    - "https://arxiv.org/abs/2411.14013"   # lightweight attribution via residual fingerprints
+    - "https://link.springer.com/article/10.1007/s10489-025-06272-0"  # understanding vocoder fingerprints
+  forecloses: "Attribution of synthetic speech to its generating system."
+  why_it_matters: >-
+    This is the subfield the "what does one model's production look like"
+    framing belongs to. Worth knowing before framing anything as new.
+
+# ------------------------------------------------------------------
+# What appears to remain open. Treat as hypotheses about the
+# literature, not as established gaps. Each needs a dedicated search
+# before it goes in a paper.
+# ------------------------------------------------------------------
+open_questions:
+  phase_conditioned_on_phoneme:
+    statement: >-
+      Every phoneme level paper found here uses SSL embeddings or magnitude
+      domain features, wav2vec 2.0, HuBERT, LogSpec, LFCC, MFCC. None was found
+      using group delay or phase, conditioned on phoneme class.
+      Confirmed on eval 2026-09-18, see docs/PREREGISTRATION.md.
+    now_better_motivated: >-
+      The synthesis literature independently reports that phase is the weaker
+      half of vocoding and that some vocoders do not constrain it in their loss.
+      So a phase deficit is predicted from the synthesis side rather than merely
+      observed from the detection side. What neither side states is WHERE in
+      speech the deficit lands, which is the gap this occupies.
+    why_it_could_matter: >-
+      There is a physical reason to expect phoneme dependence. Fricatives are
+      aperiodic, so phase is close to random. Vowels are periodic, so phase
+      carries harmonic structure. Plosives are transient, so phase is
+      discontinuous. A vocoder's phase reconstruction has no reason to fail
+      uniformly across those regimes, and magnitude domain work cannot see it.
+    strength: >-
+      Narrow. A thesis chapter or a workshop paper, not a headline, unless the
+      result is surprising. And it is worthless unless the ablation first shows
+      corrected MGD adds something over MFCC alone.
+    gate: "P3 ablation. If MGD adds nothing, this line is dead and should be dropped."
+
+  target_language_data_efficiency:
+    statement: >-
+      No systematic curve was found showing how few target language samples are
+      needed for competitive transfer. Samu et al. fine tune at one operating
+      point. Kim et al. work zero shot. The region between is thinly covered.
+    why_it_could_matter: >-
+      It is the practically useful question for a low resource language and it
+      is the claim the project already wants to make.
+    strength: "Defensible, and cheap once IndicSynth is in place."
+
+  phonetically_structured_vocoder_fingerprint:
+    statement: >-
+      Vocoder attribution treats the fingerprint as a signal level residual.
+      Whether a given model's fingerprint is PHONETICALLY structured, failing on
+      particular articulatory classes, and whether that structure is preserved
+      when the same model synthesises a different language, appears unasked.
+    why_it_could_matter: >-
+      It is the same experiment as H2 read from the model's side rather than the
+      language's side, so it costs nothing extra to report both. A fingerprint
+      that is constant across languages under a fixed model is a stronger
+      attribution cue than one that is not, and it is directly useful to the
+      attribution subfield.
+    strength: >-
+      Secondary framing, not a separate project. Do not let it become one before
+      H2 resolves.
+
+  why_zero_shot_fails:
+    statement: >-
+      Careful failure analysis of cross lingual zero shot, with the silence
+      confound controlled and conditioned on phoneme class.
+    why_it_could_matter: >-
+      Negative and diagnostic results are underreported, and our zero shot AUC
+      of 40.9% is unusual enough to be worth explaining.
+    strength: >-
+      Weak until a prior check is done. An AUC below chance on a test set that
+      size is more often a score orientation bug than a real finding. Rule that
+      out first or there is nothing here.

@@ -1,0 +1,179 @@
+# ==========================================================================
+# Dataset registry for PADS
+# ==========================================================================
+#
+# Why this file exists
+#   Nothing in this repository recorded which corpora were used, where they
+#   came from, or under what terms. That made the published Bengali result
+#   unverifiable by anyone, including its author. This is the fix.
+#
+# How to read the fields
+#   licence_verified   true means the licence was read from the source page.
+#                      false means it still needs checking before use or
+#                      redistribution. Do not assume permissive.
+#   direct_url         present only where a stable direct link was confirmed.
+#                      Opaque bitstream ids can change if a record is
+#                      re-uploaded, so landing_page stays canonical.
+#   status             in_use, candidate, or planned.
+#
+#   serves             which research phase this corpus is for. Order matters.
+#                      H1 is the pre-registered test on ASVspoof 2019 eval and
+#                      nothing else belongs in it. Everything else waits until
+#                      H1 resolves, because adding corpora before then is how a
+#                      project ends up with nine half answered questions.
+#
+# All URLs below were fetched and confirmed on 2026-09-18.
+# ==========================================================================
+
+asvspoof2019_la:
+  name: "ASVspoof 2019 Logical Access"
+  status: in_use
+  serves: "H1, the pre-registered test. Do not add other corpora to this run."
+  languages: [english]
+  landing_page: "https://datashare.ed.ac.uk/handle/10283/3336"
+  doi: "https://doi.org/10.7488/ds/2555"
+  direct_url: "https://datashare.ed.ac.uk/bitstreams/a9f87c35-f055-4015-80e2-2fdff0d46269/download"
+  filename: LA.zip
+  size_gb: 7.12
+  licence: "Open Data Commons Attribution License"
+  licence_verified: true
+  licence_note: "Free for academic and commercial use with attribution."
+  citation: "Todisco et al. 2019, arXiv:1904.05441"
+  partitions:
+    train: {utterances: 25380, bonafide: 2580, spoof: 22800, attacks: "A01-A06"}
+    dev: {utterances: 24844, bonafide: 2548, spoof: 22296, attacks: "A01-A06"}
+    eval: {utterances: 71237, bonafide: 7355, spoof: 63882, attacks: "A07-A19"}
+  note: >-
+    train and dev share attacks A01 to A06. Only eval holds unseen attacks, so
+    only eval measures generalisation. Report on eval.
+
+asvspoof2021_la:
+  name: "ASVspoof 2021 Logical Access, evaluation set"
+  status: planned
+  serves: "replication of H1 under codec and channel effects, after H1 resolves"
+  languages: [english]
+  landing_page: "https://zenodo.org/records/4837263"
+  doi: "10.5281/zenodo.4837263"
+  direct_url: "https://zenodo.org/records/4837263/files/ASVspoof2021_LA_eval.tar.gz?download=1"
+  filename: ASVspoof2021_LA_eval.tar.gz
+  size_gb: 7.8
+  md5: "2abee34d8b0b91159555fc4f016e4562"
+  keys_url: "https://www.asvspoof.org/asvspoof2021/LA-keys-full.tar.gz"
+  licence: "Open Data Commons Attribution License v1.0"
+  licence_verified: true
+  citation: "ASVspoof 2021 evaluation plan, arXiv:2109.00535"
+  note: >-
+    Adds telephony and VoIP codec effects on top of 2019. Already the stated
+    next step, and the natural place to check for catastrophic forgetting after
+    Bengali adaptation. Keys and metadata ship separately from the audio.
+
+asvspoof2021_df:
+  name: "ASVspoof 2021 Speech Deepfake"
+  status: planned
+  serves: "replication of H1 on compressed audio"
+  languages: [english]
+  landing_page: "https://zenodo.org/records/4835108"
+  licence: "Open Data Commons Attribution License v1.0"
+  licence_verified: true
+  note: "Compressed and re-encoded audio, closer to real distribution conditions."
+
+mlaad:
+  name: "MLAAD, Multi-Language Audio Anti-Spoofing Dataset"
+  status: candidate
+  serves: "H2, the cross lingual test. 54 languages is the strongest available test of whether the effect is articulatory rather than English specific"
+  priority: high
+  languages_count: 54
+  source_languages: [english, french, german, italian, polish, russian, spanish, ukrainian]
+  hours_synthetic: 1153.6
+  tts_systems: 205
+  landing_page: "https://huggingface.co/datasets/mueller91/MLAAD"
+  mirror: "https://deepfake-total.com/mlaad"
+  paper: "https://arxiv.org/abs/2401.09512"
+  licence: "CC-BY-NC 4.0"
+  licence_verified: true
+  licence_note: >-
+    Non commercial academic research only. Stricter than this repository's MIT
+    code licence, so it constrains anything trained on it.
+  citation: "Müller et al. 2024, IJCNN, arXiv:2401.09512"
+  requires: "M-AILABS for the bonafide side. MLAAD ships only the synthetic audio."
+  note: >-
+    The single most relevant candidate. The project's central claim is cross
+    lingual generalisation, currently evidenced by one language. 54 languages
+    turns that claim into something measurable.
+
+indicsynth:
+  name: "IndicSynth"
+  status: candidate
+  serves: "H2 for Indic languages including Bengali, and the data efficiency curve"
+  priority: high
+  languages: [bengali, gujarati, hindi, kannada, malayalam, marathi, odia,
+              punjabi, sanskrit, tamil, telugu, urdu]
+  hours_synthetic: 4000
+  landing_page: "https://huggingface.co/datasets/vdivyasharma/IndicSynth"
+  code: "https://github.com/vdivyas/IndicSynth"
+  licence: "unknown"
+  licence_verified: false
+  licence_note: "Check the HuggingFace dataset card before use."
+  note: >-
+    Bengali is Indic, and this covers 12 low resource Indian languages
+    including Bengali. It is the obvious source for the data efficiency curve,
+    which needs far more Bengali than a single corpus provides, and it extends
+    the same question to eleven neighbouring languages.
+
+in_the_wild:
+  name: "In-the-Wild"
+  status: candidate
+  serves: "robustness of H1 outside studio conditions"
+  languages: [english]
+  hours: 37.9
+  composition: "19,963 bonafide and 11,816 spoof, 58 public figures"
+  landing_page: "https://huggingface.co/datasets/mueller91/In-The-Wild"
+  paper: "https://arxiv.org/abs/2203.16263"
+  licence: "unknown"
+  licence_verified: false
+  citation: "Müller et al. 2022, Interspeech"
+  note: >-
+    Real world audio rather than studio recordings, with background noise,
+    codec artifacts and channel effects. Directly addresses the concern already
+    raised in April 2026 that clean datasets flatter results.
+
+bengali_candidates:
+  name: "Bengali corpora, candidates for the one actually used"
+  status: candidate
+  serves: "identifying the corpus behind the April 2026 result, and H2 for Bengali"
+  languages: [bengali]
+  licence_verified: false
+  candidates:
+    - name: "Bengali Real and Deepfake Audio Dataset"
+      landing_page: "https://ieee-dataport.org/documents/bengali-real-and-deepfake-audio-dataset-deepfake-detection"
+      note: "Most likely the corpus behind the April 2026 Bengali result. Confirm on import."
+    - name: "BanglaFake"
+      paper: "https://arxiv.org/abs/2505.10885"
+      note: "Purpose built Bengali deepfake audio dataset."
+  note: >-
+    The corpus behind the 93.6 percent Bengali result is recorded nowhere. Until
+    it is identified the number is unverifiable. Check these against whatever
+    comes back from the cluster.
+
+speechfake:
+  name: "SpeechFake"
+  status: planned
+  serves: "H2 at scale, 46 languages"
+  languages_count: 46
+  paper: "https://arxiv.org/abs/2507.21463"
+  licence: "unknown"
+  licence_verified: false
+  citation: "ACL 2025"
+  note: "Large scale multilingual, 46 languages, recent generation methods."
+
+xmad_bench:
+  name: "XMAD-Bench, Cross-Domain Multilingual Audio Deepfake Benchmark"
+  status: planned
+  serves: "an established evaluation protocol, so H2 is comparable to other work"
+  paper: "https://arxiv.org/abs/2506.00462"
+  licence: "unknown"
+  licence_verified: false
+  note: >-
+    A benchmark rather than a corpus. Useful as an evaluation protocol for the
+    cross lingual claim, so results are comparable to other work rather than
+    self reported.
