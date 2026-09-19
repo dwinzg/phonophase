@@ -359,6 +359,40 @@ def _summarise(is_bona, utterances, categories, phase, magnitude, rows,
     }
 
 
+# Pairs that are the SAME synthesis algorithm appearing in both partitions, per
+# the ASVspoof 2019 paper: A04 and A16 are one unit selection system, A06 and
+# A19 are one spectral filtering system. (keep, drop). The dev member is
+# dropped, so newly added data cannot re-count a system the eval partition
+# already contributed.
+DUPLICATE_ALGORITHMS = [("A16", "A04"), ("A19", "A06")]
+
+
+def pooled_group_test(asymmetries, taxonomy, drop_duplicates=False):
+    """
+    The registered H3 inference: one exact permutation over all the attacks
+    available, pooling partitions.
+
+    Six dev attacks alone cannot reach p < 0.05, because two against four has a
+    floor of 1/15. `docs/PREREGISTRATION-H3.md` says so in advance and registers
+    the pooled test as the inferential one, with the dev result entering it
+    whatever it says rather than being looked at and then included.
+
+    `drop_duplicates` runs it again without one member of each duplicated
+    algorithm, which the registration also requires, because the same system
+    measured on different utterances is not independent evidence.
+    """
+    if drop_duplicates:
+        drop = {d for keep, d in DUPLICATE_ALGORITHMS
+                if keep in asymmetries and d in asymmetries}
+        asymmetries = {k: v for k, v in asymmetries.items() if k not in drop}
+
+    split = group_means(asymmetries, taxonomy, "natural_phase_origin")
+    tested = split["true"] + split["false"]
+    in_group = np.array([a in split["true"] for a in tested])
+    values = np.array([asymmetries[a] for a in tested], dtype=np.float64)
+    return split, exact_permutation_p(values, in_group)
+
+
 def pooled_asymmetries(data):
     """
     The same asymmetry, with each group's slices pooled instead of averaged
@@ -497,7 +531,14 @@ def exact_permutation_p(values, in_group, seed=0):
         p_value = (extreme + 1) / (n_assignments + 1)
         exact = False
 
-    smallest = 2.0 / total if total > 1 else 1.0
+    # Enumeration runs over subsets of size k. When k == n-k the complement of
+    # each subset is also enumerated, so the most extreme split is counted twice
+    # and the floor is 2/C(n,k). When the groups are uneven the complement has a
+    # different size and never appears, so the floor is 1/C(n,k). Reporting the
+    # larger figure calls a maxed-out test underpowered when it is not, which it
+    # did at two attacks against four.
+    min_count = 2.0 if k == n - k else 1.0
+    smallest = min_count / total if total > 1 else 1.0
     return {
         "difference": observed,
         "p_value": float(p_value),
@@ -663,6 +704,11 @@ def main():
     ap.add_argument("--taxonomy", default=os.path.join(
         os.path.dirname(os.path.abspath(__file__)), "..", "configs",
         "asvspoof2019_attacks.yaml"))
+    ap.add_argument("--pool-with", default=None,
+                    help="a second slice table, typically the other partition. "
+                         "Runs the registered pooled permutation over both "
+                         "partitions' attacks, with and without the duplicated "
+                         "algorithms")
     ap.add_argument("--n-boot", type=int, default=1000)
     ap.add_argument("--seed", type=int, default=0)
     args = ap.parse_args()
@@ -678,6 +724,51 @@ def main():
 
     results = per_attack(data, n_boot=args.n_boot, seed=args.seed)
     print_report(results, taxonomy, args.seg, args.n_boot, data)
+
+    if args.pool_with:
+        other = load(args.pool_with, args.seg)
+        other_names = sorted(set(
+            other["attack"][other["y"] != other["bonafide_label"]].tolist()))
+        check_coverage(other_names, taxonomy)
+        other_results = per_attack(other, n_boot=args.n_boot, seed=args.seed)
+
+        merged = {a: r["asymmetry"] for a, r in results.items()}
+        merged.update({a: r["asymmetry"] for a, r in other_results.items()})
+
+        print(f"\n\nPOOLED over both partitions, {len(merged)} attacks")
+        print("=" * 78)
+        print("The registered H3 inference. docs/PREREGISTRATION-H3.md fixes this as")
+        print("the test, with the per partition results reported beside it.\n")
+
+        outcomes = {}
+        for label, dedup in (("all attacks", False),
+                             ("duplicated algorithms removed", True)):
+            split, test = pooled_group_test(merged, taxonomy, drop_duplicates=dedup)
+            print(f"{label}")
+            print(f"  natural   {len(split['true']):>2}: "
+                  f"{', '.join(split['true'])}  mean {split['mean_true']:+.4f}")
+            print(f"  generated {len(split['false']):>2}: mean {split['mean_false']:+.4f}")
+            if split["excluded"]:
+                print(f"  held out, origin not decidable: {', '.join(split['excluded'])}")
+            print(f"  difference {test['difference']:+.4f}, exact p "
+                  f"{test['p_value']:.5f} over {test['n_assignments']} assignments, "
+                  f"floor {test['smallest_attainable_p']:.5f}")
+            passes = bool(test["p_value"] < 0.05 and test["difference"] < 0)
+            outcomes[label] = passes
+            print(f"  {'passes' if passes else 'does not pass'} at 0.05\n")
+
+        # The registration requires BOTH, because the same algorithm measured on
+        # different utterances is not independent evidence. A result that needs
+        # a system counted twice is not a result.
+        both = all(outcomes.values())
+        print("VERDICT.", "H3 SUPPORTED." if both else "H3 NOT SUPPORTED.")
+        if not both and outcomes.get("all attacks"):
+            print("  The pooled test passes only while the duplicated algorithms are")
+            print("  counted twice. Remove the double counting and it does not.")
+            print("  docs/PREREGISTRATION-H3.md required this check in advance, for")
+            print("  exactly this reason, and it is the honest reading.")
+            print("  Across all 19 attacks there are only THREE distinct waveform")
+            print("  inheriting algorithms. That, not the p value, is the constraint.")
 
 
 if __name__ == "__main__":

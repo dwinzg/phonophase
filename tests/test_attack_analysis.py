@@ -31,6 +31,7 @@ from attack_analysis import (  # noqa: E402
     check_coverage,
     exact_permutation_p,
     group_means,
+    pooled_group_test,
     load_taxonomy,
     per_attack,
 )
@@ -357,6 +358,28 @@ def test_group_means_splits_on_the_taxonomy_and_excludes_the_unknown_case():
     assert abs(split["mean_false"] - 0.0) < 1e-12
 
 
+def test_the_smallest_attainable_p_depends_on_whether_the_split_is_even():
+    """
+    Enumeration runs over subsets of size k. When k equals n-k the complement of
+    every subset is also enumerated, so the most extreme split is counted twice
+    and the floor is 2/C(n,k). When the groups are uneven the complement has a
+    different size and is never enumerated, so the floor is 1/C(n,k).
+
+    This matters at H3's size. Two attacks against four is C(6,2)=15, and the
+    floor is 1/15 = 0.0667, not 2/15 = 0.133. Reporting the larger number calls
+    a maxed-out test underpowered when it is not.
+    """
+    uneven = exact_permutation_p(np.array([9.0, 8.0, 1.0, 1.0, 1.0, 1.0]),
+                                 np.array([True, True, False, False, False, False]))
+    assert uneven["n_assignments"] == 15
+    assert abs(uneven["smallest_attainable_p"] - 1.0 / 15) < 1e-12
+
+    even = exact_permutation_p(np.array([9.0, 8.0, 7.0, 1.0, 1.0, 1.0]),
+                               np.array([True, True, True, False, False, False]))
+    assert even["n_assignments"] == 20
+    assert abs(even["smallest_attainable_p"] - 2.0 / 20) < 1e-12
+
+
 def test_a_split_too_small_to_test_says_so_instead_of_returning_a_p_value():
     """
     Three attacks against nine is 220 assignments, so the smallest attainable
@@ -366,8 +389,47 @@ def test_a_split_too_small_to_test_says_so_instead_of_returning_a_p_value():
     values = np.array([1.0, 0.0, 0.0])
     r = exact_permutation_p(values, np.array([True, False, False]))
 
-    assert r["smallest_attainable_p"] > 0.5
+    # One against two is C(3,1)=3 assignments and the groups are uneven, so the
+    # floor is 1/3. This assertion read "> 0.5" until 2026-09-19, which encoded
+    # the old and wrong 2/C(n,k) formula.
+    assert abs(r["smallest_attainable_p"] - 1.0 / 3) < 1e-12
     assert r["underpowered"] is True
+
+
+def test_the_pooled_test_drops_one_member_of_each_duplicated_algorithm():
+    """
+    A04 and A16 are the same unit selection algorithm; A06 and A19 are the same
+    spectral filtering algorithm. Counting both members would let one system
+    vote twice, which docs/PREREGISTRATION-H3.md says in advance must not
+    happen. The dev member is the one dropped, so the newly added data cannot
+    re-count a system the eval partition already contributed.
+    """
+    taxonomy = load_taxonomy(TAXONOMY)
+    asym = {a: (1.0 if taxonomy[a]["natural_phase_origin"] is True else 0.0)
+            for a in taxonomy}
+
+    split_all, _ = pooled_group_test(asym, taxonomy, drop_duplicates=False)
+    split_dedup, _ = pooled_group_test(asym, taxonomy, drop_duplicates=True)
+
+    assert "A04" in split_all["true"] and "A16" in split_all["true"]
+    assert "A04" not in split_dedup["true"], "the dev duplicate must be dropped"
+    assert "A06" not in split_dedup["true"]
+    assert "A16" in split_dedup["true"] and "A19" in split_dedup["true"]
+    assert "A13" in split_all["excluded"], "the undecidable case stays held out"
+
+
+def test_the_pooled_test_recovers_a_planted_separation():
+    taxonomy = load_taxonomy(TAXONOMY)
+    asym = {a: (-0.1 if taxonomy[a]["natural_phase_origin"] is True else 0.1)
+            for a in taxonomy}
+
+    _, test = pooled_group_test(asym, taxonomy, drop_duplicates=False)
+
+    assert test["difference"] < 0
+    assert test["p_value"] <= test["smallest_attainable_p"] + 1e-12, (
+        "a perfect separation must sit at the floor of the permutation null"
+    )
+    assert test["underpowered"] is False, "eighteen attacks can reach 0.05"
 
 
 if __name__ == "__main__":
