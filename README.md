@@ -33,8 +33,16 @@ from spoofed speech more strongly in sonorants than in obstruents.**
 | PLOSIVES | 0.511 | [0.499, 0.522] |
 
 Sonorant advantage **+0.048 [+0.039, +0.057]** against obstruent −0.015. All
-four falsification conditions passed at 6 to 7 times the required power, and the
-result is identical to within 0.002 on both segmentations.
+four falsification conditions passed at 6 to 7 times the required power.
+
+The result agrees to within 0.002 on both segmentations, which is worth less
+than it sounds and is stated here rather than left to look impressive. The two
+segmentations are largely the same data. 73 percent of slices are numerically
+identical between them, the statistics correlate at 0.988, and 89 percent of
+`seg=run` slices are a single frame, because CTC argmax is peaky and the slicer
+has a 60 ms floor. Their agreement rules out a coding difference between the two
+paths. It does not show the finding survives a different way of cutting the
+audio, and forced alignment would be the test that does.
 
 There is a physical account. Sonorants are voiced and periodic and carry
 coherent harmonic phase that a vocoder must reconstruct. Obstruents are
@@ -46,10 +54,22 @@ structure for an artifact to disturb.
 **It is small.** Separation runs 0.51 to 0.60. This locates phase information,
 it does not detect anything.
 
-**It is heterogeneous across attacks.** Scored per attack, the sonorant
-advantage holds in **8 of 13**, from +0.183 on A14 to −0.109 on A08, reversing
-on A08, A13, A16 and A19. A tendency across synthesis systems, not a property of
-all of them, and the exceptions are more interesting than the average.
+**It is heterogeneous across attacks.** Scored per attack with
+`scripts/attack_analysis.py`, the asymmetry that H1 states, the sonorant
+advantage minus the obstruent one, is positive on **12 of 13** attacks and clear
+of zero on 8. It runs from +0.218 on A09, which is Vocaine, to −0.079 on A19,
+which is the one genuine reversal. A tendency across synthesis systems rather
+than a property of all of them, and the exceptions are more interesting than the
+average.
+
+An earlier version of this section reported the effect as reversing on four
+attacks. That was a different quantity, whether phase beats magnitude in
+sonorants at all, which H1 does not claim. A08 and A13 are negative on that
+quantity and clearly positive on the asymmetry: phase loses to magnitude
+everywhere on those attacks and loses less in sonorants. The correction is
+recorded rather than quietly applied, because the four reversals figure was
+treated as a serious threat to the mechanism for a week and is the kind of
+number that outlives its source.
 
 **One language.** Whether it holds elsewhere is the open question.
 
