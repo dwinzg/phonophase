@@ -209,6 +209,51 @@ def bonafide_label(data) -> int:
     return label
 
 
+def drop_quietest(data, fraction: float):
+    """
+    Remove the quietest `fraction` of slices by high frequency energy.
+
+    Why this exists. Zhang et al. 2023 report that the proportion of silence is
+    lower in TTS speech than in genuine speech, and that removing silence at
+    test time degrades detection sharply. So a near silent slice can separate
+    the classes for a reason that has nothing to do with phase. This project
+    inherits that exposure directly: cell D is carried entirely by /h/, the
+    quietest segment in the English inventory.
+
+    The threshold is a single global percentile rather than one per class,
+    because a per class threshold would force the two sides to be balanced and
+    hide exactly the asymmetry being checked for. The cost is that the drop can
+    fall mostly on one class, which changes the comparison rather than cleaning
+    it, so the per class counts are returned and flagged when they are lopsided.
+    """
+    if fraction <= 0:
+        return data, {"n_dropped": 0, "n_dropped_bonafide": 0, "n_dropped_spoof": 0,
+                      "threshold": float("-inf"), "lopsided": False}
+
+    energy = np.asarray(data["energy"], dtype=np.float64)
+    threshold = float(np.nanpercentile(energy, 100.0 * fraction))
+    keep = ~(energy < threshold)
+
+    is_bona = np.asarray(data["y"]) == data["bonafide_label"]
+    dropped_bona = int((~keep & is_bona).sum())
+    dropped_spoof = int((~keep & ~is_bona).sum())
+
+    out = {k: (v[keep] if isinstance(v, np.ndarray) and v.shape[:1] == keep.shape else v)
+           for k, v in data.items()}
+
+    total = dropped_bona + dropped_spoof
+    # One class losing more than four fifths of the removed slices means the
+    # threshold is separating the classes rather than removing silence.
+    lopsided = bool(total > 0 and max(dropped_bona, dropped_spoof) / total > 0.8)
+    return out, {
+        "n_dropped": total,
+        "n_dropped_bonafide": dropped_bona,
+        "n_dropped_spoof": dropped_spoof,
+        "threshold": threshold,
+        "lopsided": lopsided,
+    }
+
+
 def folded_from_auc(auc: float) -> float:
     """
     Separation without regard to direction.
@@ -227,7 +272,7 @@ def folded_from_auc(auc: float) -> float:
 def load(path, seg, stat=PHASE):
     """Read one segmentation out of a slice table into aligned arrays."""
     opener = gzip.open if str(path).endswith(".gz") else open
-    y, utt, phone, value, attack, duration = [], [], [], [], [], []
+    y, utt, phone, value, attack, duration, energy = [], [], [], [], [], [], []
     with opener(path, "rt", newline="") as fh:
         for row in csv.DictReader(fh):
             if row["seg"] != seg:
@@ -238,6 +283,7 @@ def load(path, seg, stat=PHASE):
             value.append(float(row[stat]))
             attack.append(row.get("attack", ""))
             duration.append(float(row.get("duration_s") or "nan"))
+            energy.append(float(row.get("hf_energy") or "nan"))
     cells, dropped = assign_cells(phone)
     data = {
         "y": np.asarray(y, dtype=np.int64),
@@ -246,6 +292,7 @@ def load(path, seg, stat=PHASE):
         "x": np.asarray(value, dtype=np.float64),
         "attack": np.asarray(attack),
         "duration": np.asarray(duration, dtype=np.float64),
+        "energy": np.asarray(energy, dtype=np.float64),
         "cell": cells,
         "dropped": dropped,
     }
@@ -649,6 +696,9 @@ def main():
     ap.add_argument("--seed", type=int, default=0)
     ap.add_argument("--glottals", default="separate", choices=["separate", "obstruent"],
                     help="fold [+son,-voi] into [-son,-voi], the sensitivity run")
+    ap.add_argument("--drop-quietest", type=float, default=0.0,
+                    help="remove this fraction of the quietest slices by hf_energy, "
+                         "the silence sensitivity run. 0.2 is a reasonable probe")
     ap.add_argument("--drop-phone", action="append", default=[],
                     help="remove one phone by symbol, repeatable. For the silence check")
     ap.add_argument("--both-segmentations", action="store_true",
@@ -666,6 +716,17 @@ def main():
             for key in ("y", "u", "phone", "x", "attack", "duration", "cell"):
                 data[key] = data[key][keep]
             print(f"Dropped {removed} slices for phones {args.drop_phone}")
+
+        if args.drop_quietest:
+            data, report = drop_quietest(data, args.drop_quietest)
+            print(f"Silence sensitivity: dropped {report['n_dropped']} slices below "
+                  f"hf_energy {report['threshold']:.3f}, "
+                  f"{report['n_dropped_bonafide']} bonafide and "
+                  f"{report['n_dropped_spoof']} spoof")
+            if report["lopsided"]:
+                print("  WARNING: the drop fell almost entirely on one class, so this "
+                      "run has changed\n  the comparison rather than cleaned it. Read "
+                      "it as a confound check, not a robustness check.")
 
         if args.glottals == "obstruent":
             data["cell"] = np.where(data["cell"] == SON_UNVOI, OBS_UNVOI, data["cell"])

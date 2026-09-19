@@ -33,6 +33,7 @@ from sonority_voicing import (  # noqa: E402
     analyse,
     assign_cells,
     bonafide_label,
+    drop_quietest,
     cell_of,
     folded_from_auc,
     verdict,
@@ -136,6 +137,78 @@ def test_a_table_with_no_attack_column_says_so_rather_than_guessing():
         assert "attack" in str(exc).lower()
     else:
         raise AssertionError("an unmarked table must raise rather than pick a label")
+
+
+# --------------------------------------------------------------------------
+# the silence sensitivity, which is a published concern and not a hypothetical
+# --------------------------------------------------------------------------
+
+def test_dropping_the_quietest_slices_removes_exactly_that_fraction():
+    """
+    Zhang et al. 2023 report that the proportion of silence differs between
+    genuine and TTS speech, so a near silent slice can separate the classes for
+    a reason that has nothing to do with phase. Cell D is carried entirely by
+    /h/, which is the quietest segment in the inventory, so this matters here
+    more than anywhere.
+    """
+    data = {
+        "y": np.arange(100) % 2,
+        "u": np.array([f"U{i:03d}" for i in range(100)]),
+        "phone": np.array(["a"] * 100),
+        "x": np.arange(100, dtype=float),
+        "energy": np.arange(100, dtype=float),
+        "cell": np.array([SON_VOI] * 100, dtype=object),
+        "bonafide_label": 0,
+    }
+
+    kept, report = drop_quietest(data, 0.20)
+
+    assert kept["y"].size == 80
+    assert kept["energy"].min() == 20.0, "the quietest fifth should be the rows removed"
+    assert report["n_dropped"] == 20
+
+
+def test_dropping_nothing_is_the_identity():
+    data = {
+        "y": np.array([0, 1, 0, 1]),
+        "u": np.array(["A", "B", "C", "D"]),
+        "phone": np.array(["a"] * 4),
+        "x": np.array([1.0, 2.0, 3.0, 4.0]),
+        "energy": np.array([1.0, 2.0, 3.0, 4.0]),
+        "cell": np.array([SON_VOI] * 4, dtype=object),
+        "bonafide_label": 0,
+    }
+    kept, report = drop_quietest(data, 0.0)
+
+    assert kept["y"].size == 4
+    assert report["n_dropped"] == 0
+
+
+def test_the_drop_is_reported_per_class_because_it_can_be_lopsided():
+    """
+    A global energy threshold can remove far more of one class than the other,
+    and if it does, the sensitivity run has changed the comparison rather than
+    cleaned it. The counts have to be visible.
+    """
+    data = {
+        # bonafide is label 0 here, and is the quiet class by construction
+        "y": np.array([0] * 50 + [1] * 50),
+        "u": np.array([f"U{i:03d}" for i in range(100)]),
+        "phone": np.array(["a"] * 100),
+        "x": np.arange(100, dtype=float),
+        "energy": np.concatenate([np.arange(50.0), np.arange(1000.0, 1050.0)]),
+        "cell": np.array([SON_VOI] * 100, dtype=object),
+        "bonafide_label": 0,
+    }
+
+    _, report = drop_quietest(data, 0.20)
+
+    assert report["n_dropped_bonafide"] == 20
+    assert report["n_dropped_spoof"] == 0
+    assert report["lopsided"] is True, (
+        "a drop falling entirely on one class must be flagged, not reported as a "
+        "clean sensitivity check"
+    )
 
 
 # --------------------------------------------------------------------------
