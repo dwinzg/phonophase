@@ -74,13 +74,24 @@ reverses. Neither occurred.
 
 **Status: superseded.** Do not repeat this wording.
 
-T7 crossed sonority against voicing on the same data. Both factors carry the
-effect, additively, at similar size: son +0.0323 [+0.0153, +0.0498], voi +0.0278
-[+0.0111, +0.0456], interaction −0.0083 [−0.0412, +0.0249]. Voiced obstruents
-sit between sonorants and voiceless obstruents rather than with either.
+T7 crossed sonority against voicing on the same data. The **ladder** is the
+robust part: separation runs 0.576, 0.547, 0.515 across [+son,+voi],
+[-son,+voi] and [-son,-voi], both steps clear of zero, on both segmentations and
+under a silence control. Voiced obstruents sit between sonorants and voiceless
+obstruents rather than with either.
 
 The defensible wording is that separation tracks **how much of the segment
 carries periodic, resonant structure**, which is a mechanism rather than a label.
+
+**The decomposition into the two factors is NOT robust, and an earlier version
+of this page said it was.** The baseline crossed test gives son +0.0323 and voi
++0.0278, which reads as two factors of similar size. Dropping the quietest
+quarter of slices, the silence control that Zhang et al. 2023 motivates, gives
+son +0.0523 and voi +0.0120 with an interval covering zero, on both
+segmentations. And the honest reading of that is not "sonority after all": what
+moves is cell [+son,-voi], which is 1,471 slices of the single phone /h/. Both
+the original claim and its replacement rest on that one segment. Report the
+ladder, not the decomposition.
 
 **Why the wording matters beyond pedantry:** two 2026 papers rank obstruents
 *above* sonorants. Stated as "the artifact concentrates in sonorants", the claim
