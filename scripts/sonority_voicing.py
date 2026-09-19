@@ -254,6 +254,35 @@ def drop_quietest(data, fraction: float):
     }
 
 
+def cluster_groups(data, cluster="utterance"):
+    """
+    The grouping the bootstrap resamples, and therefore what its interval means.
+
+    `utterance` resamples source utterances on both sides. The interval is then
+    a statement about more utterances drawn from the same synthesis systems.
+
+    `system` keeps bonafide clustered by utterance, since genuine speech has no
+    synthesis system, and clusters the spoof side by **attack**. The eval
+    partition's 1,495 spoof utterances come from 13 systems at 115 utterances
+    each, so under this option the effective sample size on the spoof side is
+    13, not 1,495. The interval is then a statement about speech synthesised by
+    systems we have not seen, which is what a claim about articulation needs.
+
+    Which is correct depends on the claim, not on taste, so both are reported.
+    `docs/PREREGISTRATION.md` specifies clustering by source utterance
+    throughout, so `utterance` stays the default and the registered result is
+    the one it produces.
+    """
+    if cluster not in ("utterance", "system"):
+        raise ValueError(f"cluster must be 'utterance' or 'system', got {cluster!r}")
+    utterances = np.asarray(data["u"])
+    if cluster == "utterance":
+        return utterances
+    attack = np.asarray(data["attack"])
+    is_bona = np.asarray(data["y"]) == data["bonafide_label"]
+    return np.where(is_bona, utterances, attack)
+
+
 def subset_rows(data, keep):
     """
     Keep a boolean selection of rows, across every per row array in `data`.
@@ -431,7 +460,8 @@ def _bootstrap_p(draws):
 
 
 def analyse(data, n_boot=2000, seed=0, alpha=0.05,
-            min_slices=MIN_SLICES, min_utterances=MIN_UTTERANCES):
+            min_slices=MIN_SLICES, min_utterances=MIN_UTTERANCES,
+            cluster="utterance"):
     """
     Separation per cell, the three ladder contrasts, and the crossed test.
 
@@ -455,7 +485,7 @@ def analyse(data, n_boot=2000, seed=0, alpha=0.05,
 
     usable = [c for c in CELLS if cells[c]["usable"]]
     rng = np.random.default_rng(seed)
-    clusters = _cluster_index(y, u)
+    clusters = _cluster_index(y, cluster_groups(data, cluster))
 
     folded_draws = {c: np.full(n_boot, np.nan) for c in CELLS}
     direct_draws = {c: np.full(n_boot, np.nan) for c in CELLS}
@@ -528,6 +558,7 @@ def analyse(data, n_boot=2000, seed=0, alpha=0.05,
         "main_effects": _main_effects(cells, direct_draws, alpha),
         "n_boot": n_boot,
         "alpha": alpha,
+        "cluster": cluster,
     }
 
 
@@ -723,6 +754,10 @@ def print_report(result, data, title):
                   f"{contrast_label(m)}")
 
     v = verdict(result)
+    if result.get("cluster") == "system":
+        print("\nIntervals below resample SYNTHESIS SYSTEMS on the spoof side, 13 of "
+              "them, not\nutterances. They generalise to unseen systems and are much "
+              "wider for that reason.")
     print(f"\nREADING: {v['reading'].upper()}")
     print(f"  {v['why']}")
     if v["surprise"]:
@@ -745,6 +780,11 @@ def main():
     ap.add_argument("--seed", type=int, default=0)
     ap.add_argument("--glottals", default="separate", choices=["separate", "obstruent"],
                     help="fold [+son,-voi] into [-son,-voi], the sensitivity run")
+    ap.add_argument("--cluster", default="utterance", choices=["utterance", "system"],
+                    help="what the bootstrap resamples on the spoof side. "
+                         "'system' clusters by attack, making the interval a "
+                         "statement about unseen synthesis systems rather than "
+                         "about more utterances from these ones")
     ap.add_argument("--drop-quietest", type=float, default=0.0,
                     help="remove this fraction of the quietest slices by hf_energy, "
                          "the silence sensitivity run. 0.2 is a reasonable probe")
@@ -779,9 +819,10 @@ def main():
         if args.glottals == "obstruent":
             data["cell"] = np.where(data["cell"] == SON_UNVOI, OBS_UNVOI, data["cell"])
 
-        result = analyse(data, n_boot=args.n_boot, seed=args.seed)
+        result = analyse(data, n_boot=args.n_boot, seed=args.seed,
+                         cluster=args.cluster)
         title = (f"Sonority against voicing, seg={seg}, {args.stat}, "
-                 f"glottals={args.glottals}")
+                 f"glottals={args.glottals}, clustered by {args.cluster}")
         print_report(result, data, title)
 
     print("\nExploratory. This runs on the same eval data that confirmed H1 and "

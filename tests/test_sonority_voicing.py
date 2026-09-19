@@ -33,6 +33,7 @@ from sonority_voicing import (  # noqa: E402
     analyse,
     assign_cells,
     bonafide_label,
+    cluster_groups,
     contrast_label,
     drop_quietest,
     subset_rows,
@@ -210,6 +211,64 @@ def test_the_drop_is_reported_per_class_because_it_can_be_lopsided():
     assert report["lopsided"] is True, (
         "a drop falling entirely on one class must be flagged, not reported as a "
         "clean sensitivity check"
+    )
+
+
+# --------------------------------------------------------------------------
+# what the intervals generalise to, which the audit showed was the real issue
+# --------------------------------------------------------------------------
+
+def test_system_clustering_resamples_utterances_for_real_and_systems_for_fake():
+    """
+    The spoof side of the eval table is 1,495 utterances from 13 synthesis
+    systems. Clustering it by utterance makes the interval a statement about
+    more utterances from those same 13 systems. For a claim about speech, or
+    about synthesis in general, the system is the exchangeable unit and the
+    effective n is 13.
+
+    Bonafide has no system, so it stays clustered by utterance either way.
+    """
+    data = {
+        "y": np.array([0, 0, 1, 1]),
+        "u": np.array(["b1", "b2", "s1", "s2"]),
+        "attack": np.array(["-", "-", "A07", "A08"]),
+        "bonafide_label": 0,
+    }
+
+    assert list(cluster_groups(data, "utterance")) == ["b1", "b2", "s1", "s2"]
+    assert list(cluster_groups(data, "system")) == ["b1", "b2", "A07", "A08"]
+
+
+def test_system_clustering_widens_the_interval():
+    """
+    Fewer clusters on the spoof side must mean a wider interval. If it does not,
+    the option is not doing anything.
+    """
+    rng = np.random.default_rng(3)
+    n_utt, per = 160, 6
+    # The dependence must sit at the SYSTEM level, so every utterance from one
+    # system shares its offset. That is the real structure: a vocoder leaves the
+    # same signature on everything it produces.
+    system_shock = {f"A{k:02d}": rng.normal(0, 1.2) for k in range(4)}
+    y, u, attack, cell, x = [], [], [], [], []
+    for i in range(n_utt):
+        label = i % 2
+        system = f"A{i % 4:02d}" if label == 1 else "-"
+        shock = system_shock[system] if label == 1 else 0.0
+        for _ in range(per):
+            y.append(label); u.append(f"U{i:04d}"); attack.append(system)
+            cell.append(SON_VOI)
+            x.append(shock + rng.normal(0, 1) + (0.8 if label == 0 else 0.0))
+    data = {"y": np.asarray(y), "u": np.asarray(u), "attack": np.asarray(attack),
+            "cell": np.asarray(cell, dtype=object), "x": np.asarray(x),
+            "phone": np.asarray(["a"] * len(y)), "bonafide_label": 0}
+
+    narrow = analyse(data, n_boot=BOOT, seed=0, cluster="utterance")["cells"][SON_VOI]
+    wide = analyse(data, n_boot=BOOT, seed=0, cluster="system")["cells"][SON_VOI]
+
+    assert (wide["ci_high"] - wide["ci_low"]) > (narrow["ci_high"] - narrow["ci_low"]), (
+        "clustering the spoof side by system must widen the interval, because "
+        "four systems carry less information than eighty utterances"
     )
 
 
