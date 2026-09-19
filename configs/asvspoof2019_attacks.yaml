@@ -1,0 +1,249 @@
+# The ASVspoof 2019 LA attacks, and where each one's phase comes from.
+#
+# Why this file exists
+#   The sonorant finding varies a lot across attacks, and until that variation
+#   is explained the articulatory reading is underdetermined. Explaining it
+#   needs a property of the synthesis systems that was fixed by someone else,
+#   before we looked at our own numbers. This file is that property.
+#
+# Provenance
+#   Every row of the first four fields is transcribed from the official
+#   database paper, Table 2 and the per attack descriptions in section 3.
+#
+#     Wang, X., Yamagishi, J., Todisco, M., Delgado, H., Nautsch, A., Evans,
+#     N., Sahidullah, M., Vestman, V., Kinnunen, T., Lee, K. A., Juvela, L.,
+#     Alku, P., Peng, Y.-H., Hwang, H.-T., Tsao, Y., Wang, H.-M.,
+#     Le Maguer, S., Becker, M., Henderson, F., Clark, R., Zhang, Y., Wang, Q.,
+#     Jia, Y., Onuma, K., Mushika, K., Kaneda, T., Jiang, Y., Liu, L.-J.,
+#     Wu, Y.-C., Huang, W.-C., Toda, T., Tanaka, K., Kameoka, H., Steiner, I.,
+#     Matrouf, D., Bonastre, J.-F., Govender, A., Ronanki, S., Zhang, J.-X.
+#     and Ling, Z.-H. (2020). ASVspoof 2019: a large-scale public database of
+#     synthesized, converted and replayed speech. Computer Speech & Language.
+#     arXiv:1911.01601
+#
+#   Verified against the arXiv full text on 2026-09-19. Nothing here is recalled.
+#
+# The derived field
+#   `natural_phase_origin` is ours, not the paper's. It asks one question.
+#
+#     Does the fine phase structure of the output originate in a human
+#     recording, or was it produced by a model?
+#
+#   It matters because the hypothesis under test is about a vocoder failing to
+#   reconstruct the coherent harmonic phase of voiced, sonorant speech. A system
+#   that copies or filters real waveform samples never attempts that
+#   reconstruction, so it should show little or no sonorant phase deficit. A
+#   system that generates the waveform has to reconstruct it, so it should.
+#
+#   Values are true, false or unknown. `unknown` is used rather than a guess.
+#   The 2019 paper describes A13 as filtering "the TTS voice" without naming
+#   which TTS system produced it, and whether that system was itself
+#   concatenative decides the answer. Marked unknown until the source is read
+#   rather than assumed, and excluded from the primary grouping.
+#
+# Reading order for anyone extending this
+#   The eval partition holds only three systems with `natural_phase_origin:
+#   true`, so any test of this grouping on eval alone is underpowered. The dev
+#   partition holds two more that were never used to form the hypothesis, which
+#   is why `docs/PREREGISTRATION-H3.md` tests it there.
+
+meta:
+  source: arXiv:1911.01601
+  verified: 2026-09-19
+  verified_against: full text, Table 2 and section 3 attack descriptions
+  derived_fields: [natural_phase_origin]
+
+attacks:
+
+  # ---------------------------------------------------------------- train/dev
+  # A01 to A06 appear in train and dev. None of them took any part in forming
+  # the sonorant hypothesis, which was registered and confirmed on eval only.
+
+  A01:
+    partition: train_dev
+    type: TTS
+    input: text
+    acoustic_model: HMM + AR RNN + VAE
+    waveform_generator: WaveNet
+    natural_phase_origin: false
+    note: neural autoregressive waveform model, phase produced by the model
+
+  A02:
+    partition: train_dev
+    type: TTS
+    input: text
+    acoustic_model: HMM + AR RNN + VAE
+    waveform_generator: WORLD
+    natural_phase_origin: false
+    note: source filter vocoder, phase follows a minimum phase assumption
+
+  A03:
+    partition: train_dev
+    type: TTS
+    input: text
+    acoustic_model: feedforward NN
+    waveform_generator: WORLD
+    natural_phase_origin: false
+
+  A04:
+    partition: train_dev
+    type: TTS
+    input: text
+    acoustic_model: CART
+    waveform_generator: waveform concatenation
+    natural_phase_origin: true
+    note: >
+      diphone unit selection. The output is recorded human speech cut and
+      joined, so the phase inside a unit is natural and any artifact sits at
+      the joins. Same algorithm as A16.
+
+  A05:
+    partition: train_dev
+    type: VC
+    input: human speech
+    acoustic_model: VAE
+    waveform_generator: WORLD
+    natural_phase_origin: false
+
+  A06:
+    partition: train_dev
+    type: VC
+    input: human speech
+    acoustic_model: GMM-UBM
+    waveform_generator: spectral filtering + OLA
+    natural_phase_origin: true
+    note: >
+      the filters of the input signal are replaced by the target speaker's and
+      the signal is re-synthesised, so the excitation of the real recording is
+      carried through. Same algorithm as A19.
+
+  # --------------------------------------------------------------------- eval
+  # A07 to A19. The partition the hypothesis was registered and confirmed on.
+
+  A07:
+    partition: eval
+    type: TTS
+    input: text
+    acoustic_model: RNN + RNN
+    waveform_generator: WORLD + GAN postfilter
+    natural_phase_origin: false
+
+  A08:
+    partition: eval
+    type: TTS
+    input: text
+    acoustic_model: HMM + AR RNN
+    waveform_generator: neural source-filter
+    natural_phase_origin: false
+    note: >
+      generated, but by a model with an explicit excitation source rather than
+      an implicit one. The paper does not describe the source module in the
+      text we verified, so any claim about its excitation being sinusoidal is
+      NOT recorded here. Flagged because A08 behaves unlike the other generated
+      systems in our own measurements, which is a reason to read the NSF paper
+      rather than a reason to assert something now.
+
+  A09:
+    partition: eval
+    type: TTS
+    input: text
+    acoustic_model: RNN (LSTM)
+    waveform_generator: Vocaine
+    natural_phase_origin: false
+
+  A10:
+    partition: eval
+    type: TTS
+    input: text
+    acoustic_model: Tacotron 2
+    waveform_generator: WaveRNN
+    natural_phase_origin: false
+
+  A11:
+    partition: eval
+    type: TTS
+    input: text
+    acoustic_model: Tacotron 2
+    waveform_generator: Griffin-Lim
+    natural_phase_origin: false
+    note: >
+      phase reconstructed iteratively from magnitude with no learned phase
+      model at all. The extreme case of generated phase, and the closest thing
+      in this corpus to MLAAD's griffin_lim system.
+
+  A12:
+    partition: eval
+    type: TTS
+    input: text
+    acoustic_model: HMM + AR RNN
+    waveform_generator: AR WaveNet
+    natural_phase_origin: false
+
+  A13:
+    partition: eval
+    type: TTS_VC
+    input: TTS speech
+    acoustic_model: highway NN + FFN
+    waveform_generator: waveform filtering
+    natural_phase_origin: unknown
+    note: >
+      a differential spectrum filter is estimated and the TTS voice is
+      filtered. So it modifies an existing waveform, but that waveform is
+      synthetic and the paper text we verified does not name the TTS system
+      that produced it. If that system was concatenative the phase origin is
+      natural, if it was vocoded it is not. Left unknown and excluded from the
+      primary grouping rather than guessed.
+
+  A14:
+    partition: eval
+    type: TTS_VC
+    input: TTS speech
+    acoustic_model: LSTM + ASR bottleneck
+    waveform_generator: STRAIGHT
+    natural_phase_origin: false
+
+  A15:
+    partition: eval
+    type: TTS_VC
+    input: TTS speech
+    acoustic_model: LSTM + ASR bottleneck
+    waveform_generator: WaveNet
+    natural_phase_origin: false
+
+  A16:
+    partition: eval
+    type: TTS
+    input: text
+    acoustic_model: CART
+    waveform_generator: waveform concatenation
+    natural_phase_origin: true
+    note: same unit selection algorithm as A04, which is in train and dev
+
+  A17:
+    partition: eval
+    type: VC
+    input: human speech
+    acoustic_model: VAE
+    waveform_generator: waveform filtering
+    natural_phase_origin: true
+    note: >
+      direct waveform modification. An F0 transformed residual is generated
+      from the input speech waveform itself, so the excitation is the real
+      speaker's.
+
+  A18:
+    partition: eval
+    type: VC
+    input: human speech
+    acoustic_model: i-vector PLDA
+    waveform_generator: MFCC vocoder
+    natural_phase_origin: false
+
+  A19:
+    partition: eval
+    type: VC
+    input: human speech
+    acoustic_model: GMM-UBM
+    waveform_generator: spectral filtering + OLA
+    natural_phase_origin: true
+    note: same algorithm as A06, which is in train and dev
