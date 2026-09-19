@@ -309,7 +309,7 @@ def per_attack(data, n_boot=1000, seed=0, alpha=0.05):
                                    for k, v in draws[name].items()}
         observed[name]["asymmetry_p"] = _bootstrap_p(observed[name]["draws"]["asymmetry"])
 
-    apply_fdr(observed)
+    apply_fdr(observed, n_boot=n_boot)
     return observed
 
 
@@ -397,7 +397,20 @@ def pooled_asymmetries(data):
     return out
 
 
-def apply_fdr(results, alpha=0.05):
+def monte_carlo_se(p, n_boot):
+    """
+    Standard error of a bootstrap p value, from the resampling alone.
+
+    A bootstrap p is a proportion estimated from n_boot draws, so it carries its
+    own sampling error of sqrt(p(1-p)/n_boot) before any question about the data
+    arises. At n_boot=1000 and p near 0.05 that is about 0.007, which is enough
+    to move an attack across a 0.05 threshold when the seed changes.
+    """
+    p = float(min(max(p, 0.0), 1.0))
+    return float((p * (1.0 - p) / max(n_boot, 1)) ** 0.5)
+
+
+def apply_fdr(results, alpha=0.05, n_boot=1000):
     """
     Correct the per attack asymmetry tests across attacks, in place.
 
@@ -409,6 +422,14 @@ def apply_fdr(results, alpha=0.05):
     Counting the SIGN of a point estimate, which is what the original claim did,
     is worse than either. Two of these attacks sit within 0.0005 of zero, so
     their sign is a coin flip that changes with the definition used.
+
+    `asymmetry_boundary` marks an attack whose q lands within two Monte Carlo
+    standard errors of alpha. Such an attack changes side when the bootstrap
+    seed changes, and so does any count that includes it. An external audit
+    found exactly this on the real table: A13 sits at q = 0.055, and the count
+    of clear positive attacks is four on seeds 0, 7 and 11 and five on seed 5.
+    A count containing a boundary attack is a property of the seed and must not
+    be quoted as a property of the data.
     """
     names = sorted(results)
     p_values = np.asarray([results[n]["asymmetry_p"] for n in names], dtype=np.float64)
@@ -418,6 +439,9 @@ def apply_fdr(results, alpha=0.05):
         r["asymmetry_q"] = float(q)
         r["asymmetry_clear"] = bool(
             (r["asymmetry_ci_low"] > 0 or r["asymmetry_ci_high"] < 0) and q <= alpha
+        )
+        r["asymmetry_boundary"] = bool(
+            abs(float(q) - alpha) < 2.0 * monte_carlo_se(float(q), n_boot)
         )
     return results
 
@@ -558,6 +582,20 @@ def print_report(results, taxonomy, seg, n_boot, data):
     print(f"  undecided, interval spans zero: {len(undecided):>2}  "
           f"{', '.join(undecided)}")
     print("  undecided is not a reversal. It is an attack this data cannot rank.")
+
+    boundary = sorted(a for a, r in results.items() if r.get("asymmetry_boundary"))
+    if boundary:
+        print("\n  ON THE THRESHOLD. These sit within two Monte Carlo standard "
+              "errors of alpha,")
+        print("  so which side they fall on, and therefore the counts above, "
+              "depend on the seed:")
+        for a in boundary:
+            r = results[a]
+            print(f"    {a} q={r['asymmetry_q']:.4f}, "
+                  f"{'clear' if r['asymmetry_clear'] else 'undecided'} at this seed")
+        print("  Raise --n-boot to shrink that band. Do not quote a count that "
+              "depends on a\n  boundary attack. Quote the attacks that are clear "
+              "at every seed.")
 
     # The count of sign changes is not a result, and this is the evidence.
     pooled = pooled_asymmetries(data)

@@ -26,6 +26,7 @@ from attack_analysis import (  # noqa: E402
     OBSTRUENTS,
     SONORANTS,
     apply_fdr,
+    monte_carlo_se,
     pooled_asymmetries,
     check_coverage,
     exact_permutation_p,
@@ -242,6 +243,38 @@ def test_fdr_is_applied_across_attacks_rather_than_each_one_alone():
     assert results["A07"]["asymmetry_clear"] is False, (
         "raw p below alpha is not the same as surviving thirteen tests"
     )
+
+
+def test_an_attack_whose_q_sits_on_the_threshold_is_flagged_as_a_boundary_case():
+    """
+    A bootstrap p is itself an estimate carrying Monte Carlo error of about
+    sqrt(p(1-p)/n). At n_boot=1000 and p near 0.05 that is roughly 0.007, so an
+    attack landing within a couple of standard errors of alpha changes side when
+    the seed changes, and the COUNT of clear attacks changes with it.
+
+    Measured on the real table: seeds 0, 7 and 11 give four clear positive
+    attacks and seed 5 gives five, because A13 sits at q = 0.055. Anyone quoting
+    that count without knowing this is quoting the seed. Found by an external
+    auditor, which is what the audit is for.
+    """
+    results = {
+        "A07": {"asymmetry": 0.04, "asymmetry_p": 0.052,
+                "asymmetry_ci_low": 0.005, "asymmetry_ci_high": 0.07},
+        "A08": {"asymmetry": 0.20, "asymmetry_p": 0.0001,
+                "asymmetry_ci_low": 0.15, "asymmetry_ci_high": 0.25},
+    }
+    apply_fdr(results, alpha=0.05, n_boot=1000)
+
+    assert results["A07"]["asymmetry_boundary"] is True
+    assert results["A08"]["asymmetry_boundary"] is False, (
+        "an attack nowhere near the threshold is not a boundary case"
+    )
+
+
+def test_more_draws_shrink_the_boundary_band():
+    """The band is Monte Carlo error, so it must narrow as n_boot rises."""
+    assert monte_carlo_se(0.05, 10000) < monte_carlo_se(0.05, 1000)
+    assert abs(monte_carlo_se(0.05, 1000) - (0.05 * 0.95 / 1000) ** 0.5) < 1e-12
 
 
 def test_an_interval_spanning_zero_is_never_clear_however_small_its_p():
