@@ -33,7 +33,9 @@ from sonority_voicing import (  # noqa: E402
     analyse,
     assign_cells,
     bonafide_label,
+    contrast_label,
     drop_quietest,
+    subset_rows,
     cell_of,
     folded_from_auc,
     verdict,
@@ -209,6 +211,70 @@ def test_the_drop_is_reported_per_class_because_it_can_be_lopsided():
         "a drop falling entirely on one class must be flagged, not reported as a "
         "clean sensitivity check"
     )
+
+
+# --------------------------------------------------------------------------
+# defects found by the external audit, 2026-09-19
+# --------------------------------------------------------------------------
+
+def test_subsetting_keeps_every_array_aligned_including_ones_added_later():
+    """
+    The CLI used to subset a hand written list of seven array names. `energy`
+    was added to load() afterwards and not to that list, so combining
+    --drop-phone with --drop-quietest compared a full length mask against short
+    labels and crashed. A hand written list drifts from the loader; deriving the
+    list from the data cannot.
+    """
+    data = {
+        "y": np.array([0, 1, 0, 1]),
+        "u": np.array(["A", "B", "C", "D"]),
+        "phone": np.array(["a", "b", "c", "d"]),
+        "x": np.array([1.0, 2.0, 3.0, 4.0]),
+        "energy": np.array([5.0, 6.0, 7.0, 8.0]),
+        "cell": np.array([SON_VOI] * 4, dtype=object),
+        "bonafide_label": 0,
+        "dropped": {"??": 3},
+    }
+    keep = np.array([True, False, True, False])
+    out = subset_rows(data, keep)
+
+    for key in ("y", "u", "phone", "x", "energy", "cell"):
+        assert out[key].size == 2, f"{key} was not subset"
+    assert list(out["energy"]) == [5.0, 7.0]
+    # Non-array entries must survive untouched.
+    assert out["bonafide_label"] == 0
+    assert out["dropped"] == {"??": 3}
+
+
+def test_an_interval_excluding_zero_is_never_labelled_as_spanning_it():
+    """
+    `clear` requires the interval AND the q. The printed column showed only the
+    interval, so a contrast with an interval of [+0.0011, +0.0400] and q = 0.06
+    printed as "spans zero", which contradicts itself on the page.
+    """
+    survives = {"ci_low": 0.01, "ci_high": 0.04, "q": 0.001, "clear": True}
+    fails_fdr = {"ci_low": 0.0011, "ci_high": 0.0400, "q": 0.06, "clear": False}
+    spans = {"ci_low": -0.01, "ci_high": 0.04, "q": 0.5, "clear": False}
+
+    assert contrast_label(survives) == "clear of zero"
+    assert contrast_label(fails_fdr) == "not clear after correction"
+    assert contrast_label(spans) == "spans zero"
+    assert "spans zero" not in contrast_label(fails_fdr)
+
+
+def test_the_correction_family_holds_only_independent_contrasts():
+    """
+    A-C is A-B plus B-C exactly, so three contrasts carry two degrees of
+    freedom. Correcting across all three treats a derived quantity as an
+    independent test.
+    """
+    data = _dataset({SON_VOI: 1.6, OBS_VOI: 0.8, OBS_UNVOI: 0.0}, n_utt=120, seed=31)
+    contrasts = analyse(data, n_boot=BOOT, seed=0)["contrasts"]
+
+    assert abs((contrasts["A-B"]["delta"] + contrasts["B-C"]["delta"])
+               - contrasts["A-C"]["delta"]) < 1e-9, "A-C must be the sum, by construction"
+    assert contrasts["A-C"]["q"] is None, "a derived contrast carries no q of its own"
+    assert contrasts["A-B"]["q"] is not None and contrasts["B-C"]["q"] is not None
 
 
 # --------------------------------------------------------------------------

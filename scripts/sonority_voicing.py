@@ -254,6 +254,44 @@ def drop_quietest(data, fraction: float):
     }
 
 
+def subset_rows(data, keep):
+    """
+    Keep a boolean selection of rows, across every per row array in `data`.
+
+    The list of arrays is derived rather than written out. An earlier version
+    named seven of them by hand, `energy` was added to the loader afterwards and
+    not to that list, and combining --drop-phone with --drop-quietest then
+    compared a full length mask against short labels and crashed. A hand written
+    list drifts from the loader. This cannot.
+    """
+    keep = np.asarray(keep, dtype=bool)
+    out = {}
+    for key, value in data.items():
+        if isinstance(value, np.ndarray) and value.shape[:1] == keep.shape:
+            out[key] = value[keep]
+        else:
+            out[key] = value
+    return out
+
+
+def contrast_label(contrast) -> str:
+    """
+    The three distinct states a contrast can be in, named so they cannot be
+    confused on the page.
+
+    `clear` requires the interval to exclude zero AND the corrected q to survive.
+    The report used to print the verdict beside the interval alone, so a
+    contrast with an interval of [+0.0011, +0.0400] and q = 0.06 printed as
+    "spans zero", which contradicts the number next to it.
+    """
+    if contrast.get("clear"):
+        return "clear of zero"
+    low, high = contrast.get("ci_low"), contrast.get("ci_high")
+    if low is not None and high is not None and not (low <= 0 <= high):
+        return "not clear after correction"
+    return "spans zero"
+
+
 def folded_from_auc(auc: float) -> float:
     """
     Separation without regard to direction.
@@ -464,8 +502,11 @@ def analyse(data, n_boot=2000, seed=0, alpha=0.05,
             "ci_low": lo, "ci_high": hi,
             "p": _bootstrap_p(draws), "q": 1.0, "clear": False, "why": None,
         }
-        p_values.append(contrasts[name]["p"])
-        keys.append(name)
+        # A-C is A-B plus B-C exactly, so it carries no degree of freedom of its
+        # own and must not enter the correction family as a third test.
+        if name != "A-C":
+            p_values.append(contrasts[name]["p"])
+            keys.append(name)
 
     if p_values:
         corrected = benjamini_hochberg(np.asarray(p_values), alpha=alpha)
@@ -473,6 +514,13 @@ def analyse(data, n_boot=2000, seed=0, alpha=0.05,
             c = contrasts[name]
             c["q"] = float(q)
             c["clear"] = bool((c["ci_low"] > 0 or c["ci_high"] < 0) and q <= alpha)
+
+    derived = contrasts.get("A-C")
+    if derived is not None and not derived.get("why"):
+        # Reported with its interval, but no q, because it is a sum of the two
+        # tested steps rather than an independent test.
+        derived["q"] = None
+        derived["clear"] = bool(derived["ci_low"] > 0 or derived["ci_high"] < 0)
 
     return {
         "cells": cells,
@@ -646,8 +694,9 @@ def print_report(result, data, title):
         shown = "  ".join(f"{p} {n}" for p, n in top)
         print(f"  {c:<14} {total:>3} types   {shown}")
 
-    print("\nLadder contrasts on directional AUC, paired cluster bootstrap, FDR across "
-          "three.")
+    print("\nLadder contrasts on directional AUC, paired cluster bootstrap. FDR across "
+          "the two\nindependent steps; A-C is their sum and is reported without a q "
+          "of its own.")
     print(f"{'contrast':<10} {'difference':>11} {'95% CI':>20} {'q':>8} {'folded':>8}   "
           f"verdict")
     for name in ("A-B", "B-C", "A-C"):
@@ -656,9 +705,9 @@ def print_report(result, data, title):
             print(f"{name:<10} {'-':>11}   {c['why']}")
             continue
         ci = f"[{c['ci_low']:+.4f}, {c['ci_high']:+.4f}]"
-        print(f"{name:<10} {c['delta']:>+11.4f} {ci:>20} {c['q']:>8.4f} "
-              f"{c['delta_folded']:>+8.4f}   "
-              f"{'clear of zero' if c['clear'] else 'spans zero'}")
+        q = "  derived" if c["q"] is None else f"{c['q']:>8.4f}"
+        print(f"{name:<10} {c['delta']:>+11.4f} {ci:>20} {q} "
+              f"{c['delta_folded']:>+8.4f}   {contrast_label(c)}")
 
     main = result["main_effects"]
     if main is None:
@@ -671,7 +720,7 @@ def print_report(result, data, title):
             m = main[name]
             ci = f"[{m['ci_low']:+.4f}, {m['ci_high']:+.4f}]"
             print(f"{name:<12} {m['delta']:>+9.4f} {ci:>20} {m['q']:>8.4f}   "
-                  f"{'clear of zero' if m['clear'] else 'spans zero'}")
+                  f"{contrast_label(m)}")
 
     v = verdict(result)
     print(f"\nREADING: {v['reading'].upper()}")
@@ -713,8 +762,7 @@ def main():
         if args.drop_phone:
             keep = ~np.isin(data["phone"], args.drop_phone)
             removed = int((~keep).sum())
-            for key in ("y", "u", "phone", "x", "attack", "duration", "cell"):
-                data[key] = data[key][keep]
+            data = subset_rows(data, keep)
             print(f"Dropped {removed} slices for phones {args.drop_phone}")
 
         if args.drop_quietest:
