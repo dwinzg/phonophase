@@ -104,7 +104,9 @@ import numpy as np
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "src"))
 
-from phonophase.stats import _cluster_draw, _prepare_clusters, fast_auc  # noqa: E402
+from phonophase.stats import (  # noqa: E402
+    _cluster_draw, _prepare_clusters, benjamini_hochberg, fast_auc,
+)
 
 # The pre-registered grouping, copied from scripts/analyse_slices.py so the two
 # analyses are demonstrably about the same categories.
@@ -305,7 +307,19 @@ def per_attack(data, n_boot=1000, seed=0, alpha=0.05):
             observed[name][f"{key}_ci_high"] = float(high)
         observed[name]["draws"] = {k: np.asarray(v, dtype=np.float64)
                                    for k, v in draws[name].items()}
+        observed[name]["asymmetry_p"] = _bootstrap_p(observed[name]["draws"]["asymmetry"])
+
+    apply_fdr(observed)
     return observed
+
+
+def _bootstrap_p(draws):
+    """Two sided bootstrap p against the null of no asymmetry, +1 corrected."""
+    finite = draws[np.isfinite(draws)]
+    if finite.size < 2:
+        return 1.0
+    below, above = int((finite <= 0).sum()), int((finite >= 0).sum())
+    return float(min(1.0, 2.0 * (min(below, above) + 1) / (finite.size + 1)))
 
 
 def _summarise(is_bona, utterances, categories, phase, magnitude, rows,
@@ -343,6 +357,69 @@ def _summarise(is_bona, utterances, categories, phase, magnitude, rows,
         "n_utterances_bonafide": int(np.unique(utterances[rows][y == 1]).size),
         "n_utterances_spoof": int(np.unique(utterances[rows][y == 0]).size),
     }
+
+
+def pooled_asymmetries(data):
+    """
+    The same asymmetry, with each group's slices pooled instead of averaged
+    over its categories.
+
+    Why this exists. The registered definition averages the per category
+    advantages, which weights NASALS and PLOSIVES equally however many slices
+    each contributed. Pooling weights by slice count instead. Both are
+    defensible and they are not the same number.
+
+    It matters because the original four reversals claim is reproducible under
+    pooling and not under averaging. Printing both is the only way a reader can
+    see that the count of reversals is a property of the definition rather than
+    of the data. No interval is computed for these, deliberately: the point
+    being made is that a sign without an interval is not a result.
+    """
+    bona = data["bonafide_label"]
+    is_bona = (np.asarray(data["y"]) == bona).astype(np.int64)
+    attacks, categories = data["attack"], data["category"]
+    phase, magnitude = data["phase"], data["magnitude"]
+    bona_rows = np.flatnonzero(is_bona == 1)
+
+    out = {}
+    for name in sorted(set(attacks[is_bona == 0].tolist())):
+        rows = np.concatenate([bona_rows, np.flatnonzero(attacks == name)])
+        cat = categories[rows]
+
+        def group(names):
+            selected = rows[np.isin(cat, names)]
+            ys = is_bona[selected]
+            if selected.size == 0 or np.unique(ys).size < 2:
+                return float("nan")
+            return _advantage(ys, phase[selected], magnitude[selected])
+
+        out[name] = group(SONORANTS) - group(OBSTRUENTS)
+    return out
+
+
+def apply_fdr(results, alpha=0.05):
+    """
+    Correct the per attack asymmetry tests across attacks, in place.
+
+    Thirteen intervals is thirteen chances to clear zero, and counting how many
+    cleared without correcting is how a claim like "8 of 13" gets built out of
+    noise. An attack is `asymmetry_clear` only if its interval excludes zero AND
+    its q survives correction across all the attacks tested together.
+
+    Counting the SIGN of a point estimate, which is what the original claim did,
+    is worse than either. Two of these attacks sit within 0.0005 of zero, so
+    their sign is a coin flip that changes with the definition used.
+    """
+    names = sorted(results)
+    p_values = np.asarray([results[n]["asymmetry_p"] for n in names], dtype=np.float64)
+    corrected = benjamini_hochberg(p_values, alpha=alpha)
+    for name, q in zip(names, corrected["q_values"]):
+        r = results[name]
+        r["asymmetry_q"] = float(q)
+        r["asymmetry_clear"] = bool(
+            (r["asymmetry_ci_low"] > 0 or r["asymmetry_ci_high"] < 0) and q <= alpha
+        )
+    return results
 
 
 # --------------------------------------------------------------------------
@@ -442,14 +519,14 @@ def bootstrap_group_difference(results, members_true, members_false, alpha=0.05)
 # reporting
 # --------------------------------------------------------------------------
 
-def print_report(results, taxonomy, seg, n_boot):
+def print_report(results, taxonomy, seg, n_boot, data):
     print(f"\nPer attack, seg={seg}, {n_boot} draws clustered by utterance")
     print("=" * 78)
     print("\nlevel     = phase minus magnitude within sonorants")
     print("asymmetry = the same, minus the obstruent value. H1 is about this one.\n")
 
     header = (f"{'attack':<7} {'origin':<9} {'waveform generator':<26} "
-              f"{'level':>8} {'asymmetry':>10} {'95% CI':>20}")
+              f"{'level':>8} {'asymmetry':>10} {'95% CI':>20}   {'q':>6}")
     print(header)
     print("-" * len(header))
 
@@ -458,23 +535,53 @@ def print_report(results, taxonomy, seg, n_boot):
         r = results[attack]
         t = taxonomy[attack]
         ci = f"[{r['asymmetry_ci_low']:+.3f}, {r['asymmetry_ci_high']:+.3f}]"
+        mark = " *" if r["asymmetry_clear"] else "  "
         print(f"{attack:<7} {origin_name[t['natural_phase_origin']]:<9} "
               f"{t['waveform_generator'][:26]:<26} "
-              f"{r['sonorant_advantage']:>+8.3f} {r['asymmetry']:>+10.3f} {ci:>20}")
+              f"{r['sonorant_advantage']:>+8.3f} {r['asymmetry']:>+10.3f} {ci:>20}"
+              f"{mark}{r['asymmetry_q']:>7.3f}")
 
     levels = {a: r["sonorant_advantage"] for a, r in results.items()}
     asymmetries = {a: r["asymmetry"] for a, r in results.items()}
 
-    holds = [a for a, v in asymmetries.items() if v > 0]
-    clear = [a for a, r in results.items() if r["asymmetry_ci_low"] > 0]
-    level_negative = [a for a, v in levels.items() if v < 0]
+    clear_positive = sorted(a for a, r in results.items()
+                            if r["asymmetry_clear"] and r["asymmetry"] > 0)
+    clear_negative = sorted(a for a, r in results.items()
+                            if r["asymmetry_clear"] and r["asymmetry"] < 0)
+    undecided = sorted(a for a, r in results.items() if not r["asymmetry_clear"])
 
-    print(f"\nAsymmetry positive in {len(holds)} of {len(asymmetries)} attacks, "
-          f"clear of zero in {len(clear)}.")
-    print(f"Asymmetry negative in: {', '.join(sorted(set(asymmetries) - set(holds))) or 'none'}")
-    print(f"Level negative in: {', '.join(sorted(level_negative)) or 'none'}")
-    print("\nAn attack in the second list but not the first is one where phase loses to")
-    print("magnitude everywhere and loses LESS in sonorants. H1 holds there.")
+    print(f"\nAfter correction across {len(results)} attacks, at FDR 0.05.")
+    print(f"  clear and positive, H1 holds:   {len(clear_positive):>2}  "
+          f"{', '.join(clear_positive)}")
+    print(f"  clear and NEGATIVE, a reversal: {len(clear_negative):>2}  "
+          f"{', '.join(clear_negative) or 'none'}")
+    print(f"  undecided, interval spans zero: {len(undecided):>2}  "
+          f"{', '.join(undecided)}")
+    print("  undecided is not a reversal. It is an attack this data cannot rank.")
+
+    # The count of sign changes is not a result, and this is the evidence.
+    pooled = pooled_asymmetries(data)
+    by_category_negative = sorted(a for a, v in asymmetries.items() if v < 0)
+    pooled_negative = sorted(a for a, v in pooled.items() if v < 0)
+
+    print("\nWhy the count of reversals is not a finding.")
+    print(f"  averaging categories, the registered definition, negative on "
+          f"{len(by_category_negative)}: {', '.join(by_category_negative) or 'none'}")
+    print(f"  pooling slices instead, negative on {len(pooled_negative)}: "
+          f"{', '.join(pooled_negative) or 'none'}")
+    borderline = sorted(a for a in set(by_category_negative) ^ set(pooled_negative))
+    if borderline:
+        sizes = ", ".join(f"{a} {pooled[a]:+.4f} pooled against "
+                          f"{asymmetries[a]:+.4f} averaged" for a in borderline)
+        print(f"  the attacks that change side: {sizes}")
+    print("  A sign is not a result. An attack sitting within a thousandth of zero")
+    print("  changes side with the definition, and neither side is evidence of")
+    print("  anything. Read the corrected intervals above instead.")
+
+    print(f"\nLevel negative in: "
+          f"{', '.join(sorted(a for a, v in levels.items() if v < 0)) or 'none'}")
+    print("An attack with a negative level and a positive asymmetry is one where phase")
+    print("loses to magnitude everywhere and loses LESS in sonorants. H1 holds there.")
 
     for label, statistics in (("asymmetry", asymmetries), ("level", levels)):
         split = group_means(statistics, taxonomy, "natural_phase_origin")
@@ -532,7 +639,7 @@ def main():
           f"{counts['-']} bonafide slices")
 
     results = per_attack(data, n_boot=args.n_boot, seed=args.seed)
-    print_report(results, taxonomy, args.seg, args.n_boot)
+    print_report(results, taxonomy, args.seg, args.n_boot, data)
 
 
 if __name__ == "__main__":

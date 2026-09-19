@@ -54,22 +54,34 @@ structure for an artifact to disturb.
 **It is small.** Separation runs 0.51 to 0.60. This locates phase information,
 it does not detect anything.
 
-**It is heterogeneous across attacks.** Scored per attack with
-`scripts/attack_analysis.py`, the asymmetry that H1 states, the sonorant
-advantage minus the obstruent one, is positive on **12 of 13** attacks and clear
-of zero on 8. It runs from +0.218 on A09, which is Vocaine, to −0.079 on A19,
-which is the one genuine reversal. A tendency across synthesis systems rather
-than a property of all of them, and the exceptions are more interesting than the
-average.
+**Per attack, this data mostly cannot decide.** Scored per attack with
+`scripts/attack_analysis.py`, with intervals and FDR correction across the
+thirteen, the asymmetry that H1 states is
 
-An earlier version of this section reported the effect as reversing on four
-attacks. That was a different quantity, whether phase beats magnitude in
-sonorants at all, which H1 does not claim. A08 and A13 are negative on that
-quantity and clearly positive on the asymmetry: phase loses to magnitude
-everywhere on those attacks and loses less in sonorants. The correction is
-recorded rather than quietly applied, because the four reversals figure was
-treated as a serious threat to the mechanism for a week and is the kind of
-number that outlives its source.
+| | count | attacks |
+|---|---|---|
+| clear and positive | 4 | A08, A09, A14, A17 |
+| clear and negative, a reversal | 1 | A19, and only just, q = 0.047 |
+| undecided | 8 | A07, A10, A11, A12, A13, A15, A16, A18 |
+
+Undecided is not a reversal. Each attack contributes about 230 utterances, so
+most per attack intervals are simply too wide to rank. The pooled result above
+is strong because it pools.
+
+**An earlier version of this section reported the effect as reversing on four
+attacks, and a later one as holding on twelve of thirteen. Both were counting
+the sign of a point estimate, and neither is a result.** The four came from a
+different quantity, whether phase beats magnitude in sonorants at all, which H1
+does not claim: A08 and A13 are negative on that and clearly positive on the
+asymmetry, meaning phase loses to magnitude everywhere on those attacks and
+loses less in sonorants. The twelve came from counting uncorrected signs, which
+is the same error in the opposite direction.
+
+The count of reversals is not even stable under the definition. Averaging the
+per category advantages, as the pre-registration specifies, one attack is
+negative. Pooling the slices instead, three are, because A16 and A18 sit within
+0.0005 of zero and change side. `scripts/attack_analysis.py` prints both, for
+exactly this reason.
 
 **One language.** Whether it holds elsewhere is the open question.
 

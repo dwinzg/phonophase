@@ -25,6 +25,8 @@ sys.path.insert(0, os.path.dirname(__file__))
 from attack_analysis import (  # noqa: E402
     OBSTRUENTS,
     SONORANTS,
+    apply_fdr,
+    pooled_asymmetries,
     check_coverage,
     exact_permutation_p,
     group_means,
@@ -190,6 +192,78 @@ def test_each_attack_is_scored_against_the_shared_bonafide_pool():
     assert result["A07"]["n_utterances_bonafide"] == 50
     assert result["A07"]["n_utterances_spoof"] == 50
     assert result["A08"]["n_utterances_bonafide"] == 50
+
+
+def test_pooling_and_averaging_categories_are_different_definitions():
+    """
+    The registered definition averages the per category advantages. Pooling the
+    slices instead weights each category by how many slices it has. On
+    unbalanced categories the two can disagree in sign, which is exactly how the
+    original four reversals claim arose, so both are computable here and the
+    report prints both.
+    """
+    data = _table({"A07": {"son_phase": 0.0}}, n_utt=60, per_category=3, seed=40)
+
+    # Make one sonorant category dominate, and give it the opposite sign.
+    big = data["category"] == SONORANTS[0]
+    spoof = data["y"] == 1
+    data["phase"] = np.where(big & spoof, data["phase"] - 2.0, data["phase"])
+
+    by_category = per_attack(data, n_boot=60, seed=0)["A07"]["asymmetry"]
+    pooled = pooled_asymmetries(data)["A07"]
+
+    assert abs(by_category - pooled) > 0.01, (
+        f"the two definitions should differ on unbalanced categories, "
+        f"got {by_category:.4f} and {pooled:.4f}"
+    )
+
+
+# --------------------------------------------------------------------------
+# correction across attacks, because thirteen intervals is thirteen chances
+# --------------------------------------------------------------------------
+
+def test_fdr_is_applied_across_attacks_rather_than_each_one_alone():
+    """
+    One attack at raw p = 0.04 among twelve at 0.9 does not survive correction
+    across thirteen tests. Reporting it as clear would be counting one of
+    thirteen chances as a finding, which is how "8 of 13" and "12 of 13" get
+    built out of noise.
+    """
+    results = {}
+    for i, p in enumerate([0.04] + [0.9] * 12):
+        results[f"A{i + 7:02d}"] = {
+            "asymmetry": 0.03, "asymmetry_p": p,
+            "asymmetry_ci_low": 0.001, "asymmetry_ci_high": 0.06,
+        }
+
+    apply_fdr(results)
+
+    assert results["A07"]["asymmetry_q"] > 0.05
+    assert results["A07"]["asymmetry_clear"] is False, (
+        "raw p below alpha is not the same as surviving thirteen tests"
+    )
+
+
+def test_an_interval_spanning_zero_is_never_clear_however_small_its_p():
+    results = {"A07": {"asymmetry": 0.0, "asymmetry_p": 0.0001,
+                       "asymmetry_ci_low": -0.02, "asymmetry_ci_high": 0.02}}
+    apply_fdr(results)
+    assert results["A07"]["asymmetry_clear"] is False
+
+
+def test_a_clearly_negative_attack_survives_correction_and_keeps_its_sign():
+    results = {}
+    for i, p in enumerate([0.0001] + [0.0002] * 12):
+        results[f"A{i + 7:02d}"] = {
+            "asymmetry": -0.08 if i == 0 else 0.05, "asymmetry_p": p,
+            "asymmetry_ci_low": -0.13 if i == 0 else 0.02,
+            "asymmetry_ci_high": -0.02 if i == 0 else 0.09,
+        }
+
+    apply_fdr(results)
+
+    assert results["A07"]["asymmetry_clear"] is True
+    assert results["A07"]["asymmetry"] < 0
 
 
 # --------------------------------------------------------------------------
