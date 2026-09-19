@@ -18,6 +18,7 @@ sys.path.insert(0, os.path.dirname(__file__))
 from phonophase.phonology import (  # noqa: E402
     FEATURE_NAMES,
     coverage,
+    parse_tone,
     feature_matrix,
     features,
     is_parseable,
@@ -67,7 +68,11 @@ def test_nasals_are_sonorant_and_nasal_but_not_continuant():
 
 
 def test_non_ipa_entries_are_rejected_not_guessed():
-    for junk in ("<pad>", "<unk>", "??", "a1", "i.4", "", "5"):
+    # `a1` and `i.4` moved out of this list on 2026-09-19. They are tone marked
+    # phones, not junk, and they now decode to their base segment. A bare tone
+    # marker such as `5` stays here, because stripping its digit leaves no
+    # segment at all.
+    for junk in ("<pad>", "<unk>", "??", "", "5"):
         assert features(junk) is None, f"{junk!r} should not parse"
         assert not is_parseable(junk)
 
@@ -76,24 +81,27 @@ def test_feature_matrix_drops_unparseable_and_reports_what_it_kept():
     phones = ["m", "??", "s", "a1", "a"]
     matrix, kept = feature_matrix(phones)
 
-    assert kept == ["m", "s", "a"], kept
-    assert matrix.shape == (3, 24), matrix.shape
+    # `a1` is kept from 2026-09-19, as the vowel /a/ carrying tone 1. `??` is
+    # still dropped, which is what this test is about.
+    assert kept == ["m", "s", "a1", "a"], kept
+    assert matrix.shape == (4, 24), matrix.shape
     # The caller must use the returned list, since the input order no longer maps.
     assert matrix[kept.index("m")][F["nas"]] == 1
 
 
 def test_feature_matrix_handles_nothing_parseable():
-    matrix, kept = feature_matrix(["??", "a1", "<pad>"])
+    matrix, kept = feature_matrix(["??", "<unk>", "<pad>"])
     assert kept == [] and matrix.shape == (0, 24)
 
 
 def test_coverage_reports_a_real_fraction():
-    inventory = ["m", "n", "s", "p", "bʰ", "ã", "aː", "??", "a1", "<pad>"]
+    inventory = ["m", "n", "s", "p", "bʰ", "ã", "aː", "??", "a1", "5", "<pad>"]
     c = coverage(inventory)
 
-    assert c["total"] == 8, "special tokens should not count toward the total"
-    assert c["parsed"] == 7, c["parsed"]
-    assert c["unparsed"] == ["a1"], c["unparsed"]
+    assert c["total"] == 9, "special tokens should not count toward the total"
+    # `a1` parses from 2026-09-19. `5` is a bare tone marker and does not.
+    assert c["parsed"] == 8, c["parsed"]
+    assert c["unparsed"] == ["5"], c["unparsed"]
     assert 0.8 < c["fraction"] <= 1.0
 
 
@@ -109,6 +117,104 @@ def test_multi_segment_strings_average_rather_than_drop():
     v = features("tʃ")
     assert v is not None and len(v) == 24
     assert np.all(np.isfinite(np.asarray(v, dtype=float)))
+
+
+
+
+# --------------------------------------------------------------------------
+# tone, added 2026-09-19
+#
+# The aligner emits 85 tone marked symbols out of 393 and they were rejected
+# outright, which excluded every tonal language. That was acceptable while the
+# language set was European. It stopped being acceptable when the only way to
+# separate sonority from voicing turned out to need a language with voiceless
+# sonorants, and the reachable candidates include tonal ones.
+# --------------------------------------------------------------------------
+
+def test_a_tone_digit_is_stripped_and_returned_separately():
+    assert parse_tone("a1") == ("a", 1)
+    assert parse_tone("iɛ5") == ("iɛ", 5)
+    assert parse_tone("onɡ5") == ("onɡ", 5)
+
+
+def test_a_phone_with_no_tone_is_returned_unchanged():
+    assert parse_tone("a") == ("a", None)
+    assert parse_tone("m") == ("m", None)
+
+
+def test_a_bare_tone_marker_has_no_segment_and_is_rejected():
+    """
+    `1` through `5` appear in the vocabulary as tone markers with no phone
+    attached. Stripping the digit leaves nothing, and inventing a vowel for it
+    would be fabricating a segment that was never emitted.
+    """
+    for marker in ["1", "2", "3", "4", "5"]:
+        assert parse_tone(marker) == (None, int(marker))
+        assert features(marker) is None
+
+
+def test_a_tone_marked_vowel_now_has_the_features_of_its_base():
+    """
+    The whole point. `a1` is the vowel /a/ carrying tone 1, so it must decode to
+    exactly the feature vector of /a/, not to nothing.
+    """
+    assert features("a1") is not None
+    assert features("a1") == features("a")
+    assert features("iɛ5") == features("iɛ")
+
+
+def test_tone_is_not_folded_into_the_feature_vector():
+    """
+    Tone is suprasegmental. PanPhon's hitone and hireg describe register on a
+    segment, not lexical tone, so writing tone into them would put two different
+    things in one dimension and make cross linguistic comparison meaningless.
+    """
+    assert features("a1") == features("a5"), (
+        "two tones on the same vowel must give the same segmental features"
+    )
+
+
+def test_non_ipa_junk_is_still_rejected_after_the_change():
+    for junk in ["<pad>", "??", "", "<unk>"]:
+        assert features(junk) is None
+
+
+def test_tone_marked_symbols_raise_coverage_substantially():
+    """
+    Guards the change from silently regressing. The espeak inventory is the real
+    one the aligner emits.
+    """
+    inventory = ["a", "m", "a1", "iɛ5", "onɡ5", "ɑu2", "u5", "??", "1"]
+    c = coverage(inventory)
+
+    # `??` is a special token and coverage excludes it from the total by
+    # design, so the only thing that should fail to parse here is the bare
+    # tone marker, which has no segment attached.
+    assert c["total"] == 8, c
+    assert c["parsed"] == 7, f"expected the tone marked vowels to parse, got {c}"
+    assert c["unparsed"] == ["1"], c["unparsed"]
+
+
+def test_coverage_reports_symbols_panphon_only_partly_consumed():
+    """
+    PanPhon silently drops characters it does not recognise, so `dZ`, which is
+    X-SAMPA for the affricate, comes back with the features of a plain /d/ and
+    nothing says so. That is a trap rather than a live error, because no such
+    symbol appears in the English eval data, but it would bite the moment a
+    corpus transcribed in X-SAMPA arrives.
+
+    So coverage makes it visible. What to DO about partials is a separate
+    decision and is deliberately not taken here.
+    """
+    c = coverage(["m", "a", "dZ", "aɪɚ"])
+
+    assert "dZ" in dict(c["partial"]), c["partial"]
+    assert dict(c["partial"])["dZ"] == "d", "the symbol decoded to its prefix"
+    assert "m" not in dict(c["partial"])
+
+
+def test_a_fully_consumed_inventory_reports_no_partials():
+    assert coverage(["m", "n", "a", "i", "s"])["partial"] == []
 
 
 if __name__ == "__main__":
