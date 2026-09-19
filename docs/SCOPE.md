@@ -116,6 +116,39 @@ Building a Bengali detector.
 
 Importing anything from UBC ARC.
 
+## On adding machine learning methods
+
+Decided 2026-09-19, because the question will keep coming up and the answer is
+not the same in every direction.
+
+A method earns its place here by making a measurement **more trustworthy**, not
+by making the project sound more current. Applied to the three obvious
+candidates, that rule gives three different answers.
+
+**Where it would genuinely help.** `mgd_hf_std` is one hand chosen scalar, and
+whether it is the right one is a standing open question. A cross validated
+**linear probe** on the phase plane, fitted per phoneme class, would measure how
+much phase information is present far more completely than a single statistic
+can. Conditions if it is done: held out by **utterance** and not by slice, the
+same probe family for every class so no class gets a better model than another,
+and **registered before it is run**. `mgd_hf_std` was itself selected from
+exploratory analysis, so quietly replacing it with something that scores better
+is the best of many failure in a new costume.
+
+**Where it would actively hurt.** Adapting the alignment model per language,
+with LoRA or by any other means, for the cross linguistic test. H2 compares
+languages. If the aligner is adapted for each one, alignment quality varies with
+language, and alignment quality is then confounded with the effect being
+measured. The correct move for H2 is the opposite of adaptation: one unadapted
+multilingual model everywhere, so that whatever alignment error exists is
+constant across the comparison and cannot masquerade as a language effect. Use
+forced alignment to reduce that error, not adaptation.
+
+**Where it is simply a different project.** Parameter efficient fine tuning for
+a detector, a data efficiency curve, phoneme conditioned fusion. All are already
+out of scope above, and nothing here changes that. They become interesting if
+the mechanism holds, which is what H2 and H3 decide.
+
 ## Deliverables
 
 1. H1, confirmed. Done.
