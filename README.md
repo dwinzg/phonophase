@@ -68,6 +68,12 @@ Undecided is not a reversal. Each attack contributes about 230 utterances, so
 most per attack intervals are simply too wide to rank. The pooled result above
 is strong because it pools.
 
+The decided set is not stable either. On `seg=window` the same procedure gives
+seven clear positive rather than four, because A07, A10 and A13 sit close to the
+decision boundary and cross it. What holds on both segmentations is the core:
+A08, A09, A14 and A17 clear positive, A19 the only clear negative, A16 and A18
+undecided. Anything finer than that is being read off noise.
+
 **An earlier version of this section reported the effect as reversing on four
 attacks, and a later one as holding on twelve of thirteen. Both were counting
 the sign of a point estimate, and neither is a result.** The four came from a
