@@ -45,6 +45,8 @@ import analyse_slices  # noqa: E402
 from analyse_slices import (  # noqa: E402
     MAGNITUDE,
     PHASE,
+    SONORANTS,
+    adequately_powered,
     advantage_ci,
     asymmetry_ci,
     bonafide_label,
@@ -439,6 +441,64 @@ def test_the_eval_table_has_thirteen_spoof_clusters_under_system_clustering():
         assert len(set(groups[~is_bona].tolist())) == 13, cat
         assert len(set(groups[is_bona].tolist())) == len(set(d["u"][is_bona].tolist()))
         assert np.array_equal(cluster_groups(d, "utterance"), d["u"])
+
+
+# --------------------------------------------------------------------------
+# the power precondition, which is counted in bonafide utterances
+# --------------------------------------------------------------------------
+
+def test_the_power_check_counts_bonafide_utterances_and_not_both_classes():
+    """
+    docs/PREREGISTRATION.md requires "at least 200 bonafide source utterances
+    per phoneme category" and states that the binding constraint is bonafide
+    utterances. The check read min(bonafide, spoof), so it also demanded 200
+    spoofed utterances under a label that says bonafide.
+
+    That is stricter than the registered requirement. A category with 1,344
+    bonafide utterances and 150 spoofed ones meets the registration and was
+    reported as underpowered, which on a table with a small spoof side would
+    demote a result the registration says is adequately powered.
+    """
+    per_category = {
+        "NASALS": {"utterances": (1344, 150)},
+        "APPROXIMANTS": {"utterances": (1211, 1296)},
+        "VOWELS_STEADY": {"utterances": (1493, 1484)},
+    }
+    assert adequately_powered(per_category, SONORANTS) == list(SONORANTS)
+
+
+def test_the_power_check_still_rejects_too_few_bonafide_utterances():
+    """The requirement is 200, and 199 is not 200."""
+    per_category = {
+        "NASALS": {"utterances": (199, 9999)},
+        "APPROXIMANTS": {"utterances": (200, 9999)},
+        "VOWELS_STEADY": {"utterances": (1493, 1484)},
+    }
+    powered = adequately_powered(per_category, SONORANTS)
+    assert "NASALS" not in powered
+    assert powered == ["APPROXIMANTS", "VOWELS_STEADY"]
+
+
+def test_a_category_that_never_got_measured_is_not_powered():
+    """
+    A category dropped by `usable` never reaches per_category at all, and a
+    missing count must not read as a satisfied requirement.
+    """
+    assert adequately_powered({}, SONORANTS) == []
+
+
+def test_the_power_check_is_unchanged_on_the_published_eval_counts():
+    """
+    The correction must not move the published verdict. The eval run reported
+    1344 / 1211 / 1493 bonafide utterances against spoof counts all above 200,
+    so it passed before and passes now.
+    """
+    per_category = {
+        "NASALS": {"utterances": (1344, 1383)},
+        "APPROXIMANTS": {"utterances": (1211, 1296)},
+        "VOWELS_STEADY": {"utterances": (1493, 1484)},
+    }
+    assert len(adequately_powered(per_category, SONORANTS)) == 3
 
 
 if __name__ == "__main__":

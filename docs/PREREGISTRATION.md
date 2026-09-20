@@ -170,12 +170,32 @@ sonorant mean phase-minus-magnitude advantage on its own. The **ASYMMETRY** is
 that minus the obstruent advantage, which is the quantity the primary test is
 stated in. Bootstraps clustered by source utterance, 2,000 draws.
 
+**These intervals come from the shared draw estimator**, `shared_cluster_draws`
+in `src/phonophase/stats.py`, in which one resample of source utterances serves
+every phoneme category in a draw. The intervals reported elsewhere in this
+document, including rows 1 to 3 of the outcome table above, predate that
+correction: they come from the earlier design that resampled each category
+independently and averaged the results, which discarded the dependence between
+categories fed by the same utterance. Point estimates are identical under both.
+Widths are not, so the numbers below are not comparable with the ones above.
+
 | seg | quantity | A01 to A06 | eval A07 to A19 |
 |---|---|---|---|
-| run | LEVEL | +0.0736 [+0.0668, +0.0802] | +0.0479 [+0.0388, +0.0573] |
-| run | ASYMMETRY | +0.1322 [+0.1183, +0.1454] | +0.0630 [+0.0440, +0.0800] |
-| window | LEVEL | +0.0700 [+0.0636, +0.0764] | +0.0464 [+0.0373, +0.0558] |
-| window | ASYMMETRY | +0.1316 [+0.1178, +0.1446] | +0.0629 [+0.0442, +0.0795] |
+| run | LEVEL | +0.0736 [+0.0644, +0.0828] | +0.0479 [+0.0347, +0.0609] |
+| run | ASYMMETRY | +0.1322 [+0.1179, +0.1472] | +0.0630 [+0.0451, +0.0795] |
+| window | LEVEL | +0.0700 [+0.0613, +0.0792] | +0.0464 [+0.0333, +0.0596] |
+| window | ASYMMETRY | +0.1316 [+0.1172, +0.1465] | +0.0629 [+0.0450, +0.0801] |
+
+The correction moves the two quantities in opposite directions, which is what
+the estimator predicts. Against the independent draw design the four LEVEL
+intervals above are 37 to 42 per cent wider, because the categories averaged
+into the LEVEL share utterances and that dependence was being discarded. The
+four ASYMMETRY intervals move by under 10 per cent and on eval they **narrow**,
+by 4 per cent on seg=run, because sonorant and obstruent slices largely come
+from the same utterances, so a shared draw lets their contribution cancel in
+the difference. The registered statistic also folds, and the obstruent side
+sits near zero, which spends some of the correlation a paired draw would
+otherwise exploit.
 
 Both quantities are present, in the predicted direction, with intervals clear
 of zero, on **both** partitions and on both segmentations. The condition
@@ -194,15 +214,25 @@ Reproduce with
         --eval-table results/eval_slices.csv.gz
 
 The estimator is imported from `scripts/analyse_slices.py` rather than
-reimplemented. Run on the whole dev table it reproduces that script's own
-output for dev to every printed digit, and its eval column above reproduces the
-2026-09-18 numbers in the table further up.
+reimplemented, so the two cannot disagree by construction. Run on the whole dev
+table it reproduces that script's own output for dev to every printed digit.
+Its eval point estimates reproduce the 2026-09-18 figures in the table further
+up, +0.048 and +0.046; the eval widths do not, and are not meant to, because
+those rows predate the shared draw correction.
 
 **The effect is roughly twice as large on the six train systems**, 0.074 against
-0.048 on the LEVEL and 0.132 against 0.063 on the ASYMMETRY, with
-non-overlapping intervals. That is not what condition 4 tests and it does not
-falsify anything, but it is evidence that the size of the effect is partly a
-property of the synthesis systems. It should not be read as a measured attack
+0.048 on the LEVEL and 0.132 against 0.063 on the ASYMMETRY. That is not what
+condition 4 tests and it does not falsify anything, but it is evidence that the
+size of the effect is partly a property of the synthesis systems.
+
+How firm that is differs between the two quantities once the widths are right.
+The ASYMMETRY intervals stay far apart, +0.1179 and above against +0.0795 and
+below on seg=run. The LEVEL intervals now only just clear each other, by 0.0035
+on seg=run and 0.0017 on seg=window, where under the pre-correction widths the
+gap looked comfortable. No interval was computed on the dev-minus-eval
+difference itself, and non-overlap of two separately estimated intervals is a
+weaker statement than a test of that difference, so the LEVEL gap should be
+treated as suggestive only. It should not be read as a measured attack
 effect: the partitions differ in speakers and in sample size as well as in
 attacks, dev pools six systems where eval pools thirteen, and the eval pooling
 already hides a documented spread across attacks. Separating those is a

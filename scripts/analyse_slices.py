@@ -187,6 +187,31 @@ def observed_mean(data, categories):
     ]))
 
 
+REQUIRED_BONAFIDE_UTTERANCES = 200
+
+
+def adequately_powered(per_category, categories,
+                       minimum=REQUIRED_BONAFIDE_UTTERANCES):
+    """
+    Which categories meet the Required sample size precondition.
+
+    docs/PREREGISTRATION.md asks for "at least 200 bonafide source utterances
+    per phoneme category" and says the binding constraint is bonafide
+    utterances. So the bonafide count alone decides it.
+
+    This read min(bonafide, spoof), which also demanded 200 spoofed utterances
+    under a label that says bonafide. That is stricter than the registered
+    requirement, and on a table with a small spoof side it would demote a result
+    the registration calls adequately powered. It changes no published verdict:
+    the eval run's spoof counts were all above 200 as well.
+
+    Note that this is a power precondition and not one of the four falsification
+    conditions, whatever the numbering in the printed output suggests.
+    """
+    return [c for c in categories
+            if per_category.get(c, {}).get("utterances", (0, 0))[0] >= minimum]
+
+
 def advantage_ci(data, categories, n_boot, seed, alpha=0.05, cluster="utterance"):
     """
     Bootstrap the mean phase-minus-magnitude advantage over a set of categories,
@@ -435,14 +460,21 @@ def main():
     verdicts.append((f"3. phase clears chance in at least 2 of 3 sonorant categories",
                      len(clears) >= 2, f"{len(clears)} of 3, {', '.join(clears) or 'none'}"))
 
-    powered = [c for c in SONORANTS
-               if min(per_category.get(c, {}).get("utterances", (0, 0))) >= 200]
-    verdicts.append(("4. at least 200 bonafide utterances per sonorant category",
+    powered = adequately_powered(per_category, SONORANTS)
+    verdicts.append(("Required sample size, at least 200 bonafide utterances "
+                     "per sonorant category",
                      len(powered) == 3, f"{len(powered)} of 3 adequately powered"))
 
     for text, ok, detail in verdicts:
         mark = "PASS" if ok else ("n/a " if ok is None else "FAIL")
         print(f"  [{mark}] {text}\n         {detail}")
+
+    # Condition 4 compares two partitions, so one table cannot decide it and
+    # this script must not appear to. It was reported here for months as the
+    # sample size row above, which is a different requirement from a different
+    # section of the registration.
+    print("  [ -- ] 4. present on train attacks A01 to A06 but absent on eval")
+    print("         needs both partitions, run scripts/falsification_4.py")
 
     print("\n" + "=" * 70)
 
