@@ -114,6 +114,41 @@ and it is real. Different languages are synthesised by different systems, so a
 language effect and a vocoder effect are confounded unless the comparison is
 made within a single multilingual synthesiser.
 
+## Who this is for
+
+Four uses, ordered by how ready each one is. Nothing here is a detector, and
+none of it competes with AASIST-L at 0.99% EER on 85,000 parameters.
+
+**You need cluster robust statistics for a per segment speech measurement.**
+`phonophase.stats` has no dependency on the rest of the package and is the piece
+most worth lifting. If you compute a statistic per phoneme, per frame or per
+window, your observations are not independent: many come from one utterance and
+share a speaker, a channel and, for synthetic audio, one synthesis system.
+Bootstrapping them as independent understates the interval by roughly the square
+root of slices per utterance. In our pilot, 129 slices came from 23 utterances.
+`bootstrap_auc_ci(..., groups=utterance_id)` is the fix, and
+`paired_bootstrap_delta` is the right way to compare two statistics measured on
+the same samples.
+
+**You want to know where a signal concentrates across phoneme classes, in your
+own corpus.** `scripts/make_manifest.py` builds a manifest from common directory
+layouts, `slice_and_probe.py --manifest` aligns and reduces in one GPU pass
+emitting both segmentations, and `analyse_slices.py` reports per class with
+clustered intervals. Language is carried through, so `--by-language` works. None
+of this is specific to deepfakes: it needs a per segment statistic and a class
+label, whatever they mean.
+
+**You are checking anti-spoofing work, yours or someone else's, for known
+failure modes.** `docs/RESOURCES.md` lists nine ways this measurement goes
+wrong, every one of them made and caught here, with what it looked like. Two are
+detected by the instrument directly. It is worth reading even if you never touch
+phase.
+
+**You want to check or extend the finding itself.** The eval table ships in the
+repository, the analysis runs in about thirty seconds on CPU, and the
+falsification conditions were written down before the data was touched. Trying
+to break it is a welcome use and is easier than reproducing it.
+
 ## Install
 
 ```bash
@@ -195,6 +230,67 @@ dividing out the dispersion being measured. Fixed width windows around CTC peaks
 described as phoneme segments. Best of many statistics compared against best of
 many others, turning zero of six into four of six. Slices from one utterance
 bootstrapped as independent observations, when 129 came from 23.
+
+## Contributing
+
+Issues and pull requests are welcome. The project has an unusual bar, described
+below, and it is worth reading first because it is the reason anything here can
+be trusted.
+
+### What would help most
+
+**Run the instrument on a corpus we do not have.** The open question is whether
+the effect is a property of articulation or of English, and it is falsifiable in
+one additional language. Two properties make a corpus especially useful: a
+phone inventory that breaks the sonority and voicing collinearity, for example a
+sizeable voiceless sonorant inventory, and more than five genuine speakers,
+which every corpus available to us currently fails.
+
+**Try to break a claim.** The falsifiers are written down in
+`docs/PREREGISTRATION.md` and `docs/PREREGISTRATION-H3.md`. A clean negative is
+a contribution and gets written up as one, not reframed.
+
+**Tone marked phones.** `phonophase.phonology` rejects any symbol containing a
+digit, which drops 91 symbols and excludes Mandarin, Vietnamese and Thai
+entirely. Stripping the tone digit, parsing the base vowel and carrying tone as
+a separate covariate would open every tonal language.
+
+**Forced alignment.** Both current segmentations are approximately a 60 ms
+window around a CTC argmax peak, and 73% of slices are numerically identical
+between them. A real test of segmentation sensitivity needs proper alignment.
+
+### The rules a contribution has to meet
+
+They exist because this project's predecessor produced headline numbers nobody,
+including their author, could reproduce.
+
+- **Every claim ships with the command that produced it and its output.** A
+  result that cannot be reproduced from what is written is not recorded.
+- **Pre-registration is binding.** Do not change a primary test after seeing
+  results. Register a new hypothesis and test it on data that had no part in
+  forming it.
+- **Undecided is not rejected.** A test with too little data has refuted
+  nothing, and the analysis scripts distinguish the two.
+- **Cluster every bootstrap by source utterance.** Always pass `groups=`.
+- **No best of many comparisons.** Selecting the best phase statistic and
+  comparing it against the best magnitude statistic once turned zero of six
+  into four of six.
+- **Report the magnitude, not only the interval.** Effects here run 0.51 to 0.60
+  separation. Solid and meaningful are different things.
+
+### How to send it
+
+Branch from `main` as `task/T<id>-<slug>`, commit, push, and open a pull
+request. Tests run with `./scripts/run_tests.sh`, no pytest required. New
+analysis code is expected to carry tests built on data whose answer is known by
+construction, which is how everything in `tests/` is written.
+
+### What will be turned down
+
+A claim with no command behind it. A result from a primary test that changed
+after the data was seen. A p value from a test incapable of returning a small
+one, without that stated. A count of how many cells came out positive, where the
+cells have intervals that were never corrected or reported.
 
 ## Citing
 
