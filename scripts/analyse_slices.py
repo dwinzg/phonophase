@@ -30,9 +30,14 @@ from sklearn.metrics import roc_auc_score  # noqa: F401
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "src"))
 
 from phonophase.stats import (  # noqa: E402
-    _cluster_draw, _cluster_index, benjamini_hochberg, bootstrap_auc_ci,
-    cluster_groups, fast_auc,
+    BONAFIDE_MARKERS, benjamini_hochberg, bonafide_label, bootstrap_auc_ci,
+    cluster_groups, fast_auc, shared_cluster_draws,
 )
+
+# Re-exported so a reader of this script can see the whole contract, and so the
+# tests can assert there is exactly one of each rather than a copy per script.
+__all__ = ["BONAFIDE_MARKERS", "bonafide_label", "cluster_groups",
+           "shared_cluster_draws"]
 
 SONORANTS = ["NASALS", "APPROXIMANTS", "VOWELS_STEADY"]
 OBSTRUENTS = ["FRICATIVES", "PLOSIVES", "AFFRICATES"]
@@ -58,45 +63,6 @@ def open_table(path):
         magic = fh.read(2)
     opener = gzip.open if magic == b"\x1f\x8b" else open
     return opener(path, "rt", newline="")
-
-
-# A bonafide row carries no attack, and the spellings below are the ones the
-# registered corpora use. Kept identical to BONAFIDE_MARKERS in
-# scripts/sonority_voicing.py, which test_analyse_slices.py pins.
-BONAFIDE_MARKERS = {"-", "", "bonafide", "none", "nan", "real"}
-
-
-def bonafide_label(labels, attacks):
-    """
-    Which value of the label column means bonafide, read from the attack column.
-
-    In the ASVspoof tables label 1 is spoof and bonafide rows carry attack '-'.
-    Getting this backwards would make cluster_groups put genuine speech into one
-    attack shaped group and spread the spoof side over utterances, which is
-    silently wrong rather than loudly wrong, so it is read from the data and
-    cross checked rather than assumed.
-
-    Returns None when there is no attack column, or when the attack column and
-    the label column disagree. The utterance clustered default never consults
-    the answer, so a table without an attack column still analyses; system
-    clustering refuses to run instead of guessing.
-    """
-    y = np.asarray(labels)
-    attack = np.asarray(attacks)
-    if attack.size != y.size or y.size == 0:
-        return None
-
-    marked = np.isin(np.char.lower(attack.astype(str)), sorted(BONAFIDE_MARKERS))
-    if not marked.any() or marked.all():
-        return None
-
-    seen = np.unique(y[marked])
-    if seen.size != 1:
-        return None
-    label = int(seen[0])
-    if bool((y[~marked] == label).any()):
-        return None
-    return label
 
 
 def load(path, seg):
@@ -171,6 +137,56 @@ def usable(d) -> bool:
     return True
 
 
+def pooled(data, categories, cluster):
+    """
+    One table over `categories`, plus which category each row came from.
+
+    The bootstrap has to draw over the pooled table, because the clusters are
+    utterances and one utterance yields slices in several categories. Pooling is
+    what lets a single draw carry that utterance's rows into every category at
+    once.
+    """
+    y = np.concatenate([data[c]["y"] for c in categories])
+    groups = np.concatenate([cluster_groups(data[c], cluster) for c in categories])
+    phase = np.concatenate([data[c][PHASE] for c in categories])
+    magnitude = np.concatenate([data[c][MAGNITUDE] for c in categories])
+    owner = np.concatenate([
+        np.full(data[c]["y"].size, i, dtype=np.int64)
+        for i, c in enumerate(categories)
+    ])
+    return y, groups, phase, magnitude, owner
+
+
+def draw_mean(idx, owner, y, phase, magnitude, which):
+    """
+    The mean per category advantage inside one draw, over the categories `which`.
+
+    A category the draw missed entirely, or landed on with one class only, is
+    SKIPPED rather than counted as zero. Counting it as zero would drag the mean
+    toward zero in proportion to how often the draw misses, which is a bias that
+    grows as a category gets rarer. Returns None when the draw reached none of
+    them.
+    """
+    per_category = []
+    for i in which:
+        rows = idx[owner[idx] == i]
+        if rows.size == 0:
+            continue
+        ys = y[rows]
+        if np.unique(ys).size < 2:
+            continue
+        per_category.append(folded(ys, phase[rows]) - folded(ys, magnitude[rows]))
+    return float(np.mean(per_category)) if per_category else None
+
+
+def observed_mean(data, categories):
+    """The mean per category advantage on the sample as it stands."""
+    return float(np.mean([
+        folded(data[c]["y"], data[c][PHASE]) - folded(data[c]["y"], data[c][MAGNITUDE])
+        for c in categories
+    ]))
+
+
 def advantage_ci(data, categories, n_boot, seed, alpha=0.05, cluster="utterance"):
     """
     Bootstrap the mean phase-minus-magnitude advantage over a set of categories,
@@ -180,49 +196,40 @@ def advantage_ci(data, categories, n_boot, seed, alpha=0.05, cluster="utterance"
     same synthesis system. Resampling slices would understate the uncertainty by
     roughly the square root of slices per utterance.
 
-    The cluster index is prepared once per category and each draw is a
-    vectorised gather. An earlier version rebuilt the utterance list and
-    boolean-scanned every row once per picked utterance inside the draw loop,
-    which on the eval run was about 29 million comparisons per category per
-    draw and turned a sub-minute analysis into one that ran past ten minutes.
+    ONE draw serves every category, which is a correction. This function used to
+    resample each category independently and average the results. One utterance
+    feeds all three categories, so independent draws discarded the dependence
+    they share and shrank the variance of their mean: every published LEVEL
+    interval was about 40 percent too narrow. The conclusions survive the
+    correction, the widths do not. See shared_cluster_draws in
+    src/phonophase/stats.py.
 
     `cluster` selects what gets resampled and therefore what the interval is a
     statement about. See cluster_groups in src/phonophase/stats.py.
     `utterance` is the registered setting and the default.
     """
-    rng = np.random.default_rng(seed)
     present = [c for c in categories if c in data and usable(data[c])]
     if not present:
         return None
 
-    prepared = {c: _cluster_index(data[c]["y"], cluster_groups(data[c], cluster))
-                for c in present}
+    y, groups, phase, magnitude, owner = pooled(data, present, cluster)
 
     draws = []
-    for _ in range(n_boot):
-        per_category = []
-        for cat in present:
-            d = data[cat]
-            idx = _cluster_draw(rng, prepared[cat])
-            if idx.size == 0 or np.unique(d["y"][idx]).size < 2:
-                continue
-            y = d["y"][idx]
-            per_category.append(
-                folded(y, d[PHASE][idx]) - folded(y, d[MAGNITUDE][idx])
-            )
-        if per_category:
-            draws.append(float(np.mean(per_category)))
+    for idx in shared_cluster_draws(y, groups, n_boot, seed):
+        if idx.size == 0:
+            continue
+        mean = draw_mean(idx, owner, y, phase, magnitude, range(len(present)))
+        if mean is not None:
+            draws.append(mean)
 
     if not draws:
         return None
 
-    observed = float(np.mean([
-        folded(data[c]["y"], data[c][PHASE]) - folded(data[c]["y"], data[c][MAGNITUDE])
-        for c in present
-    ]))
+    observed = observed_mean(data, present)
     lo, hi = np.percentile(draws, [100 * alpha / 2, 100 * (1 - alpha / 2)])
     return {"advantage": observed, "ci_low": float(lo), "ci_high": float(hi),
-            "categories": present, "excludes_zero": bool(lo > 0 or hi < 0)}
+            "categories": present, "excludes_zero": bool(lo > 0 or hi < 0),
+            "n_draws": len(draws)}
 
 
 def asymmetry_ci(data, n_boot, seed, alpha=0.05, cluster="utterance"):
@@ -233,59 +240,47 @@ def asymmetry_ci(data, n_boot, seed, alpha=0.05, cluster="utterance"):
     are easy to confuse and this project has already shipped two claims that
     confused them, so both are reported and neither is called "the effect".
 
-    The estimator is the one advantage_ci already uses, with both group means
-    taken from the same draw so the difference is a difference rather than two
-    separately reported numbers. Note that advantage_ci resamples each category
-    independently, so the two group means within a draw are independent too.
-    Sonorant and obstruent slices largely come from the same utterances, so the
-    real asymmetry interval is probably narrower than this one. Pairing them
-    would mean resampling utterances once across all six categories, which is a
-    different estimator from the registered one, so it is not done here.
+    Both group means come from ONE draw over all six categories, so the
+    difference is a difference rather than two separately reported numbers. That
+    matters in the opposite direction from the LEVEL: sonorant and obstruent
+    slices largely come from the same utterances, so whatever those utterances
+    contribute is common to both means and cancels here. Pairing therefore
+    TIGHTENS this interval where it WIDENS the LEVEL. An earlier version drew
+    each category independently and said in this docstring that the real
+    asymmetry interval was probably narrower than the one it reported; it was,
+    and this is the estimator that measures it.
 
     No verdict is computed from this. The falsification conditions are left
     exactly as docs/PREREGISTRATION.md states them.
     """
-    rng = np.random.default_rng(seed)
-    groups = []
+    sides = []
     for categories in (SONORANTS, OBSTRUENTS):
         present = [c for c in categories if c in data and usable(data[c])]
         if not present:
             return None
-        groups.append(present)
+        sides.append(present)
 
-    prepared = {c: _cluster_index(data[c]["y"], cluster_groups(data[c], cluster))
-                for c in groups[0] + groups[1]}
+    every = sides[0] + sides[1]
+    y, groups, phase, magnitude, owner = pooled(data, every, cluster)
+    sonorant_owners = range(len(sides[0]))
+    obstruent_owners = range(len(sides[0]), len(every))
 
     draws = []
-    for _ in range(n_boot):
-        means = []
-        for present in groups:
-            per_category = []
-            for cat in present:
-                d = data[cat]
-                idx = _cluster_draw(rng, prepared[cat])
-                if idx.size == 0 or np.unique(d["y"][idx]).size < 2:
-                    continue
-                y = d["y"][idx]
-                per_category.append(
-                    folded(y, d[PHASE][idx]) - folded(y, d[MAGNITUDE][idx])
-                )
-            means.append(float(np.mean(per_category)) if per_category else None)
-        if means[0] is not None and means[1] is not None:
-            draws.append(means[0] - means[1])
+    for idx in shared_cluster_draws(y, groups, n_boot, seed):
+        if idx.size == 0:
+            continue
+        son = draw_mean(idx, owner, y, phase, magnitude, sonorant_owners)
+        obs = draw_mean(idx, owner, y, phase, magnitude, obstruent_owners)
+        if son is not None and obs is not None:
+            draws.append(son - obs)
 
     if not draws:
         return None
 
-    observed = []
-    for present in groups:
-        observed.append(float(np.mean([
-            folded(data[c]["y"], data[c][PHASE]) - folded(data[c]["y"], data[c][MAGNITUDE])
-            for c in present
-        ])))
+    observed = observed_mean(data, sides[0]) - observed_mean(data, sides[1])
     lo, hi = np.percentile(draws, [100 * alpha / 2, 100 * (1 - alpha / 2)])
-    return {"asymmetry": observed[0] - observed[1], "ci_low": float(lo),
-            "ci_high": float(hi), "excludes_zero": bool(lo > 0 or hi < 0)}
+    return {"asymmetry": observed, "ci_low": float(lo), "ci_high": float(hi),
+            "excludes_zero": bool(lo > 0 or hi < 0), "n_draws": len(draws)}
 
 
 def run_by_language(args):
