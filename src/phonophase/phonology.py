@@ -33,6 +33,7 @@ Reference
 from __future__ import annotations
 
 import functools
+import re
 
 import numpy as np
 
@@ -43,9 +44,38 @@ FEATURE_NAMES = [
     "back", "round", "velaric", "tense", "long", "hitone", "hireg",
 ]
 
-# The espeak vocabulary carries entries that are not IPA at all, tone digits and
-# transcription artifacts among them. They are rejected rather than guessed at.
-_NON_IPA = {"<pad>", "<s>", "</s>", "<unk>", "??", "1", "2", "3", "4", "5"}
+# The espeak vocabulary carries entries that are not IPA at all. They are
+# rejected rather than guessed at. Bare digits are tone markers with no segment
+# attached, and parse_tone handles them, so they are not listed here.
+_NON_IPA = {"<pad>", "<s>", "</s>", "<unk>", "??"}
+
+# espeak writes lexical tone as a trailing digit, `a1`, `iɛ5`, `onɡ5`. Mandarin
+# uses 1 to 5, and other tonal languages in the vocabulary follow the same
+# convention.
+_TONE = re.compile(r"^(.*?)([1-9])$")
+
+
+def parse_tone(symbol: str):
+    """
+    Split a symbol into its segment and its lexical tone.
+
+    Returns (base, tone). `base` is None when the symbol is a bare tone marker
+    with no segment attached, which the vocabulary does contain, and inventing a
+    vowel for one would fabricate a segment that was never emitted.
+
+    Tone is returned separately rather than folded into the feature vector on
+    purpose. Tone is suprasegmental, while PanPhon's `hitone` and `hireg`
+    describe register on a segment. Writing one into the other would put two
+    different things in one dimension and make the cross linguistic comparison
+    this project exists to do meaningless.
+    """
+    if not symbol:
+        return None, None
+    match = _TONE.match(symbol)
+    if not match:
+        return symbol, None
+    base, tone = match.group(1), int(match.group(2))
+    return (base or None), tone
 
 
 @functools.lru_cache(maxsize=1)
@@ -62,11 +92,17 @@ def features(phone: str) -> tuple | None:
     Values are -1, 0 or +1 for minus, unspecified and plus. A multi segment
     string, which the aligner occasionally emits, is averaged across its
     segments so it still contributes rather than being dropped.
+
+    A trailing tone digit is stripped before parsing, so `a1` decodes to the
+    features of /a/. Read the tone itself with `parse_tone`.
     """
-    if not phone or phone in _NON_IPA or any(c.isdigit() for c in phone):
+    if not phone or phone in _NON_IPA:
+        return None
+    base, _ = parse_tone(phone)
+    if base is None or base in _NON_IPA:
         return None
     try:
-        vectors = _feature_table().word_to_vector_list(phone, numeric=True)
+        vectors = _feature_table().word_to_vector_list(base, numeric=True)
     except Exception:
         return None
     if not vectors:
@@ -101,13 +137,41 @@ def feature_matrix(phones) -> tuple[np.ndarray, list[str]]:
 
 
 def coverage(vocabulary) -> dict:
-    """Report how much of a phone inventory the feature mapping recovers."""
+    """
+    Report how much of a phone inventory the feature mapping recovers.
+
+    `partial` is the important and least obvious field. PanPhon silently drops
+    characters it does not recognise rather than failing, so a symbol can come
+    back with the features of its recognised prefix and nothing says so. `dZ`,
+    X-SAMPA for the affricate, decodes to a plain /d/. `aɪɚ` loses its rhotic.
+    Each entry is (symbol, what PanPhon actually consumed).
+
+    They are still counted as parsed, because deciding what to do with them
+    changes the contract of this module and affects results already published
+    from it. Making them visible is separate from deciding their fate, and only
+    the first is done here.
+    """
     phones = [p for p in vocabulary if p not in _NON_IPA and not p.startswith("<")]
     parsed = [p for p in phones if is_parseable(p)]
+
+    partial = []
+    table = _feature_table()
+    for phone in parsed:
+        base, _ = parse_tone(phone)
+        if base is None:
+            continue
+        try:
+            consumed = "".join(table.ipa_segs(base))
+        except Exception:
+            continue
+        if consumed != base:
+            partial.append((phone, consumed))
+
     return {
         "total": len(phones),
         "parsed": len(parsed),
         "unparsed": sorted(set(phones) - set(parsed)),
+        "partial": sorted(partial),
         "fraction": len(parsed) / len(phones) if phones else 0.0,
     }
 

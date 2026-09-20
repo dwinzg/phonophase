@@ -127,7 +127,12 @@ def test_cluster_weights_counts_multiplicities():
 def test_feature_columns_keep_row_alignment_and_flag_unparseable():
     # phonology.feature_matrix drops unparseable phones, which silently breaks
     # the correspondence with the slice rows. This must not.
-    phones = np.array(["m", "??", "s", "a1", "a"])
+    #
+    # The second unparseable entry was `a1` until 2026-09-19. Tone marked phones
+    # now decode to their base segment, so `a1` is the vowel /a/ carrying tone 1
+    # and parses. `5` is a bare tone marker with no segment attached and still
+    # does not, which keeps this test doing what it was written to do.
+    phones = np.array(["m", "??", "s", "5", "a"])
     matrix, parsed = feature_columns(phones)
 
     assert matrix.shape == (5, 24)
