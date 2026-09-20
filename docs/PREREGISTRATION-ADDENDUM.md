@@ -69,9 +69,32 @@ intervals it does print, `+0.048 [+0.039, +0.057]` and `-0.015 [-0.030, +0.001]`
 are marginal intervals on the two levels, and an interval on a difference does
 not follow from two marginal intervals.
 
-So the outcome recorded as **H1 SUPPORTED** rests on the four falsification
-conditions passing. The primary test, as worded, has not been run on eval under
-the registered clustering.
+### The fourth falsification condition is not the fourth falsification condition
+
+The registration lists four. The script implements three of them and substitutes
+a requirement taken from a different section of the document for the fourth.
+
+| # | registered falsification bullet | what the script checks |
+|---|---|---|
+| 1 | sonorant advantage interval includes zero | same, inverted. implemented |
+| 2 | the ordering reverses | same. implemented |
+| 3 | phase fails to clear chance in 2 of 3 sonorants | same. implemented |
+| 4 | **present on train A01 to A06 but absent on eval** | **200+ bonafide utterances per category** |
+
+The fourth registered condition is the one that would catch the effect being a
+property of six particular synthesis systems. It is **not implemented anywhere**.
+What sits in its place is the "Required sample size" requirement, which is a
+power precondition and not a falsification condition at all.
+
+The script's own decision logic agrees. `analyse_slices.py:466` reads
+`verdicts[:3]`, so it decides on three conditions and treats the fourth as a
+qualifier. The Outcome table nonetheless prints all four under the heading
+"Condition, fixed in advance".
+
+So the outcome recorded as **H1 SUPPORTED** rests on **three** falsification
+conditions passing, plus a power check. The primary test as worded has not been
+run on eval under the registered clustering, and the fourth registered condition
+has not been run at all.
 
 This is a statement about execution, not a retraction. The conclusion may well
 survive: the two marginal intervals do not overlap and the estimates are of
@@ -89,28 +112,75 @@ The registration fixes the resampling unit inside the primary test itself:
 registered procedure.** Any other resampling unit is a different analysis.
 
 The 2026-09-19 analysis that clusters the spoof side by synthesis system
-therefore sits outside the registration. It reports the ASYMMETRY surviving,
-+0.0630 [+0.0195, +0.0979], and the LEVEL not, [-0.0002, +0.0820]. Read through
-the registration those two results say SUPPORTED and REJECTED at once.
+therefore sits outside the registration.
 
-They do not, because neither is a registered result. The rule, stated here so it
-is not decided case by case afterwards:
+**Correction, 2026-09-19b.** An earlier revision of this document said that
+analysis reports the LEVEL spanning zero and therefore fires falsification
+condition 1, putting the registration in direct contradiction with itself. That
+was written from a single run of an ad hoc script at 600 draws. It is wrong, and
+the reason is worth more than the correction.
+
+Two implementations of the same registered quantity disagreed. Re-deriving both
+independently at 2,000 draws shows why: they differ in **what a bootstrap draw
+resamples**, not in arithmetic.
+
+`analyse_slices.py:advantage_ci` prepares a cluster index **per category** and
+draws each category independently. The registered LEVEL is the mean of three
+per-category advantages, and one source utterance contributes slices to all
+three. Drawing them independently discards that shared dependence and shrinks
+the variance of their mean. `sonority_voicing.py` does the opposite by explicit
+design: "One sequence of utterance resamples serves every cell and every
+contrast." The two paths have never been reconciled.
+
+Measured, seg=run, 2,000 draws, on `results/eval_slices.csv.gz`:
+
+| quantity | clustering | draw | 95% interval | width |
+|---|---|---|---|---|
+| LEVEL | utterance | per category, as registered | [+0.0388, +0.0574] | 0.0186 |
+| LEVEL | utterance | one shared draw | [+0.0348, +0.0613] | **0.0265** |
+| LEVEL | system | per category, as registered | [+0.0162, +0.0726] | 0.0564 |
+| LEVEL | system | one shared draw | [+0.0007, +0.0852] | **0.0845** |
+| ASYMMETRY | utterance | per category | [+0.0453, +0.0805] | 0.0352 |
+| ASYMMETRY | utterance | one shared draw | [+0.0456, +0.0813] | 0.0357 |
+| ASYMMETRY | system | per category | [+0.0200, +0.0982] | 0.0783 |
+| ASYMMETRY | system | one shared draw | [+0.0204, +0.1023] | 0.0819 |
+
+Three things follow, and they matter more than the correction that produced them.
+
+**The registered LEVEL interval is about 40 percent too narrow.** The published
++0.048 [+0.039, +0.057] should be nearer [+0.035, +0.061]. It still excludes
+zero, comfortably, so this is a correction and not a retraction.
+
+**The ASYMMETRY does not care.** Its interval moves by 0.0005 to 0.004 between
+the two draw designs, because the shared draw widens the two group estimates and
+pairs them at the same time, and the two effects cancel. **The quantity H1
+actually asserts is the robust one.** The fragile quantity is the one the
+registration's falsification condition 1 happens to name.
+
+**Falsification condition 1 does not fire, and does not clearly pass either.**
+Under system clustering with the shared draw the LEVEL lower bound is +0.0007 at
+2,000 draws and -0.0002 at 600. The bootstrap cannot resolve which side of zero
+it sits on. This project's own rule applies to its own registration:
+**undecided is not rejected**. The honest statement is that the level is
+unresolved at 13 clusters, not that it fails.
+
+None of this is a registered result, because the registration fixes clustering
+by source utterance. The rule, stated here so it is not decided case by case
+afterwards:
 
 **A robustness analysis outside the registration cannot trigger a registered
 falsification condition, and cannot satisfy the registered primary test
 either.** It bounds the scope of a confirmed claim. It does not adjudicate it.
 
-The symmetry is the point and it cuts against the project's current summary.
-Citing the system clustered ASYMMETRY as evidence that "H1 still stands" while
-declining the system clustered LEVEL that would reject under falsification 1 is
-selection after the fact, standing question 9. Either both are reported or
-neither is. The honest form is:
+The symmetry is the point. Either both quantities are reported or neither is.
+The honest form is:
 
-> Under the registered utterance clustering, H1's falsification conditions all
-> pass. A post hoc analysis that resamples the 13 synthesis systems instead
-> widens every interval; under it the asymmetry remains clear of zero and the
-> sonorant level does not. That analysis is not registered and is reported as a
-> scope bound, not as a confirmation.
+> Under the registered utterance clustering, the three implemented falsification
+> conditions pass. A post hoc analysis that resamples the 13 synthesis systems
+> instead widens every interval; under it the asymmetry remains clear of zero at
+> +0.063 [+0.020, +0.102], while the sonorant level becomes unresolved, sitting
+> on zero at [+0.001, +0.085]. That analysis is not registered and is reported
+> as a scope bound, not as a confirmation.
 
 ## 5. What the registered result licenses, and what it does not
 
@@ -140,8 +210,15 @@ written down afterwards, which is the entire reason registrations exist.
 ## 7. Consequent actions
 
 1. Compute the ASYMMETRY interval under registered utterance clustering and add
-   it to the outcome record, so the primary test as worded has a result.
-2. Report the system clustered LEVEL wherever the system clustered ASYMMETRY is
+   it to the outcome record, so the primary test as worded has a result. Done in
+   `task/T15-preregistered-clustering`: **+0.063 [+0.045, +0.081]**, which
+   satisfies the primary test as written.
+2. Reconcile the two bootstrap draw designs, and re-issue every published
+   interval on a multi-category advantage. The conclusions survive; the widths
+   do not.
+3. Implement the fourth registered falsification condition, or state in the
+   outcome record that it was not run.
+4. Report the system clustered LEVEL wherever the system clustered ASYMMETRY is
    reported.
-3. Correct the session summary in the project log, which states the system
+5. Correct the session summary in the project log, which states the system
    clustered asymmetry as "H1 still stands" without the level beside it.
