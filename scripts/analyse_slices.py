@@ -10,14 +10,16 @@ which has already happened twice in this project.
 Runs locally in seconds on the downloaded CSV. No GPU, no corpus.
 
 Usage
-    python scripts/analyse_slices.py --table results/eval_slices.csv
-    python scripts/analyse_slices.py --table results/eval_slices.csv --seg window
+    python scripts/analyse_slices.py --table results/eval_slices.csv.gz
+    python scripts/analyse_slices.py --table results/eval_slices.csv.gz --seg window
+    python scripts/analyse_slices.py --table results/eval_slices.csv.gz --cluster system
 """
 
 from __future__ import annotations
 
 import argparse
 import csv
+import gzip
 import os
 import sys
 from collections import defaultdict
@@ -28,7 +30,8 @@ from sklearn.metrics import roc_auc_score  # noqa: F401
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "src"))
 
 from phonophase.stats import (  # noqa: E402
-    _cluster_draw, _cluster_index, benjamini_hochberg, bootstrap_auc_ci, fast_auc,
+    _cluster_draw, _cluster_index, benjamini_hochberg, bootstrap_auc_ci,
+    cluster_groups, fast_auc,
 )
 
 SONORANTS = ["NASALS", "APPROXIMANTS", "VOWELS_STEADY"]
@@ -38,18 +41,113 @@ PHASE = "mgd_hf_std"
 MAGNITUDE = "mfcc_frame_spread"
 
 
+def open_table(path):
+    """
+    Open the slice table, decompressing gzip transparently.
+
+    The only table artifact in the repository is results/eval_slices.csv.gz and
+    the documented command pointed at a plain .csv that is not there, so the
+    pre-registered analysis crashed on the gzip magic bytes with
+    UnicodeDecodeError before reading a single row.
+
+    The format is decided by those magic bytes rather than by the suffix. A
+    table is often renamed on the way out of a notebook or a bundle, and the
+    bytes are what the reader actually has to cope with.
+    """
+    with open(path, "rb") as fh:
+        magic = fh.read(2)
+    opener = gzip.open if magic == b"\x1f\x8b" else open
+    return opener(path, "rt", newline="")
+
+
+# A bonafide row carries no attack, and the spellings below are the ones the
+# registered corpora use. Kept identical to BONAFIDE_MARKERS in
+# scripts/sonority_voicing.py, which test_analyse_slices.py pins.
+BONAFIDE_MARKERS = {"-", "", "bonafide", "none", "nan", "real"}
+
+
+def bonafide_label(labels, attacks):
+    """
+    Which value of the label column means bonafide, read from the attack column.
+
+    In the ASVspoof tables label 1 is spoof and bonafide rows carry attack '-'.
+    Getting this backwards would make cluster_groups put genuine speech into one
+    attack shaped group and spread the spoof side over utterances, which is
+    silently wrong rather than loudly wrong, so it is read from the data and
+    cross checked rather than assumed.
+
+    Returns None when there is no attack column, or when the attack column and
+    the label column disagree. The utterance clustered default never consults
+    the answer, so a table without an attack column still analyses; system
+    clustering refuses to run instead of guessing.
+    """
+    y = np.asarray(labels)
+    attack = np.asarray(attacks)
+    if attack.size != y.size or y.size == 0:
+        return None
+
+    marked = np.isin(np.char.lower(attack.astype(str)), sorted(BONAFIDE_MARKERS))
+    if not marked.any() or marked.all():
+        return None
+
+    seen = np.unique(y[marked])
+    if seen.size != 1:
+        return None
+    label = int(seen[0])
+    if bool((y[~marked] == label).any()):
+        return None
+    return label
+
+
 def load(path, seg):
-    rows = defaultdict(lambda: {"y": [], "u": [], PHASE: [], MAGNITUDE: []})
-    with open(path, newline="") as fh:
+    rows = defaultdict(lambda: {"y": [], "u": [], "attack": [], PHASE: [], MAGNITUDE: []})
+    with open_table(path) as fh:
         for r in csv.DictReader(fh):
             if r["seg"] != seg:
                 continue
             d = rows[r["category"]]
             d["y"].append(int(r["label"]))
             d["u"].append(r["utterance_id"])
+            d["attack"].append(r.get("attack", ""))
             d[PHASE].append(float(r[PHASE]))
             d[MAGNITUDE].append(float(r[MAGNITUDE]))
-    return {k: {n: np.asarray(v) for n, v in d.items()} for k, d in rows.items()}
+    data = {k: {n: np.asarray(v) for n, v in d.items()} for k, d in rows.items()}
+    return with_bonafide_label(data)
+
+
+def with_bonafide_label(data):
+    """
+    Attach the bonafide label, read once over the whole table.
+
+    Read over every category rather than per category, because a category
+    holding one class alone cannot answer the question and would otherwise get
+    None while its neighbours got 0.
+    """
+    if not data:
+        return data
+    labels = np.concatenate([d["y"] for d in data.values()])
+    attacks = np.concatenate([d["attack"] for d in data.values()])
+    answer = bonafide_label(labels, attacks)
+    return {k: {**d, "bonafide_label": answer} for k, d in data.items()}
+
+
+def require_cluster(data, cluster):
+    """
+    Refuse system clustering on a table whose bonafide rows cannot be located.
+
+    Falling back to utterance clustering here would report a narrow interval
+    under a heading that says system, which is the kind of quiet substitution
+    this project has already shipped twice.
+    """
+    if cluster != "system":
+        return
+    if any(d.get("bonafide_label") is None for d in data.values()):
+        raise SystemExit(
+            "--cluster system needs an attack column that agrees with the label "
+            "column, so bonafide rows can be told from spoofed ones. This table "
+            "does not have one. Use --cluster utterance, which is what "
+            "docs/PREREGISTRATION.md specifies in any case."
+        )
 
 
 def folded(y, v):
@@ -73,7 +171,7 @@ def usable(d) -> bool:
     return True
 
 
-def advantage_ci(data, categories, n_boot, seed, alpha=0.05):
+def advantage_ci(data, categories, n_boot, seed, alpha=0.05, cluster="utterance"):
     """
     Bootstrap the mean phase-minus-magnitude advantage over a set of categories,
     resampling SOURCE UTTERANCES rather than slices.
@@ -87,13 +185,18 @@ def advantage_ci(data, categories, n_boot, seed, alpha=0.05):
     boolean-scanned every row once per picked utterance inside the draw loop,
     which on the eval run was about 29 million comparisons per category per
     draw and turned a sub-minute analysis into one that ran past ten minutes.
+
+    `cluster` selects what gets resampled and therefore what the interval is a
+    statement about. See cluster_groups in src/phonophase/stats.py.
+    `utterance` is the registered setting and the default.
     """
     rng = np.random.default_rng(seed)
     present = [c for c in categories if c in data and usable(data[c])]
     if not present:
         return None
 
-    prepared = {c: _cluster_index(data[c]["y"], data[c]["u"]) for c in present}
+    prepared = {c: _cluster_index(data[c]["y"], cluster_groups(data[c], cluster))
+                for c in present}
 
     draws = []
     for _ in range(n_boot):
@@ -122,6 +225,69 @@ def advantage_ci(data, categories, n_boot, seed, alpha=0.05):
             "categories": present, "excludes_zero": bool(lo > 0 or hi < 0)}
 
 
+def asymmetry_ci(data, n_boot, seed, alpha=0.05, cluster="utterance"):
+    """
+    Bootstrap the ASYMMETRY: sonorant advantage minus obstruent advantage.
+
+    Distinct from the LEVEL, which is the sonorant advantage on its own. The two
+    are easy to confuse and this project has already shipped two claims that
+    confused them, so both are reported and neither is called "the effect".
+
+    The estimator is the one advantage_ci already uses, with both group means
+    taken from the same draw so the difference is a difference rather than two
+    separately reported numbers. Note that advantage_ci resamples each category
+    independently, so the two group means within a draw are independent too.
+    Sonorant and obstruent slices largely come from the same utterances, so the
+    real asymmetry interval is probably narrower than this one. Pairing them
+    would mean resampling utterances once across all six categories, which is a
+    different estimator from the registered one, so it is not done here.
+
+    No verdict is computed from this. The falsification conditions are left
+    exactly as docs/PREREGISTRATION.md states them.
+    """
+    rng = np.random.default_rng(seed)
+    groups = []
+    for categories in (SONORANTS, OBSTRUENTS):
+        present = [c for c in categories if c in data and usable(data[c])]
+        if not present:
+            return None
+        groups.append(present)
+
+    prepared = {c: _cluster_index(data[c]["y"], cluster_groups(data[c], cluster))
+                for c in groups[0] + groups[1]}
+
+    draws = []
+    for _ in range(n_boot):
+        means = []
+        for present in groups:
+            per_category = []
+            for cat in present:
+                d = data[cat]
+                idx = _cluster_draw(rng, prepared[cat])
+                if idx.size == 0 or np.unique(d["y"][idx]).size < 2:
+                    continue
+                y = d["y"][idx]
+                per_category.append(
+                    folded(y, d[PHASE][idx]) - folded(y, d[MAGNITUDE][idx])
+                )
+            means.append(float(np.mean(per_category)) if per_category else None)
+        if means[0] is not None and means[1] is not None:
+            draws.append(means[0] - means[1])
+
+    if not draws:
+        return None
+
+    observed = []
+    for present in groups:
+        observed.append(float(np.mean([
+            folded(data[c]["y"], data[c][PHASE]) - folded(data[c]["y"], data[c][MAGNITUDE])
+            for c in present
+        ])))
+    lo, hi = np.percentile(draws, [100 * alpha / 2, 100 * (1 - alpha / 2)])
+    return {"asymmetry": observed[0] - observed[1], "ci_low": float(lo),
+            "ci_high": float(hi), "excludes_zero": bool(lo > 0 or hi < 0)}
+
+
 def run_by_language(args):
     """
     H2. The same pre-registered test, once per language.
@@ -132,31 +298,35 @@ def run_by_language(args):
     cheaply.
     """
     languages = set()
-    with open(args.table, newline="") as fh:
+    with open_table(args.table) as fh:
         for r in csv.DictReader(fh):
             if r["seg"] == args.seg:
                 languages.add(r.get("language", "-"))
 
-    print(f"H2, per language. table {args.table}, segmentation {args.seg}")
+    print(f"H2, per language. table {args.table}, segmentation {args.seg}, "
+          f"clustered by {args.cluster}")
     print(f"languages: {', '.join(sorted(languages))}\n")
     print(f"{'LANGUAGE':<12} {'SONORANT ADV':>14} {'95% CI':>20} {'OBSTRUENT ADV':>15}  VERDICT")
     print("-" * 78)
 
     for lang in sorted(languages):
-        rows = defaultdict(lambda: {"y": [], "u": [], PHASE: [], MAGNITUDE: []})
-        with open(args.table, newline="") as fh:
+        rows = defaultdict(lambda: {"y": [], "u": [], "attack": [], PHASE: [], MAGNITUDE: []})
+        with open_table(args.table) as fh:
             for r in csv.DictReader(fh):
                 if r["seg"] != args.seg or r.get("language", "-") != lang:
                     continue
                 d = rows[r["category"]]
                 d["y"].append(int(r["label"]))
                 d["u"].append(r["utterance_id"])
+                d["attack"].append(r.get("attack", ""))
                 d[PHASE].append(float(r[PHASE]))
                 d[MAGNITUDE].append(float(r[MAGNITUDE]))
-        data = {k: {n: np.asarray(v) for n, v in d.items()} for k, d in rows.items()}
+        data = with_bonafide_label(
+            {k: {n: np.asarray(v) for n, v in d.items()} for k, d in rows.items()})
+        require_cluster(data, args.cluster)
 
-        son = advantage_ci(data, SONORANTS, args.n_boot, args.seed)
-        obs = advantage_ci(data, OBSTRUENTS, args.n_boot, args.seed + 1)
+        son = advantage_ci(data, SONORANTS, args.n_boot, args.seed, cluster=args.cluster)
+        obs = advantage_ci(data, OBSTRUENTS, args.n_boot, args.seed + 1, cluster=args.cluster)
         if son is None:
             print(f"{lang:<12} {'too few':>14}")
             continue
@@ -178,6 +348,12 @@ def main():
     ap.add_argument("--seg", default="run", choices=["run", "window"])
     ap.add_argument("--n-boot", type=int, default=2000)
     ap.add_argument("--seed", type=int, default=0)
+    ap.add_argument("--cluster", default="utterance", choices=["utterance", "system"],
+                    help="what the bootstrap resamples. 'utterance' is the "
+                         "registered setting and makes the interval a statement "
+                         "about more utterances from the same 13 synthesis "
+                         "systems. 'system' clusters the spoof side by attack, "
+                         "making it a statement about systems we have not seen")
     ap.add_argument("--by-language", action="store_true",
                     help="run the same test separately per language. This is "
                          "the H2 cross lingual test. If the effect is "
@@ -191,6 +367,7 @@ def main():
     data = load(args.table, args.seg)
     if not data:
         raise SystemExit(f"no rows with seg={args.seg} in {args.table}")
+    require_cluster(data, args.cluster)
 
     print(f"table {args.table}, segmentation {args.seg}\n")
     print(f"{'CATEGORY':<16} {'SLICES':>12} {'UTTERANCES':>12} {'PHASE SEP':>10} {'95% CI':>16}")
@@ -206,7 +383,7 @@ def main():
             print(f"{cat:<16} {f'{n_b}/{n_s}':>12} {f'{u_b}/{u_s}':>12}   too few")
             continue
         r = bootstrap_auc_ci(d["y"], d[PHASE], n_boot=args.n_boot,
-                             seed=args.seed, groups=d["u"])
+                             seed=args.seed, groups=cluster_groups(d, args.cluster))
         sep = max(r["auc"], 1 - r["auc"])
         lo, hi = ((r["ci_low"], r["ci_high"]) if r["auc"] >= 0.5
                   else (1 - r["ci_high"], 1 - r["ci_low"]))
@@ -216,8 +393,9 @@ def main():
         print(f"{cat:<16} {f'{n_b}/{n_s}':>12} {f'{u_b}/{u_s}':>12} "
               f"{sep:>10.3f} {'[%.3f, %.3f]' % (lo, hi):>16}")
 
-    son = advantage_ci(data, SONORANTS, args.n_boot, args.seed)
-    obs = advantage_ci(data, OBSTRUENTS, args.n_boot, args.seed + 1)
+    son = advantage_ci(data, SONORANTS, args.n_boot, args.seed, cluster=args.cluster)
+    obs = advantage_ci(data, OBSTRUENTS, args.n_boot, args.seed + 1, cluster=args.cluster)
+    asym = asymmetry_ci(data, args.n_boot, args.seed, cluster=args.cluster)
 
     print("\n" + "=" * 70)
     print("PRE-REGISTERED TEST, docs/PREREGISTRATION.md")
@@ -229,6 +407,15 @@ def main():
         print(f"  {name:<12} advantage {r['advantage']:+.3f} "
               f"[{r['ci_low']:+.3f}, {r['ci_high']:+.3f}]  "
               f"over {', '.join(r['categories'])}")
+
+    # The LEVEL is the sonorant advantage above. The ASYMMETRY is the difference
+    # between the two, which is the quantity H1 is about. Reported side by side
+    # because confusing them is the failure this project has already shipped
+    # twice. No falsification condition is computed from the line below.
+    if asym is not None:
+        print(f"  {'asymmetry':<12} sonorant minus obstruent {asym['asymmetry']:+.3f} "
+              f"[{asym['ci_low']:+.3f}, {asym['ci_high']:+.3f}]")
+    print(f"  {'clustered by':<12} {args.cluster}")
 
     print("\nFalsification conditions, stated in advance:")
     verdicts = []

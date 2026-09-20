@@ -12,6 +12,8 @@ Why this file exists
     package, so other people can lift it.
 
 What each piece answers
+    cluster_groups          which unit the bootstrap resamples, and so what
+                            the interval is a statement about
     bootstrap_auc_ci        how uncertain is this AUC
     permutation_test_auc    could this separation have arisen by chance
     paired_bootstrap_delta  is A genuinely better than B on the same samples
@@ -262,6 +264,35 @@ def paired_bootstrap_delta(
         # statistic beat the other on these samples.
         "significant": bool(lo > 0 or hi < 0),
     }
+
+
+def cluster_groups(data, cluster="utterance"):
+    """
+    The grouping the bootstrap resamples, and therefore what its interval means.
+
+    `utterance` resamples source utterances on both sides. The interval is then
+    a statement about more utterances drawn from the same synthesis systems.
+
+    `system` keeps bonafide clustered by utterance, since genuine speech has no
+    synthesis system, and clusters the spoof side by **attack**. The eval
+    partition's 1,495 spoof utterances come from 13 systems at 115 utterances
+    each, so under this option the effective sample size on the spoof side is
+    13, not 1,495. The interval is then a statement about speech synthesised by
+    systems we have not seen, which is what a claim about articulation needs.
+
+    Which is correct depends on the claim, not on taste, so both are reported.
+    `docs/PREREGISTRATION.md` specifies clustering by source utterance
+    throughout, so `utterance` stays the default and the registered result is
+    the one it produces.
+    """
+    if cluster not in ("utterance", "system"):
+        raise ValueError(f"cluster must be 'utterance' or 'system', got {cluster!r}")
+    utterances = np.asarray(data["u"])
+    if cluster == "utterance":
+        return utterances
+    attack = np.asarray(data["attack"])
+    is_bona = np.asarray(data["y"]) == data["bonafide_label"]
+    return np.where(is_bona, utterances, attack)
 
 
 def benjamini_hochberg(p_values, alpha: float = 0.05) -> dict:
