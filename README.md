@@ -33,8 +33,16 @@ from spoofed speech more strongly in sonorants than in obstruents.**
 | PLOSIVES | 0.511 | [0.499, 0.522] |
 
 Sonorant advantage **+0.048 [+0.039, +0.057]** against obstruent −0.015. All
-four falsification conditions passed at 6 to 7 times the required power, and the
-result is identical to within 0.002 on both segmentations.
+four falsification conditions passed at 6 to 7 times the required power.
+
+The result agrees to within 0.002 on both segmentations, which is worth less
+than it sounds and is stated here rather than left to look impressive. The two
+segmentations are largely the same data. 73 percent of slices are numerically
+identical between them, the statistics correlate at 0.988, and 89 percent of
+`seg=run` slices are a single frame, because CTC argmax is peaky and the slicer
+has a 60 ms floor. Their agreement rules out a coding difference between the two
+paths. It does not show the finding survives a different way of cutting the
+audio, and forced alignment would be the test that does.
 
 There is a physical account. Sonorants are voiced and periodic and carry
 coherent harmonic phase that a vocoder must reconstruct. Obstruents are
@@ -46,10 +54,40 @@ structure for an artifact to disturb.
 **It is small.** Separation runs 0.51 to 0.60. This locates phase information,
 it does not detect anything.
 
-**It is heterogeneous across attacks.** Scored per attack, the sonorant
-advantage holds in **8 of 13**, from +0.183 on A14 to −0.109 on A08, reversing
-on A08, A13, A16 and A19. A tendency across synthesis systems, not a property of
-all of them, and the exceptions are more interesting than the average.
+**Per attack, this data mostly cannot decide.** Scored per attack with
+`scripts/attack_analysis.py`, with intervals and FDR correction across the
+thirteen, the asymmetry that H1 states is
+
+| | count | attacks |
+|---|---|---|
+| clear and positive | 4 | A08, A09, A14, A17 |
+| clear and negative, a reversal | 1 | A19, and only just, q = 0.047 |
+| undecided | 8 | A07, A10, A11, A12, A13, A15, A16, A18 |
+
+Undecided is not a reversal. Each attack contributes about 230 utterances, so
+most per attack intervals are simply too wide to rank. The pooled result above
+is strong because it pools.
+
+The decided set is not stable either. On `seg=window` the same procedure gives
+seven clear positive rather than four, because A07, A10 and A13 sit close to the
+decision boundary and cross it. What holds on both segmentations is the core:
+A08, A09, A14 and A17 clear positive, A19 the only clear negative, A16 and A18
+undecided. Anything finer than that is being read off noise.
+
+**An earlier version of this section reported the effect as reversing on four
+attacks, and a later one as holding on twelve of thirteen. Both were counting
+the sign of a point estimate, and neither is a result.** The four came from a
+different quantity, whether phase beats magnitude in sonorants at all, which H1
+does not claim: A08 and A13 are negative on that and clearly positive on the
+asymmetry, meaning phase loses to magnitude everywhere on those attacks and
+loses less in sonorants. The twelve came from counting uncorrected signs, which
+is the same error in the opposite direction.
+
+The count of reversals is not even stable under the definition. Averaging the
+per category advantages, as the pre-registration specifies, one attack is
+negative. Pooling the slices instead, three are, because A16 and A18 sit within
+0.0005 of zero and change side. `scripts/attack_analysis.py` prints both, for
+exactly this reason.
 
 **One language.** Whether it holds elsewhere is the open question.
 
