@@ -482,13 +482,17 @@ def test_voiced_obstruents_leading_is_reported_as_the_surprise_it_would_be():
     assert r["surprise"] is True
 
 
-def _result(ab, bc, ac, usable=True):
+def _result(ab, bc, ac, usable=True, steps=None):
     """
     A result dict with the contrasts set by hand.
 
     The decision rule is tested directly here rather than through a sampled
     dataset, so a rule change is caught by a deterministic test instead of by
     an effect size that happens to land on one side of a threshold.
+
+    `steps` is the interval on (A-B) minus (B-C), the quantity that says whether
+    the two ladder steps differ from each other at all. None means the analysis
+    did not produce it, which is what a table with an unusable ladder gives.
     """
     def contrast(lo, hi):
         return {"delta": (lo + hi) / 2, "ci_low": lo, "ci_high": hi,
@@ -497,10 +501,97 @@ def _result(ab, bc, ac, usable=True):
 
     cell = {"usable": usable, "n_utterances_bonafide": 100, "n_utterances_spoof": 100,
             "n_slices": 400, "why_unusable": None}
-    return {
+    out = {
         "cells": {SON_VOI: dict(cell), OBS_VOI: dict(cell), OBS_UNVOI: dict(cell)},
         "contrasts": {"A-B": contrast(*ab), "B-C": contrast(*bc), "A-C": contrast(*ac)},
+        "step_difference": None,
     }
+    if steps is not None:
+        lo, hi = steps
+        out["step_difference"] = {
+            "delta": (lo + hi) / 2, "ci_low": lo, "ci_high": hi,
+            "p": 0.001 if (lo > 0 or hi < 0) else 0.9,
+            "clear": lo > 0 or hi < 0,
+        }
+    return out
+
+
+# --------------------------------------------------------------------------
+# naming a factor requires the two steps to differ, not one of them to fail
+# --------------------------------------------------------------------------
+
+def test_one_step_clearing_alone_does_not_name_a_factor():
+    """
+    The pattern the eval table actually shows under system clustering. B-C
+    clears, A-B does not, and the two steps are not distinguishable from each
+    other.
+
+    The steps were +0.0282 and +0.0319, a ratio of 0.88, while their standard
+    errors differed by a factor of 1.85 and their difference was -0.0037 with p
+    about 0.9. Under utterance clustering both cleared and the reading was
+    graded; under system clustering only one cleared and the reading became
+    voicing, on identical point estimates. So the label was decided by power
+    alone, which is a failure to reject dressed as acceptance of a null.
+    """
+    r = verdict(_result(ab=(-0.014, 0.065), bc=(0.010, 0.053), ac=(0.020, 0.090),
+                        steps=(-0.050, 0.045)))
+
+    assert r["reading"] != "voicing", (
+        "one step failing to clear is not evidence that the other is the factor"
+    )
+    assert r["reading"] == "steps-indistinguishable"
+    assert "power" in r["why"].lower()
+
+
+def test_a_factor_is_named_when_the_two_steps_genuinely_differ():
+    """
+    The rule must still be able to name voicing. A real voicing pattern has A
+    level with B and both far above C, so the step difference is clearly
+    negative rather than merely unproven.
+    """
+    r = verdict(_result(ab=(-0.010, 0.012), bc=(0.030, 0.070), ac=(0.030, 0.080),
+                        steps=(-0.070, -0.020)))
+
+    assert r["reading"] == "voicing"
+
+
+def test_sonority_is_named_on_the_mirror_image_and_not_otherwise():
+    named = verdict(_result(ab=(0.030, 0.070), bc=(-0.010, 0.012), ac=(0.030, 0.080),
+                            steps=(0.020, 0.070)))
+    assert named["reading"] == "sonority"
+
+    unnamed = verdict(_result(ab=(0.010, 0.053), bc=(-0.014, 0.065), ac=(0.020, 0.090),
+                              steps=(-0.045, 0.050)))
+    assert unnamed["reading"] == "steps-indistinguishable"
+
+
+def test_a_missing_step_difference_cannot_license_a_label():
+    """
+    If the analysis did not produce the step difference, no factor is named. The
+    absence of a check is not the check passing.
+    """
+    r = verdict(_result(ab=(-0.014, 0.065), bc=(0.010, 0.053), ac=(0.020, 0.090)))
+    assert r["reading"] == "steps-indistinguishable"
+
+
+def test_the_step_difference_comes_out_of_the_same_draws_as_the_steps():
+    """
+    (A-B) minus (B-C) has to be computed inside the shared draw, or its interval
+    would not carry the correlation between the two steps, which is the whole
+    reason a paired bootstrap is used here.
+    """
+    data = _dataset({SON_VOI: 2.2, OBS_VOI: 1.1, OBS_UNVOI: 0.0}, n_utt=200, seed=7)
+    result = analyse(data, n_boot=BOOT, seed=0)
+
+    step = result["step_difference"]
+    ab = result["contrasts"]["A-B"]["delta"]
+    bc = result["contrasts"]["B-C"]["delta"]
+
+    assert step is not None
+    assert abs(step["delta"] - (ab - bc)) < 1e-12, (
+        "the point estimate must be the difference of the two step estimates"
+    )
+    assert step["ci_low"] < step["delta"] < step["ci_high"]
 
 
 def test_an_ordered_ladder_whose_steps_are_individually_undetermined_is_not_called_flat():
