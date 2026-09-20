@@ -101,8 +101,13 @@ sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."
 
 from phonophase.phonology import FEATURE_NAMES, features  # noqa: E402
 from phonophase.stats import (  # noqa: E402
-    _cluster_draw, _cluster_index, benjamini_hochberg, cluster_groups, fast_auc,
+    BONAFIDE_MARKERS, benjamini_hochberg, cluster_groups, fast_auc,
+    require_bonafide_label, shared_cluster_draws,
 )
+
+# Re-exported so the tests can assert there is one definition of each rather
+# than a copy per script, which is what they were.
+__all__ = ["BONAFIDE_MARKERS", "cluster_groups", "shared_cluster_draws"]
 
 PHASE = "mgd_hf_std"
 
@@ -166,47 +171,16 @@ def assign_cells(phones):
 # A bonafide row carries no attack. Which symbol marks that varies by corpus,
 # so every spelling seen in the registered corpora is accepted and anything else
 # is treated as an attack.
-BONAFIDE_MARKERS = {"-", "", "bonafide", "none", "nan", "real"}
-
-
 def bonafide_label(data) -> int:
     """
-    Which value of the label column means bonafide, read from the attack column.
+    Which label means bonafide, read from the attack column and refused if the
+    table cannot answer.
 
-    In the ASVspoof tables label 1 is SPOOF and bonafide rows carry attack '-'.
-    Assuming the other convention inverts every direction in the output while
-    leaving every magnitude correct, which is an error that survives review.
-    This project has already shipped one inverted hypothesis, so the convention
-    is read from the data and cross checked rather than assumed.
+    This analysis cannot run without knowing the direction, so it refuses rather
+    than guessing. The reading itself lives in src/phonophase/stats.py, because a
+    second copy here had already drifted to a different failure behaviour.
     """
-    y = np.asarray(data["y"])
-    attack = np.asarray(data.get("attack") if data.get("attack") is not None else [])
-    if attack.size != y.size:
-        raise ValueError(
-            "cannot tell which label is bonafide without an attack column of the "
-            "same length as the labels"
-        )
-
-    marked = np.isin(np.char.lower(attack.astype(str)), sorted(BONAFIDE_MARKERS))
-    if not marked.any() or marked.all():
-        raise ValueError(
-            "the attack column marks either no rows or every row as bonafide, so "
-            "the bonafide label cannot be read from it"
-        )
-
-    labels = np.unique(y[marked])
-    if labels.size != 1:
-        raise ValueError(
-            f"attack column and label column disagree: rows with no attack carry "
-            f"labels {labels.tolist()}"
-        )
-    label = int(labels[0])
-    if bool((y[~marked] == label).any()):
-        raise ValueError(
-            f"attack column and label column disagree: attacked rows also carry "
-            f"label {label}, which the bonafide rows carry"
-        )
-    return label
+    return require_bonafide_label(data["y"], data.get("attack"))
 
 
 def drop_quietest(data, fraction: float):
@@ -455,14 +429,11 @@ def analyse(data, n_boot=2000, seed=0, alpha=0.05,
     cells = {c: describe_cell(data, masks[c], min_slices, min_utterances) for c in CELLS}
 
     usable = [c for c in CELLS if cells[c]["usable"]]
-    rng = np.random.default_rng(seed)
-    clusters = _cluster_index(y, cluster_groups(data, cluster))
-
     folded_draws = {c: np.full(n_boot, np.nan) for c in CELLS}
     direct_draws = {c: np.full(n_boot, np.nan) for c in CELLS}
 
-    for b in range(n_boot):
-        idx = _cluster_draw(rng, clusters)
+    draws = shared_cluster_draws(y, cluster_groups(data, cluster), n_boot, seed)
+    for b, idx in enumerate(draws):
         if idx.size == 0:
             continue
         for c in usable:
