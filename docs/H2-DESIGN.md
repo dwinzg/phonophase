@@ -1,7 +1,17 @@
 # H2 design, the cross linguistic test
 
-Draft 2026-09-18, before any data is pulled. Not yet a pre-registration. That
-gets written once the design is settled and before the run.
+Draft 2026-09-18, revised 2026-09-19. Not yet a pre-registration. That gets
+written once the design is settled and before the run.
+
+**Three things changed in the revision and each one weakens a claim this
+document previously made.** The speaker diversity control does not exist,
+because Spanish has 3 real speakers and not the 21 an unverified source
+reported. The griffin_lim positive control is contradicted by ASVspoof's own
+Griffin-Lim system. And the crossed sonority against voicing test cannot travel
+to these languages, because none of them has phonemic voiceless sonorants.
+
+None of that blocks H2. All of it would have been discovered after the run
+rather than before it.
 
 ## What H2 asks
 
@@ -66,8 +76,10 @@ directories, French 42, Polish 21.
 The 18 span a wide range of eras, from classical Griffin-Lim through GAN era
 bark and xtts to recent LLM based TTS such as MOSS-TTS and Llasa. That spread
 lets us ask whether the effect is architecture dependent, which connects
-directly to the unexplained heterogeneity already seen in English where the
-effect holds in 8 of 13 attacks.
+directly to the heterogeneity seen in English. Stated correctly, after T6: on
+the eval attacks the asymmetry is clear and positive on 4, clear and negative on
+1, and undecided on 8 after correction. The variation is real but most of it is
+unresolved rather than contrary, and the classical parametric vocoders lead.
 
 ### griffin_lim is a positive control, and should be named as one
 
@@ -86,20 +98,49 @@ xtts_v2 at 7.30. Settle it by comparing magnitude spectrograms of one
 griffin_lim file against the M-AILABS file its `original_file` names, and do not
 rely on it as a control until then.
 
-Under the first reading it should show the **largest** phase deficit of any
-system in the set, and the sonorant pattern should be at its clearest there.
+### The prediction this section used to make is already in trouble
 
-This is worth naming in the pre-registration as a prediction, because it is a
-cheap and severe test. If a method with no phase model does not show the effect
-most strongly, the account is wrong and no amount of averaging over the other
-17 systems will rescue it.
+**Updated 2026-09-19, and this is the most important change to the design.**
 
-### One access blocker
+This section previously said griffin_lim should show the largest phase deficit
+of any system, and that if a method with no phase model did not show the effect
+most strongly, the account was wrong.
 
-MLAAD is gated. Directory listings are public but everything under `fake/` needs
-the account to be authorized. That blocks `architecture`, `is_original_language`
-and `reference_speaker`, which are precisely the three covariates this design
-needs to control. Resolve before the run, not during.
+ASVspoof already contains that test and it came out the other way. A11 is
+Tacotron 2 with Griffin-Lim, the extreme case of phase generated with no learned
+phase model at all. Its asymmetry is **+0.034 with an interval spanning zero**,
+well short of A09 Vocaine at +0.218 and A14 STRAIGHT at +0.122, which are
+classical parametric source filter vocoders.
+
+So iterative phase reconstruction from magnitude does **not** maximise the
+effect in the one corpus where we can check. Two readings, and MLAAD's
+griffin_lim discriminates between them rather than confirming either:
+
+**If the mechanism is phase reconstruction as such**, griffin_lim should lead,
+and A11 becomes a corpus specific anomaly needing its own explanation.
+
+**If the mechanism is parametric excitation modelling**, the systems that impose
+a pulse-or-noise source and a minimum phase envelope should lead, which is what
+Vocaine and STRAIGHT are, and griffin_lim should sit mid table exactly as A11
+does.
+
+The second currently fits the evidence better. It is a hypothesis generated
+after seeing A11, so it must be registered before it is tested and must not be
+presented as a finding. Register the DIRECTION of griffin_lim relative to the
+parametric systems, not the assumption that it leads.
+
+### Access, resolved
+
+MLAAD is gated and the account is now authorized. Reading gated `meta.csv`
+returns http 200. One schema correction came out of it: the final field is
+`speaker_similarity`, not `reference_speaker` as the paper and card state, and
+it is empty in every row checked.
+
+Also found: models do not share source files. Each draws its own 1000 M-AILABS
+files with zero overlap between the models checked, so there is within model
+real to fake pairing but no cross model pairing on identical utterances. That is
+fine for a design that compares within a system, and it rules out comparing two
+systems on the same sentences.
 
 ## The real side, and why it changed the language set
 
@@ -108,20 +149,35 @@ BSD three clause licence, already mono 16 kHz, and MLAAD's `original_file` gives
 utterance level pairing. The original host is dead, the live route is
 `https://ics.tau-ceti.space/data/Training/stt_tts/{lang}.tgz`.
 
-The problem is speaker counts. **Polish has 2 real speakers, English 3, French
-unknown**, and M-AILABS documents none of this. With two voices on the real
-side, a real versus synthetic separation risks separating those two particular
-voices from TTS voices rather than genuine from synthetic speech.
+The problem is speaker counts, and the figures below are **measured from the
+data** rather than taken from documentation, which is how the earlier version of
+this section went wrong.
 
-**Spanish is added as a fourth language in response.** The identical 18 models
-that span English, French and Polish also span Spanish, so coverage costs
-nothing, and Spanish has 21 M-AILABS speakers against Polish's 2.
+| language | named speakers |
+|---|---|
+| French | 5 |
+| English | 4 |
+| Spanish | 3 |
+| Polish | 2 |
 
-That turns the confound into a control rather than a caveat. Speaker diversity
-now varies deliberately across the set, from 2 to 21. If the effect holds at the
-same magnitude in Spanish as in Polish, speaker diversity is not driving it. If
-it does not, that is itself a finding. Dropping Polish would have been weaker,
-since it would have discarded the phonological contrast that justified it.
+**Correction, 2026-09-19.** This section previously said Spanish has 21 real
+speakers, and added Spanish to the language set specifically to create a speaker
+diversity control ranging from 2 to 21. That figure came from Montreal Forced
+Aligner documentation and was never verified. Counted from `original_file` in
+1000 MLAAD rows per language, Spanish has **3**.
+
+**So the speaker diversity control does not exist.** The real range is 2 to 5,
+which is far too narrow to vary deliberately. Any claim in this design that
+rests on contrasting a speaker rich language against a speaker poor one is
+withdrawn.
+
+**What controls speaker instead, and it is stronger.** Every MLAAD row carries
+`original_file`, naming the specific M-AILABS recording it was derived from. So
+a synthetic sample is compared against **its own source**: same speaker, same
+text, same recording session. That is exact control rather than balancing, it is
+available in all four languages, and it is now the load bearing element of the
+design. A corpus proposed as a replacement for MLAAD has to be checked for an
+equivalent pairing before it is adopted.
 
 ## Language selection
 
@@ -140,13 +196,36 @@ side where the hypothesis predicts little signal. If separation stays low there
 under a fixed synthesiser, that is the negative half of the prediction holding.
 Only 2 real speakers, so it is also the speaker poor end of the control.
 
-**Spanish.** Added for speaker diversity, 21 real speakers against Polish's 2,
-with a comparatively simple phonology. It is the speaker rich end of the
-control, and the same 18 systems cover it.
+**Spanish.** Its original justification, speaker diversity, was based on a wrong
+figure and is withdrawn. It stays only on the weaker ground that the same 18
+systems cover it at no extra cost and it adds a fourth, phonologically simple
+point. If the run needs to be smaller, Spanish is the one to drop.
 
-Between them these cover both arms of the phonological claim and both ends of
-the speaker diversity control. Adding further languages before the design is
-validated buys noise.
+### What T7 adds, and the limit it runs into
+
+T7 found that sonority and voicing both carry the effect, additively and at
+similar size, and that English cannot separate them because its only voiceless
+sonorants are the glottals. So the ideal H2 language is one that **breaks the
+sonority and voicing collinearity**.
+
+Checked against this language set, the news is half good.
+
+**The voiced obstruent arm can be strengthened a lot.** Polish, and Russian or
+Ukrainian if ever added, have far richer voiced obstruent inventories than
+English, with paired sibilants and affricates. That populates the [-son, +voi]
+cell properly instead of resting it on seven English phones.
+
+**The voiceless sonorant arm cannot be strengthened at all.** None of the eight
+M-AILABS languages has phonemic voiceless sonorants. The [+son, -voi] cell will
+be glottals again in every one of them.
+
+**Consequence for the design, stated now rather than discovered later.** The
+crossed 2 by 2 test stays an English only analysis. H2 should test the ladder,
+[+son,+voi] against [-son,+voi] against [-son,-voi], which all four languages
+support and which Polish supports better than English does. Fully separating
+sonority from voicing needs a language with voiceless sonorants, such as Welsh,
+Icelandic or Burmese, and none is reachable through MLAAD paired with M-AILABS.
+That is a separate corpus problem and should not hold up H2.
 
 ## Measurement
 
@@ -172,8 +251,9 @@ would specifically contradict the articulatory reading.
 
 ## Open before this becomes a pre-registration
 
-Confirm M-AILABS language coverage and that real and synthetic can be paired per
-language.
+~~Confirm M-AILABS language coverage and that real and synthetic can be paired
+per language.~~ **Resolved 2026-09-18.** All eight languages confirmed, modified
+BSD licence, already mono 16 kHz, pairing available through `original_file`.
 
 Decide how `is_original_language` is handled. MLAAD includes audio generated
 from translated text, so the phonetics are of the target language but the text
@@ -184,8 +264,13 @@ Count how many systems actually span the chosen languages with enough
 utterances. The design needs at least a few, and if only one system spans them
 the result rests on that system alone.
 
-Decide whether `reference_speaker` needs controlling, since voice cloning
-reference affects phase directly.
+~~Decide whether `reference_speaker` needs controlling.~~ **Cannot be, as
+documented.** The field is actually named `speaker_similarity`, not
+`reference_speaker` as the paper and dataset card state, and it is empty in
+every row checked across griffin_lim, xtts_v2 and Edge-TTS. The voice cloning
+covariate is therefore not usable. Voice cloning reference does affect phase
+directly, so this is a real uncontrolled variable and belongs in the writeup as
+one.
 
 Fix the tone digit handling in `phonophase.phonology` if any tonal language
 enters later. It is not needed for English, French and Polish.
