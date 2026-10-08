@@ -254,6 +254,73 @@ def drop_quietest(data, fraction: float):
     }
 
 
+def cluster_groups(data, cluster="utterance"):
+    """
+    The grouping the bootstrap resamples, and therefore what its interval means.
+
+    `utterance` resamples source utterances on both sides. The interval is then
+    a statement about more utterances drawn from the same synthesis systems.
+
+    `system` keeps bonafide clustered by utterance, since genuine speech has no
+    synthesis system, and clusters the spoof side by **attack**. The eval
+    partition's 1,495 spoof utterances come from 13 systems at 115 utterances
+    each, so under this option the effective sample size on the spoof side is
+    13, not 1,495. The interval is then a statement about speech synthesised by
+    systems we have not seen, which is what a claim about articulation needs.
+
+    Which is correct depends on the claim, not on taste, so both are reported.
+    `docs/PREREGISTRATION.md` specifies clustering by source utterance
+    throughout, so `utterance` stays the default and the registered result is
+    the one it produces.
+    """
+    if cluster not in ("utterance", "system"):
+        raise ValueError(f"cluster must be 'utterance' or 'system', got {cluster!r}")
+    utterances = np.asarray(data["u"])
+    if cluster == "utterance":
+        return utterances
+    attack = np.asarray(data["attack"])
+    is_bona = np.asarray(data["y"]) == data["bonafide_label"]
+    return np.where(is_bona, utterances, attack)
+
+
+def subset_rows(data, keep):
+    """
+    Keep a boolean selection of rows, across every per row array in `data`.
+
+    The list of arrays is derived rather than written out. An earlier version
+    named seven of them by hand, `energy` was added to the loader afterwards and
+    not to that list, and combining --drop-phone with --drop-quietest then
+    compared a full length mask against short labels and crashed. A hand written
+    list drifts from the loader. This cannot.
+    """
+    keep = np.asarray(keep, dtype=bool)
+    out = {}
+    for key, value in data.items():
+        if isinstance(value, np.ndarray) and value.shape[:1] == keep.shape:
+            out[key] = value[keep]
+        else:
+            out[key] = value
+    return out
+
+
+def contrast_label(contrast) -> str:
+    """
+    The three distinct states a contrast can be in, named so they cannot be
+    confused on the page.
+
+    `clear` requires the interval to exclude zero AND the corrected q to survive.
+    The report used to print the verdict beside the interval alone, so a
+    contrast with an interval of [+0.0011, +0.0400] and q = 0.06 printed as
+    "spans zero", which contradicts the number next to it.
+    """
+    if contrast.get("clear"):
+        return "clear of zero"
+    low, high = contrast.get("ci_low"), contrast.get("ci_high")
+    if low is not None and high is not None and not (low <= 0 <= high):
+        return "not clear after correction"
+    return "spans zero"
+
+
 def folded_from_auc(auc: float) -> float:
     """
     Separation without regard to direction.
@@ -393,7 +460,8 @@ def _bootstrap_p(draws):
 
 
 def analyse(data, n_boot=2000, seed=0, alpha=0.05,
-            min_slices=MIN_SLICES, min_utterances=MIN_UTTERANCES):
+            min_slices=MIN_SLICES, min_utterances=MIN_UTTERANCES,
+            cluster="utterance"):
     """
     Separation per cell, the three ladder contrasts, and the crossed test.
 
@@ -417,7 +485,7 @@ def analyse(data, n_boot=2000, seed=0, alpha=0.05,
 
     usable = [c for c in CELLS if cells[c]["usable"]]
     rng = np.random.default_rng(seed)
-    clusters = _cluster_index(y, u)
+    clusters = _cluster_index(y, cluster_groups(data, cluster))
 
     folded_draws = {c: np.full(n_boot, np.nan) for c in CELLS}
     direct_draws = {c: np.full(n_boot, np.nan) for c in CELLS}
@@ -464,8 +532,11 @@ def analyse(data, n_boot=2000, seed=0, alpha=0.05,
             "ci_low": lo, "ci_high": hi,
             "p": _bootstrap_p(draws), "q": 1.0, "clear": False, "why": None,
         }
-        p_values.append(contrasts[name]["p"])
-        keys.append(name)
+        # A-C is A-B plus B-C exactly, so it carries no degree of freedom of its
+        # own and must not enter the correction family as a third test.
+        if name != "A-C":
+            p_values.append(contrasts[name]["p"])
+            keys.append(name)
 
     if p_values:
         corrected = benjamini_hochberg(np.asarray(p_values), alpha=alpha)
@@ -474,12 +545,60 @@ def analyse(data, n_boot=2000, seed=0, alpha=0.05,
             c["q"] = float(q)
             c["clear"] = bool((c["ci_low"] > 0 or c["ci_high"] < 0) and q <= alpha)
 
+    derived = contrasts.get("A-C")
+    if derived is not None and not derived.get("why"):
+        # Reported with its interval, but no q, because it is a sum of the two
+        # tested steps rather than an independent test.
+        derived["q"] = None
+        derived["clear"] = bool(derived["ci_low"] > 0 or derived["ci_high"] < 0)
+
     return {
         "cells": cells,
         "contrasts": contrasts,
+        "step_difference": _step_difference(cells, direct_draws, alpha),
         "main_effects": _main_effects(cells, direct_draws, alpha),
         "n_boot": n_boot,
         "alpha": alpha,
+        "cluster": cluster,
+    }
+
+
+def _step_difference(cells, draws, alpha):
+    """
+    (A-B) minus (B-C). Whether the two ladder steps differ FROM EACH OTHER.
+
+    Why the ladder needs this to say anything about a factor
+        The ladder names sonority when the A-B step carries the effect and
+        voicing when the B-C step does. But "this step cleared zero and that one
+        did not" is a statement about power, not about effect. On the eval
+        partition the two steps were +0.0282 and +0.0319, a ratio of 0.88, while
+        their standard errors differed by a factor of 1.85. Under utterance
+        clustering both cleared and the reading was graded; under system
+        clustering only one cleared and the reading became voicing, on identical
+        point estimates. Their difference is -0.0037 with p about 0.9.
+
+        So a label taken from which step cleared is decided by how much data each
+        cell happened to have. Naming a factor requires this quantity to be
+        clear, which is a claim the data can refuse.
+
+    Computed inside the shared draw, so its interval carries the correlation
+    between the two steps. Not in the FDR family with them: it is one follow-up
+    question asked only when the ladder is interpretable, and adding it to the
+    family would move the q values of the very steps it is asked about.
+    """
+    if not all(cells[c]["usable"] for c in LADDER):
+        return None
+
+    a, b, c = draws[SON_VOI], draws[OBS_VOI], draws[OBS_UNVOI]
+    draw = (a - b) - (b - c)
+    seen = {k: cells[k]["auc_directional"] for k in LADDER}
+    observed = ((seen[SON_VOI] - seen[OBS_VOI]) - (seen[OBS_VOI] - seen[OBS_UNVOI]))
+
+    lo, hi = _interval(draw, alpha)
+    return {
+        "delta": float(observed), "ci_low": lo, "ci_high": hi,
+        "p": _bootstrap_p(draw),
+        "clear": bool(lo > 0 or hi < 0),
     }
 
 
@@ -579,20 +698,49 @@ def verdict(result):
                     "voiced ones, which neither reading predicts."),
         }
 
+    # Naming a factor requires the two steps to DIFFER, not merely one of them
+    # to fail to clear. See _step_difference: one step clearing while the other
+    # does not is a statement about power, and this rule used to read it as a
+    # statement about mechanism.
+    steps = result.get("step_difference")
+
+    def steps_differ(sign):
+        if not steps or not steps.get("clear"):
+            return False
+        return steps["ci_low"] > 0 if sign > 0 else steps["ci_high"] < 0
+
+    def undecidable_label(clear_step, other_step):
+        p = steps.get("p") if steps else None
+        measured = "" if p is None else f" Their difference has p={p:.4f}."
+        return {
+            "reading": "steps-indistinguishable",
+            "surprise": False,
+            "why": (f"{clear_step} clear, {other_step} not, but the two steps are "
+                    f"not distinguishable from each other.{measured} Which step "
+                    f"clears is then decided by power rather than by effect size, "
+                    f"so neither sonority nor voicing is named."),
+        }
+
     if positive(ab) and not positive(bc):
-        return {
-            "reading": "sonority",
-            "surprise": False,
-            "why": ("A-B clear, B-C not. Voiced obstruents pattern with voiceless ones, "
-                    "so the split follows sonority rather than voicing."),
-        }
+        if steps_differ(+1):
+            return {
+                "reading": "sonority",
+                "surprise": False,
+                "why": ("A-B clear, B-C not, and the A-B step is clearly the larger "
+                        "of the two. Voiced obstruents pattern with voiceless ones, "
+                        "so the split follows sonority rather than voicing."),
+            }
+        return undecidable_label("A-B", "B-C")
     if positive(bc) and not positive(ab):
-        return {
-            "reading": "voicing",
-            "surprise": False,
-            "why": ("B-C clear, A-B not. Voiced obstruents pattern with sonorants, "
-                    "so the split follows voicing rather than sonority."),
-        }
+        if steps_differ(-1):
+            return {
+                "reading": "voicing",
+                "surprise": False,
+                "why": ("B-C clear, A-B not, and the B-C step is clearly the larger "
+                        "of the two. Voiced obstruents pattern with sonorants, so "
+                        "the split follows voicing rather than sonority."),
+            }
+        return undecidable_label("B-C", "A-B")
     if positive(ab) and positive(bc):
         return {
             "reading": "graded",
@@ -646,8 +794,9 @@ def print_report(result, data, title):
         shown = "  ".join(f"{p} {n}" for p, n in top)
         print(f"  {c:<14} {total:>3} types   {shown}")
 
-    print("\nLadder contrasts on directional AUC, paired cluster bootstrap, FDR across "
-          "three.")
+    print("\nLadder contrasts on directional AUC, paired cluster bootstrap. FDR across "
+          "the two\nindependent steps; A-C is their sum and is reported without a q "
+          "of its own.")
     print(f"{'contrast':<10} {'difference':>11} {'95% CI':>20} {'q':>8} {'folded':>8}   "
           f"verdict")
     for name in ("A-B", "B-C", "A-C"):
@@ -656,9 +805,24 @@ def print_report(result, data, title):
             print(f"{name:<10} {'-':>11}   {c['why']}")
             continue
         ci = f"[{c['ci_low']:+.4f}, {c['ci_high']:+.4f}]"
-        print(f"{name:<10} {c['delta']:>+11.4f} {ci:>20} {c['q']:>8.4f} "
-              f"{c['delta_folded']:>+8.4f}   "
-              f"{'clear of zero' if c['clear'] else 'spans zero'}")
+        q = "  derived" if c["q"] is None else f"{c['q']:>8.4f}"
+        print(f"{name:<10} {c['delta']:>+11.4f} {ci:>20} {q} "
+              f"{c['delta_folded']:>+8.4f}   {contrast_label(c)}")
+
+    # Printed next to the steps, because the reading depends on it and a reader
+    # who sees only that one step cleared will otherwise draw the conclusion
+    # this script used to draw.
+    step = result.get("step_difference")
+    if step is None:
+        print("\n(A-B)-(B-C)  unavailable, the ladder has an unusable cell.")
+    else:
+        ci = f"[{step['ci_low']:+.4f}, {step['ci_high']:+.4f}]"
+        settled = "the steps differ" if step["clear"] else "NOT distinguishable"
+        print(f"\n{'(A-B)-(B-C)':<10} {step['delta']:>+11.4f} {ci:>20} "
+              f"p={step['p']:.4f}   {settled}")
+        print("  Whether the two steps differ from each other. A factor is named "
+              "only if they do,\n  since otherwise which step clears is decided by "
+              "power rather than by effect size.")
 
     main = result["main_effects"]
     if main is None:
@@ -671,9 +835,13 @@ def print_report(result, data, title):
             m = main[name]
             ci = f"[{m['ci_low']:+.4f}, {m['ci_high']:+.4f}]"
             print(f"{name:<12} {m['delta']:>+9.4f} {ci:>20} {m['q']:>8.4f}   "
-                  f"{'clear of zero' if m['clear'] else 'spans zero'}")
+                  f"{contrast_label(m)}")
 
     v = verdict(result)
+    if result.get("cluster") == "system":
+        print("\nIntervals below resample SYNTHESIS SYSTEMS on the spoof side, 13 of "
+              "them, not\nutterances. They generalise to unseen systems and are much "
+              "wider for that reason.")
     print(f"\nREADING: {v['reading'].upper()}")
     print(f"  {v['why']}")
     if v["surprise"]:
@@ -696,6 +864,11 @@ def main():
     ap.add_argument("--seed", type=int, default=0)
     ap.add_argument("--glottals", default="separate", choices=["separate", "obstruent"],
                     help="fold [+son,-voi] into [-son,-voi], the sensitivity run")
+    ap.add_argument("--cluster", default="utterance", choices=["utterance", "system"],
+                    help="what the bootstrap resamples on the spoof side. "
+                         "'system' clusters by attack, making the interval a "
+                         "statement about unseen synthesis systems rather than "
+                         "about more utterances from these ones")
     ap.add_argument("--drop-quietest", type=float, default=0.0,
                     help="remove this fraction of the quietest slices by hf_energy, "
                          "the silence sensitivity run. 0.2 is a reasonable probe")
@@ -713,8 +886,7 @@ def main():
         if args.drop_phone:
             keep = ~np.isin(data["phone"], args.drop_phone)
             removed = int((~keep).sum())
-            for key in ("y", "u", "phone", "x", "attack", "duration", "cell"):
-                data[key] = data[key][keep]
+            data = subset_rows(data, keep)
             print(f"Dropped {removed} slices for phones {args.drop_phone}")
 
         if args.drop_quietest:
@@ -731,9 +903,10 @@ def main():
         if args.glottals == "obstruent":
             data["cell"] = np.where(data["cell"] == SON_UNVOI, OBS_UNVOI, data["cell"])
 
-        result = analyse(data, n_boot=args.n_boot, seed=args.seed)
+        result = analyse(data, n_boot=args.n_boot, seed=args.seed,
+                         cluster=args.cluster)
         title = (f"Sonority against voicing, seg={seg}, {args.stat}, "
-                 f"glottals={args.glottals}")
+                 f"glottals={args.glottals}, clustered by {args.cluster}")
         print_report(result, data, title)
 
     print("\nExploratory. This runs on the same eval data that confirmed H1 and "
