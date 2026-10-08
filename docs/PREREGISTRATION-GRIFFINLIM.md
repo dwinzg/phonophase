@@ -19,7 +19,7 @@ small. Separations run 0.51 to 0.60 and the asymmetry is 0.048.
 
 Every result in this repository so far has the same shape: a phase statistic
 beats a magnitude statistic by a little, on audio where the synthetic side
-differs from the genuine side in **everything at once** — speaker, sentence,
+differs from the genuine side in **everything at once**, speaker, sentence,
 recording chain, magnitude envelope and phase. Nothing has ever shown that
 `mgd_hf_std` responds to phase rather than to one of the other things.
 
@@ -107,8 +107,8 @@ processing artifact of the comparison itself. Registered as: pooled
 per cent cluster-bootstrap interval on the difference excluding zero.
 
 **G3, the articulatory prediction. About `ASYM`.** If the mechanism behind H1 is
-articulatory — coherent harmonic phase in voiced sonorants is what a system has
-to reconstruct and gets wrong — then `ASYM` should be positive within this
+articulatory, coherent harmonic phase in voiced sonorants is what a system has
+to reconstruct and gets wrong, then `ASYM` should be positive within this
 system, where every phone's phase is reconstructed from scratch. Registered as:
 `ASYM` positive with a 95 per cent interval excluding zero.
 
@@ -168,7 +168,7 @@ those two readings make opposite predictions here.
 `docs/RESOURCES.md` records an alternative, as something to register rather
 than assert: **the operative variable may be parametric excitation modelling
 rather than phase reconstruction as such.** The evidence for it is the same A11
-observation — the two largest asymmetries on ASVspoof eval are Vocaine and
+observation, the two largest asymmetries on ASVspoof eval are Vocaine and
 STRAIGHT, both classical source-filter vocoders with explicit excitation
 models, and the Griffin-Lim system is not near them.
 
@@ -261,8 +261,8 @@ through 16 to 22.05 to 16 kHz:
 | `hf_lf_tilt` | -6.047 | -6.082 | 0.504 | crosses chance |
 
 1003 slices per arm from 150 utterances. A resampler, with no synthesis
-anywhere, moves the phase statistic to 0.576 — inside the 0.51 to 0.60 range
-that H1's whole result occupies — and leaves the magnitude statistic, the
+anywhere, moves the phase statistic to 0.576, inside the 0.51 to 0.60 range
+that H1's whole result occupies, and leaves the magnitude statistic, the
 energy control and the tilt control at chance. **That is precisely the
 signature G1 and G2 predict.** If only the `griffin_lim` side were resampled,
 this design would return a clean confirmation of G1 and G2 from nothing but
@@ -315,7 +315,7 @@ synthesis and F5 below fires.
 ## Primary test
 
 **Registered as primary: the unpaired estimator with paired resampling.**
-Folded separation as H1 defines it — `abs(AUC - 0.5) + 0.5` — computed over all
+Folded separation as H1 defines it, `abs(AUC - 0.5) + 0.5`, computed over all
 slices of each class within a phoneme category, with a cluster bootstrap whose
 resampling unit is the **utterance pair**: a draw picks `original_file` pair ids
 and takes both members of each drawn pair together, one shared draw serving
@@ -440,7 +440,7 @@ separation H1 ever measured on real ASVspoof attacks was between 0.511 and
 0.13 to 0.34 against its own source, is not detecting phase reconstruction
 artifacts. If F3 fires, the reading of `mgd_hf_std` as a phase-artifact
 statistic is abandoned, and with it the mechanism H1 was given. H1's empirical
-result stands — it was pre-registered and confirmed — but it stops being
+result stands, it was pre-registered and confirmed, but it stops being
 evidence about phase and becomes an unexplained separation between two
 statistics.
 
@@ -461,8 +461,8 @@ phase, and the articulatory reading of H1 is abandoned rather than qualified.
 ### What a null `ASYM` means, decided now
 
 If `ASYM` comes back with an interval including zero while F3 and F4 do not
-fire — the phase statistic separates strongly, the direction is right, and the
-asymmetry is absent — then `mgd_hf_std` is confirmed as a phase-artifact
+fire, the phase statistic separates strongly, the direction is right, and the
+asymmetry is absent, then `mgd_hf_std` is confirmed as a phase-artifact
 statistic and the **articulatory** part of the account is not supported by this
 control. A11 makes that a live possibility and H3's dev result argues the other
 way, which is why it is registered rather than assumed either way. It is
@@ -576,3 +576,68 @@ Consequences, recorded so they are not rediscovered:
 One slicing pass over 2000 files, 4.1 hours of audio, the same pipeline as the
 eval run. Analysis is CPU and takes minutes. The M-AILABS English archives are
 7.47 and 3.47 GiB and both routes are live.
+
+---
+
+## Addendum, 2026-10-08, written before the run
+
+Nothing above is edited. No `griffin_lim` file has been measured on either side
+of any comparison. This addendum exists because a test run since on ASVspoof
+2019 LA, recorded in `docs/BAND-EDGE.md`, bears on three statements in "The
+trap, and the mitigation written into the design".
+
+### 1. The two null figures do not say whether the audio was requantised
+
+The 0.576 and 0.592 nulls above were computed on resampled arrays, and this
+document does not record whether those arrays were rounded back to 16 bit
+before the statistics were taken. It matters. On ASVspoof bonafide speech a
+soxr HQ round trip gives a phase minus magnitude advantage of +0.083 in
+sonorants when float output is compared with 16 bit originals, and -0.003 once
+the output is rounded to 16 bit. The two figures stand as recorded, with that
+caveat on what they measured.
+
+**Added requirement.** Record the sample format of the MLAAD files and of the
+M-AILABS sources before anything is computed. After the last resampling step,
+round every array on both sides to 16 bit, and say so beside every result.
+
+### 2. `NULL_asym` has now been measured elsewhere, and it is not small
+
+The text above says a resampling artifact "has no obvious reason to be indexed
+to articulation". On ASVspoof bonafide speech, a soxr LQ round trip through
+22.05 kHz, rounded to 16 bit, against the same speech untreated, gives an
+ASYMMETRY of +0.059 [+0.040, +0.077], the size of H1's own, in the same
+direction and category order. soxr HQ and `resample_poly` give none. So the
+artifact can be indexed to articulation, and whether it is depends on the
+filter, which for MLAAD is unknown.
+
+**Added null.** Step 5 re-runs two processing nulls on the English source
+side. A third is added: the same round trip with soxr LQ. `NULL_sep` and
+`NULL_asym` are the largest of the three.
+
+### 3. Passing both sides through one resampler is only a partial equaliser
+
+Mitigation 1 rests on both sides carrying "one identical downsample and one
+identical anti-alias transition". Tested with a planted difference: a soxr HQ
+round trip applied to one arm, then the same round trip applied to both, left
+an ASYMMETRY of +0.018 where +0.008 had been planted. An identical linear phase
+low pass on both arms, followed by rounding to 16 bit, removed planted
+differences to within 0.001.
+
+**Added secondary analysis.** After the registered analysis, and reported
+beside it, the same comparison is repeated with one identical linear phase low
+pass applied to both sides at 0.8625 of the common band limit, 6900 Hz for an
+8 kHz limit, then rounding to 16 bit. `mgd_hf_std` is still not redefined.
+
+### What is and is not changed
+
+The hypotheses, the primary test, the sample size, the statistical discipline
+and both tiers of falsification conditions are unchanged, and the registered
+verdict is the one they produce. The additions are a recording requirement, one
+more null, and one secondary analysis.
+
+One reading rule is fixed now, because the secondary analysis could otherwise
+be used selectively. If the registered analysis supports G3 and the low passed
+one gives an `ASYM` below half of the registered value with an interval that
+includes zero, the result is reported as not separable from a band edge
+artifact, whatever the registered verdict says. If both agree, the secondary
+analysis adds nothing and is reported in one line.
