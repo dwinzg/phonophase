@@ -13,6 +13,7 @@ Usage
     python scripts/analyse_slices.py --table results/eval_slices.csv.gz
     python scripts/analyse_slices.py --table results/eval_slices.csv.gz --seg window
     python scripts/analyse_slices.py --table results/eval_slices.csv.gz --cluster system
+    python scripts/analyse_slices.py --table results/eval_slices.csv.gz --cluster speaker
 """
 
 from __future__ import annotations
@@ -29,9 +30,11 @@ from sklearn.metrics import roc_auc_score  # noqa: F401
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "src"))
 
+from phonophase.corpus import read_speaker_map  # noqa: E402
 from phonophase.stats import (  # noqa: E402
-    BONAFIDE_MARKERS, benjamini_hochberg, bonafide_label, bootstrap_auc_ci,
-    cluster_groups, fast_auc, shared_cluster_draws,
+    BONAFIDE_MARKERS, CLUSTERS, benjamini_hochberg, bonafide_label,
+    bootstrap_auc_ci, cluster_groups, fast_auc, percentile_interval,
+    shared_cluster_draws,
 )
 
 # Re-exported so a reader of this script can see the whole contract, and so the
@@ -65,16 +68,36 @@ def open_table(path):
     return opener(path, "rt", newline="")
 
 
-def load(path, seg):
-    rows = defaultdict(lambda: {"y": [], "u": [], "attack": [], PHASE: [], MAGNITUDE: []})
+UNKNOWN_SPEAKER = "UNKNOWN"
+DEFAULT_PROTOCOL = os.path.join(
+    os.path.dirname(os.path.abspath(__file__)), "..", "configs", "protocols",
+    "ASVspoof2019.LA.cm.eval.trl.txt")
+
+
+def load(path, seg, language=None, speakers=None):
+    """
+    Read one segmentation of the slice table, optionally one language of it.
+
+    The speaker of a row is its `speaker` column when the table has one. The
+    shipped eval table predates that column, so `speakers`, a map from
+    utterance id to speaker read off the ASVspoof protocol, fills it in. A row
+    neither source can place is UNKNOWN, which require_cluster refuses.
+    """
+    speakers = speakers or {}
+    rows = defaultdict(lambda: {"y": [], "u": [], "attack": [], "speaker": [],
+                                PHASE: [], MAGNITUDE: []})
     with open_table(path) as fh:
         for r in csv.DictReader(fh):
             if r["seg"] != seg:
+                continue
+            if language is not None and r.get("language", "-") != language:
                 continue
             d = rows[r["category"]]
             d["y"].append(int(r["label"]))
             d["u"].append(r["utterance_id"])
             d["attack"].append(r.get("attack", ""))
+            d["speaker"].append(r.get("speaker") or speakers.get(
+                r["utterance_id"], UNKNOWN_SPEAKER))
             d[PHASE].append(float(r[PHASE]))
             d[MAGNITUDE].append(float(r[MAGNITUDE]))
     data = {k: {n: np.asarray(v) for n, v in d.items()} for k, d in rows.items()}
@@ -105,6 +128,15 @@ def require_cluster(data, cluster):
     under a heading that says system, which is the kind of quiet substitution
     this project has already shipped twice.
     """
+    if cluster in ("speaker", "speaker-paired"):
+        placeholders = {UNKNOWN_SPEAKER, "-", ""}
+        if any(np.isin(d["speaker"], sorted(placeholders)).any()
+               for d in data.values()):
+            raise SystemExit(
+                f"--cluster {cluster} needs a speaker for every row. This table "
+                "has rows with none, and --protocol does not list their "
+                "utterance ids.")
+        return
     if cluster != "system":
         return
     if any(d.get("bonafide_label") is None for d in data.values()):
@@ -120,6 +152,30 @@ def folded(y, v):
     """Direction agnostic separation. A statistic running bonafide-high
     separates just as well as one running spoof-high."""
     return abs(fast_auc(y, v) - 0.5) + 0.5
+
+
+# A third verdict beside True and False. A string so it is truthy by accident
+# nowhere: every use compares with `is`.
+UNDECIDED = "undecided"
+
+
+def at_least(needed, clear, unsettled):
+    """
+    Whether at least `needed` cells are clear, when `unsettled` more of them
+    could go either way. True, False, or UNDECIDED when the unsettled cells
+    would decide it.
+    """
+    if clear >= needed:
+        return True
+    return UNDECIDED if clear + unsettled >= needed else False
+
+
+def settle_note(result):
+    """How many draws would settle an undecided bound, as a phrase."""
+    needed = result["draws_to_settle"]
+    if needed is None:
+        return "and the bound sits on zero, so no draw count settles it"
+    return f"about {needed:,} draws would settle it"
 
 
 MIN_SLICES = 30
@@ -212,6 +268,18 @@ def adequately_powered(per_category, categories,
             if per_category.get(c, {}).get("utterances", (0, 0))[0] >= minimum]
 
 
+def _interval_fields(interval):
+    """
+    The interval as this script reports it. `undecided` means the draw count
+    does not settle whether the interval excludes zero, see percentile_interval
+    in src/phonophase/stats.py.
+    """
+    return {"ci_low": interval["ci_low"], "ci_high": interval["ci_high"],
+            "excludes_zero": interval["excludes_null"],
+            "undecided": interval["undecided"],
+            "draws_to_settle": interval["draws_to_settle"]}
+
+
 def advantage_ci(data, categories, n_boot, seed, alpha=0.05, cluster="utterance"):
     """
     Bootstrap the mean phase-minus-magnitude advantage over a set of categories,
@@ -240,7 +308,8 @@ def advantage_ci(data, categories, n_boot, seed, alpha=0.05, cluster="utterance"
     y, groups, phase, magnitude, owner = pooled(data, present, cluster)
 
     draws = []
-    for idx in shared_cluster_draws(y, groups, n_boot, seed):
+    for idx in shared_cluster_draws(y, groups, n_boot, seed,
+                                    stratify=cluster != "speaker-paired"):
         if idx.size == 0:
             continue
         mean = draw_mean(idx, owner, y, phase, magnitude, range(len(present)))
@@ -250,11 +319,9 @@ def advantage_ci(data, categories, n_boot, seed, alpha=0.05, cluster="utterance"
     if not draws:
         return None
 
-    observed = observed_mean(data, present)
-    lo, hi = np.percentile(draws, [100 * alpha / 2, 100 * (1 - alpha / 2)])
-    return {"advantage": observed, "ci_low": float(lo), "ci_high": float(hi),
-            "categories": present, "excludes_zero": bool(lo > 0 or hi < 0),
-            "n_draws": len(draws)}
+    interval = percentile_interval(draws, alpha)
+    return {"advantage": observed_mean(data, present), "categories": present,
+            **_interval_fields(interval), "n_draws": len(draws)}
 
 
 def asymmetry_ci(data, n_boot, seed, alpha=0.05, cluster="utterance"):
@@ -291,7 +358,8 @@ def asymmetry_ci(data, n_boot, seed, alpha=0.05, cluster="utterance"):
     obstruent_owners = range(len(sides[0]), len(every))
 
     draws = []
-    for idx in shared_cluster_draws(y, groups, n_boot, seed):
+    for idx in shared_cluster_draws(y, groups, n_boot, seed,
+                                    stratify=cluster != "speaker-paired"):
         if idx.size == 0:
             continue
         son = draw_mean(idx, owner, y, phase, magnitude, sonorant_owners)
@@ -303,12 +371,12 @@ def asymmetry_ci(data, n_boot, seed, alpha=0.05, cluster="utterance"):
         return None
 
     observed = observed_mean(data, sides[0]) - observed_mean(data, sides[1])
-    lo, hi = np.percentile(draws, [100 * alpha / 2, 100 * (1 - alpha / 2)])
-    return {"asymmetry": observed, "ci_low": float(lo), "ci_high": float(hi),
-            "excludes_zero": bool(lo > 0 or hi < 0), "n_draws": len(draws)}
+    return {"asymmetry": observed,
+            **_interval_fields(percentile_interval(draws, alpha)),
+            "n_draws": len(draws)}
 
 
-def run_by_language(args):
+def run_by_language(args, speakers):
     """
     H2. The same pre-registered test, once per language.
 
@@ -330,19 +398,7 @@ def run_by_language(args):
     print("-" * 78)
 
     for lang in sorted(languages):
-        rows = defaultdict(lambda: {"y": [], "u": [], "attack": [], PHASE: [], MAGNITUDE: []})
-        with open_table(args.table) as fh:
-            for r in csv.DictReader(fh):
-                if r["seg"] != args.seg or r.get("language", "-") != lang:
-                    continue
-                d = rows[r["category"]]
-                d["y"].append(int(r["label"]))
-                d["u"].append(r["utterance_id"])
-                d["attack"].append(r.get("attack", ""))
-                d[PHASE].append(float(r[PHASE]))
-                d[MAGNITUDE].append(float(r[MAGNITUDE]))
-        data = with_bonafide_label(
-            {k: {n: np.asarray(v) for n, v in d.items()} for k, d in rows.items()})
+        data = load(args.table, args.seg, language=lang, speakers=speakers)
         require_cluster(data, args.cluster)
 
         son = advantage_ci(data, SONORANTS, args.n_boot, args.seed, cluster=args.cluster)
@@ -353,10 +409,12 @@ def run_by_language(args):
         holds = bool(son["excludes_zero"] and son["advantage"] > 0 and (
             obs is None or (np.isfinite(obs["advantage"])
                             and son["advantage"] > obs["advantage"])))
+        verdict = ("undecided at this draw count" if son["undecided"]
+                   else "holds" if holds else "does not hold")
         print(f"{lang:<12} {son['advantage']:>+14.3f} "
               f"{'[%+.3f, %+.3f]' % (son['ci_low'], son['ci_high']):>20} "
               f"{(obs['advantage'] if obs else float('nan')):>+15.3f}  "
-              f"{'holds' if holds else 'does not hold'}")
+              f"{verdict}")
 
     print("\nH2 is supported only if the effect holds in a language absent from")
     print("training. Holding in English alone is the null result for H2.")
@@ -368,23 +426,32 @@ def main():
     ap.add_argument("--seg", default="run", choices=["run", "window"])
     ap.add_argument("--n-boot", type=int, default=2000)
     ap.add_argument("--seed", type=int, default=0)
-    ap.add_argument("--cluster", default="utterance", choices=["utterance", "system"],
+    ap.add_argument("--cluster", default="utterance", choices=CLUSTERS,
                     help="what the bootstrap resamples. 'utterance' is the "
                          "registered setting and makes the interval a statement "
                          "about more utterances from the same 13 synthesis "
                          "systems. 'system' clusters the spoof side by attack, "
-                         "making it a statement about systems we have not seen")
+                         "making it a statement about systems we have not seen. "
+                         "'speaker' clusters both sides by speaker, and "
+                         "'speaker-paired' picks each speaker once for both "
+                         "classes")
+    ap.add_argument("--protocol", default=DEFAULT_PROTOCOL,
+                    help="ASVspoof protocol file, used to find the speaker of a "
+                         "row when the table has no speaker column")
     ap.add_argument("--by-language", action="store_true",
                     help="run the same test separately per language. This is "
                          "the H2 cross lingual test. If the effect is "
                          "articulatory it should hold in every language")
     args = ap.parse_args()
 
+    speakers = (read_speaker_map(args.protocol)
+                if os.path.exists(args.protocol) else {})
+
     if args.by_language:
-        run_by_language(args)
+        run_by_language(args, speakers)
         return
 
-    data = load(args.table, args.seg)
+    data = load(args.table, args.seg, speakers=speakers)
     if not data:
         raise SystemExit(f"no rows with seg={args.seg} in {args.table}")
     require_cluster(data, args.cluster)
@@ -409,6 +476,7 @@ def main():
                   else (1 - r["ci_high"], 1 - r["ci_low"]))
         per_category[cat] = {"sep": sep, "lo": lo, "hi": hi,
                              "clears_chance": not r["crosses_chance"],
+                             "chance_undecided": r["chance_undecided"],
                              "utterances": (u_b, u_s)}
         print(f"{cat:<16} {f'{n_b}/{n_s}':>12} {f'{u_b}/{u_s}':>12} "
               f"{sep:>10.3f} {'[%.3f, %.3f]' % (lo, hi):>16}")
@@ -443,9 +511,15 @@ def main():
     if son is None:
         verdicts.append(("1. sonorant advantage interval excludes zero", None, "unavailable"))
     else:
-        ok = son["excludes_zero"] and son["advantage"] > 0
+        ok = (UNDECIDED if son["undecided"]
+              else son["excludes_zero"] and son["advantage"] > 0)
+        detail = f"{son['advantage']:+.3f} [{son['ci_low']:+.3f}, {son['ci_high']:+.3f}]"
+        if son["undecided"]:
+            detail += ("\n         the bound nearest zero is within Monte Carlo "
+                       f"error of it at {son['n_draws']} draws, "
+                       + settle_note(son))
         verdicts.append(("1. sonorant advantage interval excludes zero and is positive",
-                         ok, f"{son['advantage']:+.3f} [{son['ci_low']:+.3f}, {son['ci_high']:+.3f}]"))
+                         ok, detail))
 
     if son and obs:
         ok = bool(np.isfinite(son["advantage"]) and np.isfinite(obs["advantage"])
@@ -456,9 +530,16 @@ def main():
         verdicts.append(("2. sonorant advantage exceeds obstruent advantage", False,
                          "one group had too few usable categories to compare"))
 
-    clears = [c for c in SONORANTS if per_category.get(c, {}).get("clears_chance")]
-    verdicts.append((f"3. phase clears chance in at least 2 of 3 sonorant categories",
-                     len(clears) >= 2, f"{len(clears)} of 3, {', '.join(clears) or 'none'}"))
+    unsettled = [c for c in SONORANTS
+                 if per_category.get(c, {}).get("chance_undecided")]
+    clears = [c for c in SONORANTS
+              if per_category.get(c, {}).get("clears_chance") and c not in unsettled]
+    ok = at_least(2, len(clears), len(unsettled))
+    detail = f"{len(clears)} of 3, {', '.join(clears) or 'none'}"
+    if unsettled:
+        detail += f". Not settled at this draw count: {', '.join(unsettled)}"
+    verdicts.append(("3. phase clears chance in at least 2 of 3 sonorant categories",
+                     ok, detail))
 
     powered = adequately_powered(per_category, SONORANTS)
     verdicts.append(("Required sample size, at least 200 bonafide utterances "
@@ -466,7 +547,8 @@ def main():
                      len(powered) == 3, f"{len(powered)} of 3 adequately powered"))
 
     for text, ok, detail in verdicts:
-        mark = "PASS" if ok else ("n/a " if ok is None else "FAIL")
+        mark = ("n/a " if ok is None else "UNDECIDED" if ok is UNDECIDED
+                else "PASS" if ok else "FAIL")
         print(f"  [{mark}] {text}\n         {detail}")
 
     # Condition 4 compares two partitions, so one table cannot decide it and
@@ -491,7 +573,14 @@ def main():
         return
 
     decided = [v[1] for v in verdicts[:3] if v[1] is not None]
-    if len(decided) == 3 and all(decided):
+    if UNDECIDED in decided and False not in decided:
+        # A bound within Monte Carlo error of its threshold prints PASS on one
+        # seed and FAIL on another. Neither is a result.
+        print("UNDECIDED at this draw count. A falsification condition turns on")
+        print("a bootstrap bound that another seed would put on the other side")
+        print("of its threshold. This is NOT a rejection and NOT a confirmation.")
+        print("Rerun with a larger --n-boot.")
+    elif len(decided) == 3 and all(decided):
         print("H1 SUPPORTED on this partition.")
         if len(powered) < 3:
             print("Power condition not met, so treat as provisional and say so.")

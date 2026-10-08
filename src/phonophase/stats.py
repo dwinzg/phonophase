@@ -20,6 +20,8 @@ What each piece answers
     shared_cluster_draws    one resample per draw, shared by every statistic
                             computed inside it
     bonafide_label          which label means genuine speech, read from the data
+    percentile_interval     the interval, and whether the draw count settles
+                            which side of the null its bounds fall on
     bootstrap_auc_ci        how uncertain is this AUC
     permutation_test_auc    could this separation have arisen by chance
     paired_bootstrap_delta  is A genuinely better than B on the same samples
@@ -54,6 +56,67 @@ def fast_auc(y_true, scores) -> float:
 
     ranks = rankdata(s)
     return float((ranks[positive].sum() - n_pos * (n_pos + 1) / 2.0) / (n_pos * n_neg))
+
+
+def percentile_interval(draws, alpha: float = 0.05, null: float = 0.0,
+                        z: float = 2.576) -> dict:
+    """
+    The percentile interval, with the Monte Carlo error of each bound.
+
+    A percentile bound is an order statistic of the draws, so it is itself an
+    estimate, and rerunning with another seed moves it. When a bound sits close
+    to the null that movement decides whether the interval excludes it: on the
+    eval table, clustered by system at 2,000 draws, three seeds printed PASS on
+    the first falsification condition and one printed FAIL, on identical data.
+
+    The band on each bound is the distribution free interval for a quantile.
+    The number of draws below the true q quantile is binomial(n, q), so the
+    order statistics at ranks n q -+ z sqrt(n q (1-q)) bracket it with no
+    assumption about the shape of the bootstrap distribution. The default z is
+    the 99 percent one, so a bound reported as settled changes side on roughly
+    one seed in a hundred at worst, rather than one in twenty.
+
+    `undecided` is True when the answer to "does the interval exclude `null`"
+    differs across those bands. Undecided is not rejected and it is not
+    confirmed either. `draws_to_settle` is roughly the draw count at which the
+    band would clear the null, from the band shrinking as 1/sqrt(n); it is None
+    when the result is decided, or when the bound sits on the null exactly and
+    no draw count would settle it.
+    """
+    x = np.sort(np.asarray(draws, dtype=np.float64))
+    n = x.size
+    if n == 0:
+        raise ValueError("percentile_interval needs at least one draw")
+    lo, hi = np.percentile(x, [100 * alpha / 2, 100 * (1 - alpha / 2)])
+
+    def band(q):
+        half = z * np.sqrt(n * q * (1 - q))
+        low_rank = int(np.floor(n * q - half)) - 1
+        high_rank = int(np.ceil(n * q + half))
+        return (float(x[min(max(low_rank, 0), n - 1)]),
+                float(x[min(max(high_rank, 0), n - 1)]))
+
+    low_band, high_band = band(alpha / 2), band(1 - alpha / 2)
+    answers = {bool(a > null or b < null) for a in low_band for b in high_band}
+    undecided = len(answers) > 1
+
+    draws_to_settle = None
+    if undecided:
+        needed = []
+        for bound, (a, b) in ((lo, low_band), (hi, high_band)):
+            if a <= null <= b and bound != null:
+                needed.append(n * ((b - a) / 2 / abs(bound - null)) ** 2)
+        draws_to_settle = int(np.ceil(max(needed))) if needed else None
+
+    return {
+        "ci_low": float(lo),
+        "ci_high": float(hi),
+        "low_band": low_band,
+        "high_band": high_band,
+        "excludes_null": bool(lo > null or hi < null),
+        "undecided": undecided,
+        "draws_to_settle": draws_to_settle,
+    }
 
 
 def _stratified_resample(rng, pos_idx, neg_idx):
@@ -166,11 +229,12 @@ def bootstrap_auc_ci(
         draws.append(fast_auc(y_true[idx], scores[idx]))
     draws = np.asarray(draws, dtype=np.float64)
 
-    lo, hi = np.percentile(draws, [100 * alpha / 2, 100 * (1 - alpha / 2)])
+    interval = percentile_interval(draws, alpha, null=0.5)
+    lo, hi = interval["ci_low"], interval["ci_high"]
     return {
         "auc": observed,
-        "ci_low": float(lo),
-        "ci_high": float(hi),
+        "ci_low": lo,
+        "ci_high": hi,
         "n_pos": int(pos_idx.size),
         "n_neg": int(neg_idx.size),
         "n_clusters_pos": int(clusters[0][1].size) if clusters else None,
@@ -178,6 +242,8 @@ def bootstrap_auc_ci(
         # An interval spanning 0.5 means the statistic has not been shown to
         # separate the classes at all.
         "crosses_chance": bool(lo <= 0.5 <= hi),
+        # Whether that answer would survive another seed at this draw count.
+        "chance_undecided": interval["undecided"],
     }
 
 
@@ -272,7 +338,8 @@ def paired_bootstrap_delta(
     }
 
 
-def shared_cluster_draws(y_true, groups, n_boot: int, seed: int = 0):
+def shared_cluster_draws(y_true, groups, n_boot: int, seed: int = 0,
+                         stratify: bool = True):
     """
     Yield the row indices for each bootstrap draw, ONE cluster resample per draw.
 
@@ -301,8 +368,18 @@ def shared_cluster_draws(y_true, groups, n_boot: int, seed: int = 0):
     compute inside the draw. The caller then splits the returned rows by
     category. A category the draw missed entirely, or landed on with one class
     only, must be skipped rather than counted as zero.
+
+    `stratify=False` resamples clusters once across both classes instead of
+    within each. That is the draw for a cluster present on both sides, such as
+    a speaker with bonafide and spoofed utterances: one pick carries the
+    speaker's rows into both classes, so whatever the speaker contributes to
+    both is kept paired. The class ratio then varies from draw to draw.
     """
-    clusters = _cluster_index(y_true, groups)
+    if stratify:
+        clusters = _cluster_index(y_true, groups)
+    else:
+        everything = np.zeros(np.asarray(groups).size, dtype=np.int64)
+        clusters = [_prepare_clusters(everything, groups, 0)]
     rng = np.random.default_rng(seed)
     for _ in range(n_boot):
         yield _cluster_draw(rng, clusters)
@@ -374,6 +451,9 @@ def require_bonafide_label(labels, attacks) -> int:
     return label
 
 
+CLUSTERS = ("utterance", "system", "speaker", "speaker-paired")
+
+
 def cluster_groups(data, cluster="utterance"):
     """
     The grouping the bootstrap resamples, and therefore what its interval means.
@@ -388,16 +468,25 @@ def cluster_groups(data, cluster="utterance"):
     13, not 1,495. The interval is then a statement about speech synthesised by
     systems we have not seen, which is what a claim about articulation needs.
 
-    Which is correct depends on the claim, not on taste, so both are reported.
+    `speaker` clusters both sides by speaker. Eval has 67 speakers, all 67 on
+    the bonafide side and 48 of them on the spoof side, so under utterance
+    clustering the bonafide side is treated as about 1,500 independent units
+    when it holds 67. `speaker-paired` returns the same groups; the difference
+    is in the draw, which the caller makes with `stratify=False` so a speaker
+    is picked once for both classes.
+
+    Which is correct depends on the claim, not on taste, so all are reported.
     `docs/PREREGISTRATION.md` specifies clustering by source utterance
     throughout, so `utterance` stays the default and the registered result is
     the one it produces.
     """
-    if cluster not in ("utterance", "system"):
-        raise ValueError(f"cluster must be 'utterance' or 'system', got {cluster!r}")
+    if cluster not in CLUSTERS:
+        raise ValueError(f"cluster must be one of {CLUSTERS}, got {cluster!r}")
     utterances = np.asarray(data["u"])
     if cluster == "utterance":
         return utterances
+    if cluster in ("speaker", "speaker-paired"):
+        return np.asarray(data["speaker"])
     attack = np.asarray(data["attack"])
     is_bona = np.asarray(data["y"]) == data["bonafide_label"]
     return np.where(is_bona, utterances, attack)

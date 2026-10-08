@@ -90,7 +90,9 @@ from tqdm import tqdm
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "src"))
 
 from phonophase.config import load_config  # noqa: E402
-from phonophase.corpus import partition_paths, read_protocol, select_balanced  # noqa: E402
+from phonophase.corpus import (  # noqa: E402
+    partition_paths, read_protocol, read_speaker_map, select_balanced,
+)
 from phonophase.probe import STATISTIC_NAMES, slice_statistics  # noqa: E402
 
 MODEL_ID = "facebook/wav2vec2-lv-60-espeak-cv-ft"
@@ -116,27 +118,6 @@ UNKNOWN_SPEAKER = "UNKNOWN"
 FIELDS = ["utterance_id", "speaker", "label", "attack", "language", "corpus",
           "category", "phoneme", "seg", "start_frame", "n_frames",
           "duration_s"] + STATISTIC_NAMES
-
-
-def read_speaker_map(protocol_path):
-    """
-    {utterance_id: speaker_id}, read directly from an ASVspoof 2019 LA
-    protocol file.
-
-    Lines are whitespace separated: SPEAKER_ID AUDIO_FILE_NAME - SYSTEM_ID
-    KEY. Column 0 is the speaker, column 1 the utterance id every slice table
-    is keyed on. phonophase.corpus.read_protocol already parses this same
-    file but keeps only columns 1, 3 and 4 (utterance id, attack, label), so
-    the speaker column is read again here rather than by widening that
-    shared function, which this task's scope does not touch.
-    """
-    mapping = {}
-    with open(protocol_path) as fh:
-        for line in fh:
-            parts = line.split()
-            if len(parts) >= 2:
-                mapping[parts[1]] = parts[0]
-    return mapping
 
 
 def speaker_for(utt, speaker_map):

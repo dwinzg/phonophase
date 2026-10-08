@@ -74,3 +74,22 @@ def select_balanced(rows, n_bonafide: int, n_spoof: int, seed: int):
         chosen += [pool[i] for i in rng.permutation(len(pool))[:quota]]
 
     return chosen
+
+
+def read_speaker_map(protocol_path):
+    """
+    {utterance_id: speaker_id}, read directly from an ASVspoof 2019 LA
+    protocol file.
+
+    Lines are whitespace separated: SPEAKER_ID AUDIO_FILE_NAME - SYSTEM_ID
+    KEY. Column 0 is the speaker, column 1 the utterance id every slice table
+    is keyed on. read_protocol above parses the same file but keeps only the
+    utterance id, attack and label.
+    """
+    mapping = {}
+    with open(protocol_path) as fh:
+        for line in fh:
+            parts = line.split()
+            if len(parts) >= 2:
+                mapping[parts[1]] = parts[0]
+    return mapping

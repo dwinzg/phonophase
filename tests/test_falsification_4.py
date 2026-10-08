@@ -290,6 +290,18 @@ def test_an_unmeasurable_quantity_is_undecided_rather_than_absent():
                      "ci_high": float("nan"), "excludes_zero": False}) is None
 
 
+def test_a_bound_within_monte_carlo_error_of_zero_is_undecided_not_absent():
+    """
+    Otherwise the seed could fire the condition: an eval interval whose lower
+    bound lands at -0.001 on one seed and +0.001 on the next would read as
+    absent on the first and present on the second.
+    """
+    on_the_edge = {"estimate": 0.048, "ci_low": -0.001, "ci_high": 0.081,
+                   "excludes_zero": False, "undecided": True}
+    assert presence(on_the_edge) is None
+    assert condition_4(True, presence(on_the_edge)) == UNRESOLVED
+
+
 def test_condition_4_fires_only_on_present_train_attacks_and_absent_eval():
     """The condition as worded, as a truth table."""
     assert condition_4(True, False) == FIRES
