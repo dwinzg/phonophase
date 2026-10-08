@@ -66,10 +66,18 @@ has a 60 ms floor. Their agreement rules out a coding difference between the two
 paths. It does not show the finding survives a different way of cutting the
 audio, and forced alignment would be the test that does.
 
-There is a physical account. Sonorants are voiced and periodic and carry
-coherent harmonic phase that a vocoder must reconstruct. Obstruents are
-aperiodic, so phase is close to random in genuine speech too and there is little
-structure for an artifact to disturb.
+A physical account has been proposed and is not established. Sonorants are
+voiced and periodic and carry coherent harmonic phase that a vocoder must
+reconstruct. Obstruents are aperiodic, so phase is close to random in genuine
+speech too and there is little structure for an artifact to disturb. Two
+measurements stand in the way of asserting it. A magnitude statistic, spectral
+tilt, shows nearly the same pattern (`docs/ROBUSTNESS.md`). And a sample rate
+conversion applied to genuine speech, with no synthesis involved, reproduces
+the sonorant advantage in full, though not the difference between sonorants and
+obstruents, which survives when both classes are low passed identically
+(`docs/BAND-EDGE.md`). On four of the thirteen attacks, the ones whose audio
+stops near 7.7 kHz, that difference does not survive, a split noticed after the
+fact and not yet tested on other data.
 
 ### Three things it does not say
 

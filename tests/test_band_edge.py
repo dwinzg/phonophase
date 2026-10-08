@@ -268,8 +268,7 @@ def test_a_joint_draw_takes_both_versions_of_every_utterance_it_picks():
     base, treated = paired_rows(n_utt=20)
     data = B.to_data(B.two_arm_rows(base, treated, "treated"))
     y, groups, *_ = A.pooled(data, A.SONORANTS + A.OBSTRUENTS, "utterance")
-    prepared = [B._prepare_clusters(np.zeros(y.size, dtype=int), groups, 0)]
-    idx = B._cluster_draw(np.random.default_rng(0), prepared)
+    idx = next(iter(B.shared_cluster_draws(y, groups, 1, 0, stratify=False)))
     assert idx.size == y.size
     for u in np.unique(groups[idx]):
         picked = idx[groups[idx] == u]

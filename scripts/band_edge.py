@@ -59,7 +59,7 @@ import slice_and_probe as S  # noqa: E402
 from phonophase.features import modified_group_delay  # noqa: E402
 from phonophase.probe import HOP, N_FFT, WIN, slice_statistics  # noqa: E402
 from phonophase.stats import (  # noqa: E402
-    _cluster_draw, _prepare_clusters, bootstrap_auc_ci, shared_cluster_draws,
+    bootstrap_auc_ci, shared_cluster_draws,
 )
 
 SR = S.SR
@@ -474,12 +474,7 @@ def level_asymmetry(data, n_boot, seed, joint=False, alpha=0.05):
     y, groups, phase, magnitude, owner = A.pooled(data, every, "utterance")
     son_i, obs_i = range(len(sides[0])), range(len(sides[0]), len(every))
 
-    if joint:
-        prepared = [_prepare_clusters(np.zeros(y.size, dtype=int), groups, 0)]
-        rng = np.random.default_rng(seed)
-        indices = (_cluster_draw(rng, prepared) for _ in range(n_boot))
-    else:
-        indices = shared_cluster_draws(y, groups, n_boot, seed)
+    indices = shared_cluster_draws(y, groups, n_boot, seed, stratify=not joint)
 
     draws = []
     for idx in indices:

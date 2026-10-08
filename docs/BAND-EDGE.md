@@ -75,6 +75,40 @@ unmodified and +0.078 [+0.058, +0.096] after. Applied to the four alone, R2's
 own criteria would fire. The split was chosen after seeing M1 and M2, so this
 is exploratory and is not a test.
 
+## What this changes about H1, and what it does not
+
+**The band edge does not account for the pooled ASYMMETRY.** The low pass is
+shown below to remove a planted resampling difference completely, and after it
+the eval ASYMMETRY is +0.061 [+0.042, +0.078] against +0.063 unmodified. The
+registered analysis script run on the low passed table prints the same figures.
+
+**R1 fired by its letter and the rule was badly drawn.** It asked only for a
+positive interval excluding zero and set no size. One of the two named
+resamplers meets it, at one eighth of H1's ASYMMETRY, with a sign that reverses
+when the output is rounded to 16 bit, and the other does not. That is reported
+here as mixed and undecided. It is not rewritten as a pass: a rule with a size
+criterion would have to be registered and run on other data.
+
+**A resampler alone reproduces the LEVEL.** The soxr round trip on bonafide
+speech gives a phase minus magnitude advantage of +0.083 in sonorants, larger
+than H1's +0.048, with the magnitude statistic at chance. So the LEVEL on its
+own is not evidence of anything specific to synthesis. Only the ASYMMETRY
+distinguishes the eval result from what a resampler does, and it does so by
+size, +0.063 against +0.008.
+
+**On four of the thirteen attacks the ASYMMETRY is a top of band effect.** This
+split was chosen after seeing the data, so it is a hypothesis and not a result.
+If it holds, H1 is a statement about the nine attacks whose audio reaches
+Nyquist. It needs registering and testing on a partition that had no part in
+forming it.
+
+**Spectral tilt still matches it after equalisation.** With `hf_lf_tilt` as the
+magnitude comparator the ASYMMETRY on the low passed table is +0.006
+[-0.005, +0.032], as it is on the unmodified one (`docs/ROBUSTNESS.md`). The
+band edge is not what makes tilt track the phase statistic.
+
+None of this supports stating a mechanism for H1 more strongly than before.
+
 ## Calibration
 
 The alignment was recomputed on CPU from the FLAC files and compared with
@@ -444,6 +478,16 @@ is not a mean of per attack AUCs.
   because the archive's manifest has none.
 
 ## Commands
+
+The two figures in the reading above that come from the registered script:
+
+```bash
+python scripts/analyse_slices.py --table <low passed table>
+python scripts/analyse_slices.py --table <low passed table> --magnitude hf_lf_tilt
+```
+
+where the table is the output of `band_edge.py slice --treatment "lp:6900>pcm16"`
+below.
 
 `$AUDIO` is the extracted archive, `$OUT` a scratch directory. Run with
 `PYTHONPATH=src`.
