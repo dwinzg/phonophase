@@ -11,6 +11,7 @@ Access database:
 |---|---|
 | `results/eval_slices.csv.gz` | per phoneme slice statistics computed from the evaluation partition. No audio |
 | `results/dev_slices.csv.gz` | the same statistics computed from the development partition. No audio |
+| any other table under `results/` | alignments, spectral descriptors and summaries computed from the same partitions. No audio |
 | `configs/protocols/ASVspoof2019.LA.cm.eval.trl.txt` | the evaluation protocol file from the database, unchanged |
 
 The ASVspoof 2019 database is made available under the Open Data Commons
