@@ -129,7 +129,14 @@ mirror. Bootstraps clustered by source utterance throughout.
 | 1. sonorant advantage excludes zero and is positive | PASS, +0.048 [+0.039, +0.057] | PASS, +0.046 [+0.037, +0.056] |
 | 2. sonorant advantage exceeds obstruent | PASS, +0.048 vs −0.015 | PASS, +0.046 vs −0.017 |
 | 3. phase clears chance in 2 of 3 sonorants | PASS, 3 of 3 | PASS, 3 of 3 |
-| 4. 200+ bonafide utterances per sonorant category | PASS, 1344 / 1211 / 1493 | PASS |
+| 4. present on A01 to A06 but absent on eval | does not fire, see below | does not fire, see below |
+| Required sample size, 200+ bonafide utterances per sonorant category | met, 1344 / 1211 / 1493 | met |
+
+The last row is the *Required sample size* requirement, which is a power
+precondition and not one of the four falsification conditions. Until
+2026-09-19 it was tabulated here as condition 4 and the registered condition 4
+was not evaluated anywhere, so the run of 2026-09-18 decided three of the four
+conditions rather than all four. The fourth is decided below.
 
 Per category separation of `mgd_hf_std`, seg=run.
 
@@ -146,6 +153,90 @@ Per category separation of `mgd_hf_std`, seg=run.
 The two segmentations agree to within 0.002, so the effect is not an artifact
 of how the audio was cut. That control was built in precisely because the pilot
 effect was measured on fixed windows.
+
+## Condition 4, run 2026-09-19
+
+> The effect is present on train attacks A01 to A06 but absent on eval, which
+> would make it a property of those six synthesis systems rather than of speech.
+
+A01 to A06 are the six systems the countermeasure training partition uses, and
+the ASVspoof 2019 LA **development** partition uses the same six. Dev therefore
+stands in for the train systems here. 2,548 bonafide and 2,544 spoof
+utterances, 114,181 slices per segmentation, against eval's A07 to A19.
+
+Two quantities, kept separate because "the sonorant advantage" names both and
+conflating them has produced wrong claims in this project. The **LEVEL** is the
+sonorant mean phase-minus-magnitude advantage on its own. The **ASYMMETRY** is
+that minus the obstruent advantage, which is the quantity the primary test is
+stated in. Bootstraps clustered by source utterance, 2,000 draws.
+
+**These intervals come from the shared draw estimator**, `shared_cluster_draws`
+in `src/phonophase/stats.py`, in which one resample of source utterances serves
+every phoneme category in a draw. The intervals reported elsewhere in this
+document, including rows 1 to 3 of the outcome table above, predate that
+correction: they come from the earlier design that resampled each category
+independently and averaged the results, which discarded the dependence between
+categories fed by the same utterance. Point estimates are identical under both.
+Widths are not, so the numbers below are not comparable with the ones above.
+
+| seg | quantity | A01 to A06 | eval A07 to A19 |
+|---|---|---|---|
+| run | LEVEL | +0.0736 [+0.0644, +0.0828] | +0.0479 [+0.0347, +0.0609] |
+| run | ASYMMETRY | +0.1322 [+0.1179, +0.1472] | +0.0630 [+0.0451, +0.0795] |
+| window | LEVEL | +0.0700 [+0.0613, +0.0792] | +0.0464 [+0.0333, +0.0596] |
+| window | ASYMMETRY | +0.1316 [+0.1172, +0.1465] | +0.0629 [+0.0450, +0.0801] |
+
+The correction moves the two quantities in opposite directions, which is what
+the estimator predicts. Against the independent draw design the four LEVEL
+intervals above are 37 to 42 per cent wider, because the categories averaged
+into the LEVEL share utterances and that dependence was being discarded. The
+four ASYMMETRY intervals move by under 10 per cent and on eval they **narrow**,
+by 4 per cent on seg=run, because sonorant and obstruent slices largely come
+from the same utterances, so a shared draw lets their contribution cancel in
+the difference. The registered statistic also folds, and the obstruent side
+sits near zero, which spends some of the correlation a paired draw would
+otherwise exploit.
+
+Both quantities are present, in the predicted direction, with intervals clear
+of zero, on **both** partitions and on both segmentations. The condition
+requires presence on A01 to A06 *and* absence on eval. The second clause is
+false, so the condition **does not fire** on either quantity. It would have
+fired had the eval interval included zero, or excluded it from below, while the
+A01 to A06 interval excluded it from above. Presence on the train systems alone
+does not falsify H1, because H1 predicts the effect there too.
+
+Reproduce with
+
+    git show task/T6-attack-reversals:results/dev_slices.csv.gz \
+        > results/dev_slices.csv.gz
+    python scripts/falsification_4.py \
+        --train-table results/dev_slices.csv.gz \
+        --eval-table results/eval_slices.csv.gz
+
+The estimator is imported from `scripts/analyse_slices.py` rather than
+reimplemented, so the two cannot disagree by construction. Run on the whole dev
+table it reproduces that script's own output for dev to every printed digit.
+Its eval point estimates reproduce the 2026-09-18 figures in the table further
+up, +0.048 and +0.046; the eval widths do not, and are not meant to, because
+those rows predate the shared draw correction.
+
+**The effect is roughly twice as large on the six train systems**, 0.074 against
+0.048 on the LEVEL and 0.132 against 0.063 on the ASYMMETRY. That is not what
+condition 4 tests and it does not falsify anything, but it is evidence that the
+size of the effect is partly a property of the synthesis systems.
+
+How firm that is differs between the two quantities once the widths are right.
+The ASYMMETRY intervals stay far apart, +0.1179 and above against +0.0795 and
+below on seg=run. The LEVEL intervals now only just clear each other, by 0.0035
+on seg=run and 0.0017 on seg=window, where under the pre-correction widths the
+gap looked comfortable. No interval was computed on the dev-minus-eval
+difference itself, and non-overlap of two separately estimated intervals is a
+weaker statement than a test of that difference, so the LEVEL gap should be
+treated as suggestive only. It should not be read as a measured attack
+effect: the partitions differ in speakers and in sample size as well as in
+attacks, dev pools six systems where eval pools thirteen, and the eval pooling
+already hides a documented spread across attacks. Separating those is a
+question for a design that varies attacks while holding speakers fixed.
 
 ## What this does not say
 

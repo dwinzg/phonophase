@@ -8,10 +8,18 @@ Why this file exists
     interpretable, and the temptation to believe them is exactly the failure
     mode an unsupervised project should be guarding against.
 
-    Everything here is corpus agnostic and has no dependency on the rest of the
-    package, so other people can lift it.
+    Everything here has no dependency on the rest of the package, so other
+    people can lift it. Two pieces are not corpus agnostic and say so:
+    cluster_groups and the bonafide convention below know what an attack column
+    is. They sit here anyway, because the alternative was a copy in each script
+    and the copies had already drifted apart.
 
 What each piece answers
+    cluster_groups          which unit the bootstrap resamples, and so what
+                            the interval is a statement about
+    shared_cluster_draws    one resample per draw, shared by every statistic
+                            computed inside it
+    bonafide_label          which label means genuine speech, read from the data
     bootstrap_auc_ci        how uncertain is this AUC
     permutation_test_auc    could this separation have arisen by chance
     paired_bootstrap_delta  is A genuinely better than B on the same samples
@@ -262,6 +270,137 @@ def paired_bootstrap_delta(
         # statistic beat the other on these samples.
         "significant": bool(lo > 0 or hi < 0),
     }
+
+
+def shared_cluster_draws(y_true, groups, n_boot: int, seed: int = 0):
+    """
+    Yield the row indices for each bootstrap draw, ONE cluster resample per draw.
+
+    Why this is the only draw design in the package
+        Two designs used to live here and they disagreed. The pre-registered
+        analysis resampled each phoneme category independently and took the mean
+        of the per category advantages; `scripts/sonority_voicing.py` resampled
+        once and recomputed every cell inside that one draw. The registered path
+        was the naive one.
+
+        One source utterance yields slices in every category it contains, so the
+        per category advantages are not independent. Drawing them independently
+        discards the dependence they share and shrinks the variance of their
+        mean by roughly the number of categories, which understated every
+        published multi category interval by about 40 percent.
+
+    What a shared draw buys, and what it costs
+        A mean over categories gets WIDER, because the shared utterance effect
+        no longer averages away. A difference between two groups of categories
+        gets NARROWER, because that same shared effect cancels in a difference
+        and only a paired draw can exploit the cancellation. Both are correct
+        and they pull in opposite directions, which is the reason to state the
+        quantity before quoting an interval.
+
+    Pass the POOLED labels and groups, over every category the caller will
+    compute inside the draw. The caller then splits the returned rows by
+    category. A category the draw missed entirely, or landed on with one class
+    only, must be skipped rather than counted as zero.
+    """
+    clusters = _cluster_index(y_true, groups)
+    rng = np.random.default_rng(seed)
+    for _ in range(n_boot):
+        yield _cluster_draw(rng, clusters)
+
+
+# A bonafide row carries no attack, and the spellings below are the ones the
+# registered corpora use. One definition, because two scripts reading the
+# convention differently is the same class of defect as two bootstrap designs.
+BONAFIDE_MARKERS = {"-", "", "bonafide", "none", "nan", "real"}
+
+
+def _read_bonafide_label(labels, attacks):
+    """
+    Return (label, reason). `label` is None when the table cannot answer, and
+    `reason` says why.
+
+    Two callers need different failure behaviour, which is why the reason is
+    carried rather than raised here. The registered analysis defaults to
+    utterance clustering and never consults the answer, so a table without a
+    usable attack column must still analyse. `sonority_voicing` cannot run at
+    all without knowing the direction, so it refuses loudly.
+    """
+    y = np.asarray(labels)
+    attack = np.asarray(attacks if attacks is not None else [])
+    if attack.size != y.size:
+        return None, ("cannot tell which label is bonafide without an attack "
+                      "column of the same length as the labels")
+    if y.size == 0:
+        return None, "the table has no rows, so the bonafide label cannot be read"
+
+    marked = np.isin(np.char.lower(attack.astype(str)), sorted(BONAFIDE_MARKERS))
+    if not marked.any() or marked.all():
+        return None, ("the attack column marks either no rows or every row as "
+                      "bonafide, so the bonafide label cannot be read from it")
+
+    seen = np.unique(y[marked])
+    if seen.size != 1:
+        return None, (f"attack column and label column disagree: rows with no "
+                      f"attack carry labels {seen.tolist()}")
+    label = int(seen[0])
+    if bool((y[~marked] == label).any()):
+        return None, (f"attack column and label column disagree: attacked rows "
+                      f"also carry label {label}, which the bonafide rows carry")
+    return label, None
+
+
+def bonafide_label(labels, attacks):
+    """
+    Which value of the label column means bonafide, read from the attack column.
+
+    In the ASVspoof tables label 1 is SPOOF and bonafide rows carry attack '-'.
+    Assuming the other convention inverts every direction in the output while
+    leaving every magnitude correct, which is an error that survives review. It
+    happened once in this project and was caught only because a direction column
+    contradicted a confirmed finding. So the convention is read from the data and
+    cross checked rather than assumed.
+
+    None when the table cannot answer. Use require_bonafide_label where an
+    analysis cannot proceed without it.
+    """
+    return _read_bonafide_label(labels, attacks)[0]
+
+
+def require_bonafide_label(labels, attacks) -> int:
+    """bonafide_label, refusing with the reason rather than returning None."""
+    label, reason = _read_bonafide_label(labels, attacks)
+    if label is None:
+        raise ValueError(reason)
+    return label
+
+
+def cluster_groups(data, cluster="utterance"):
+    """
+    The grouping the bootstrap resamples, and therefore what its interval means.
+
+    `utterance` resamples source utterances on both sides. The interval is then
+    a statement about more utterances drawn from the same synthesis systems.
+
+    `system` keeps bonafide clustered by utterance, since genuine speech has no
+    synthesis system, and clusters the spoof side by **attack**. The eval
+    partition's 1,495 spoof utterances come from 13 systems at 115 utterances
+    each, so under this option the effective sample size on the spoof side is
+    13, not 1,495. The interval is then a statement about speech synthesised by
+    systems we have not seen, which is what a claim about articulation needs.
+
+    Which is correct depends on the claim, not on taste, so both are reported.
+    `docs/PREREGISTRATION.md` specifies clustering by source utterance
+    throughout, so `utterance` stays the default and the registered result is
+    the one it produces.
+    """
+    if cluster not in ("utterance", "system"):
+        raise ValueError(f"cluster must be 'utterance' or 'system', got {cluster!r}")
+    utterances = np.asarray(data["u"])
+    if cluster == "utterance":
+        return utterances
+    attack = np.asarray(data["attack"])
+    is_bona = np.asarray(data["y"]) == data["bonafide_label"]
+    return np.where(is_bona, utterances, attack)
 
 
 def benjamini_hochberg(p_values, alpha: float = 0.05) -> dict:
