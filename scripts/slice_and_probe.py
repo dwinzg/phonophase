@@ -22,6 +22,20 @@ Resumable
     already processed utterance ids are skipped on restart. A reclaimed Colab
     session costs you the last few utterances, not the run.
 
+Speaker column
+    Every row carries a speaker id, so that bootstrap resampling can
+    eventually be done per speaker rather than per utterance, and so an
+    auditor can check speaker level clustering at all. For --subset and
+    --hf-dataset, it is read from column 0 of the ASVspoof 2019 LA protocol
+    file, keyed on the utterance id in column 1. An utterance id absent from
+    the protocol writes UNKNOWN rather than a blank cell, which would
+    otherwise be silently indistinguishable from a genuinely empty field.
+    --manifest corpora carry no ASVspoof protocol, so their rows write "-",
+    the same not-applicable sentinel already used for attack, language and
+    corpus when a manifest does not supply them. This column is not yet
+    consumed by any analysis script; wiring it into clustering is separate
+    work.
+
 Two input modes
     --subset reads the ASVspoof 2019 LA protocols directly. Use this for the
     pre-registered test.
@@ -97,18 +111,86 @@ PHONEME_MAP = {
 }
 CHAR_TO_CATEGORY = {c: cat for cat, chars in PHONEME_MAP.items() for c in chars}
 
-FIELDS = ["utterance_id", "label", "attack", "language", "corpus", "category",
-          "phoneme", "seg", "start_frame", "n_frames", "duration_s"] + STATISTIC_NAMES
+UNKNOWN_SPEAKER = "UNKNOWN"
+
+FIELDS = ["utterance_id", "speaker", "label", "attack", "language", "corpus",
+          "category", "phoneme", "seg", "start_frame", "n_frames",
+          "duration_s"] + STATISTIC_NAMES
+
+
+def read_speaker_map(protocol_path):
+    """
+    {utterance_id: speaker_id}, read directly from an ASVspoof 2019 LA
+    protocol file.
+
+    Lines are whitespace separated: SPEAKER_ID AUDIO_FILE_NAME - SYSTEM_ID
+    KEY. Column 0 is the speaker, column 1 the utterance id every slice table
+    is keyed on. phonophase.corpus.read_protocol already parses this same
+    file but keeps only columns 1, 3 and 4 (utterance id, attack, label), so
+    the speaker column is read again here rather than by widening that
+    shared function, which this task's scope does not touch.
+    """
+    mapping = {}
+    with open(protocol_path) as fh:
+        for line in fh:
+            parts = line.split()
+            if len(parts) >= 2:
+                mapping[parts[1]] = parts[0]
+    return mapping
+
+
+def speaker_for(utt, speaker_map):
+    """
+    Resolve one utterance id to its speaker id.
+
+    A miss means the protocol file does not agree with the utterance ids
+    actually being processed. That is a data problem worth seeing, so it
+    surfaces as an explicit sentinel that can never collide with a real
+    ASVspoof speaker id (all of which look like LA_####), rather than "",
+    which would be indistinguishable from a genuinely empty field once it is
+    sitting in a CSV cell.
+    """
+    return speaker_map.get(utt, UNKNOWN_SPEAKER)
+
+
+def check_header_compatible(out_path, fields):
+    """
+    Refuse to resume into a file whose header predates this column layout.
+
+    Resuming appends rows shaped like `fields` under whatever header line is
+    already on disk. Adding a column, such as this one adding speaker, is
+    exactly the change that would silently misalign every row appended after
+    the old header. Caught here, before the GPU model loads, rather than
+    discovered later by a reader that gets the wrong values in the wrong
+    columns.
+    """
+    if not os.path.exists(out_path):
+        return
+    with open(out_path, newline="") as fh:
+        header = next(csv.reader(fh), [])
+    if header and header != fields:
+        raise SystemExit(
+            f"{out_path} already exists with a header that does not match "
+            "the current columns (this version adds 'speaker'). Appending "
+            "would misalign every row written after it. Start a new --out "
+            "file, or migrate the existing file to the new column layout "
+            "before resuming."
+        )
 
 
 def read_manifest(path):
     """
     Load an arbitrary corpus. Returns (audio_path, utterance_id, attack,
-    language, corpus, label_str) per row.
+    language, corpus, label_str, speaker) per row.
 
     A relative path is resolved against the manifest's own directory first, so
     an exported subset works wherever it is unzipped without anyone having to
     match the working directory to the archive layout.
+
+    speaker is always "-". A manifest describes an arbitrary corpus with no
+    ASVspoof protocol to source a speaker id from, so there is nothing
+    truthful to fill in here; "-" is the same not-applicable sentinel already
+    used above for attack, language and corpus when a manifest omits them.
     """
     manifest_dir = os.path.dirname(os.path.abspath(path))
     rows = []
@@ -136,6 +218,7 @@ def read_manifest(path):
                 r.get("language") or "-",
                 r.get("corpus") or "-",
                 label,
+                "-",
             ))
     return rows
 
@@ -234,6 +317,7 @@ def main():
                 "rather than 7.12 GB."
             )
 
+    speaker_map = read_speaker_map(protocol)
     selected = select_balanced(read_protocol(protocol), args.limit_bonafide,
                                args.limit_spoof, args.seed)
     done = already_done(args.out)
@@ -246,7 +330,8 @@ def main():
           f"{len(selected) - n_bona} spoof")
 
     items = [(os.path.join(audio_dir, f"{utt}.flac"), utt, attack, "en",
-              "asvspoof2019_la", label) for utt, attack, label in selected]
+              "asvspoof2019_la", label, speaker_for(utt, speaker_map))
+             for utt, attack, label in selected]
     run(items, args, segs)
 
 
@@ -275,6 +360,7 @@ def run_from_hf(args, segs):
     if not os.path.exists(protocol):
         raise SystemExit(f"protocol not found: {protocol}")
 
+    speaker_map = read_speaker_map(protocol)
     selected = select_balanced(read_protocol(protocol), args.limit_bonafide,
                                args.limit_spoof, args.seed)
     wanted = {utt: (attack, label) for utt, attack, label in selected}
@@ -298,13 +384,15 @@ def run_from_hf(args, segs):
                 continue
             attack, label = remaining[utt]
             # Audio arrives decoded, so nothing is written to disk at any point.
-            yield (row["audio"], utt, attack, "en", args.hf_dataset, label)
+            yield (row["audio"], utt, attack, "en", args.hf_dataset, label,
+                   speaker_for(utt, speaker_map))
 
     run(items(), args, segs, total=len(remaining), audio_is_array=True)
 
 
 def run(items, args, segs, total=None, audio_is_array=False):
     """Align, slice and reduce. Shared by both input modes."""
+    check_header_compatible(args.out, FIELDS)
     print(f"segmentations: {', '.join(segs)}")
 
     from transformers import (Wav2Vec2FeatureExtractor, Wav2Vec2ForCTC,
@@ -340,7 +428,7 @@ def run(items, args, segs, total=None, audio_is_array=False):
 
     started = time.time()
     written = 0
-    for n, (audio_src, utt, attack, language, corpus, label_str) in enumerate(
+    for n, (audio_src, utt, attack, language, corpus, label_str, speaker) in enumerate(
             tqdm(items, desc="utterances", total=total), 1):
         try:
             if audio_is_array:
@@ -363,6 +451,8 @@ def run(items, args, segs, total=None, audio_is_array=False):
             chars = [inv_vocab[t.item()].lower() for t in torch.argmax(logits, dim=-1)[0]]
 
             label = 0 if label_str == "bonafide" else 1
+            if speaker == UNKNOWN_SPEAKER:
+                print(f"  no speaker id for {utt} (not in the protocol file)")
 
             for char, first, last in group_runs(chars):
                 category = CHAR_TO_CATEGORY.get(char)
@@ -387,8 +477,8 @@ def run(items, args, segs, total=None, audio_is_array=False):
                     if stats is None:
                         continue
                     writer.writerow({
-                        "utterance_id": utt, "label": label, "attack": attack,
-                        "language": language, "corpus": corpus,
+                        "utterance_id": utt, "speaker": speaker, "label": label,
+                        "attack": attack, "language": language, "corpus": corpus,
                         "category": category, "phoneme": char, "seg": seg,
                         "start_frame": first, "n_frames": last - first,
                         "duration_s": round((b - a) / SR, 4), **stats,
