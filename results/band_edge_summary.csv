@@ -56,9 +56,9 @@ r1 poly pcm16,unpaired,2,+0.0089,-0.0037,+0.0183,+0.0001,-0.0152,+0.0183
 r2 band 4000-6500 REDEFINITION,registered,0,+0.0445,+0.0299,+0.0583,+0.0461,+0.0275,+0.0641
 r2 band 4000-6500 REDEFINITION,registered,1,+0.0445,+0.0310,+0.0594,+0.0461,+0.0274,+0.0643
 r2 band 4000-6500 REDEFINITION,registered,2,+0.0445,+0.0304,+0.0580,+0.0461,+0.0275,+0.0655
-r2 band 6500-8000 REDEFINITION,registered,0,+0.0291,+0.0158,+0.0418,+0.0627,+0.0349,+0.0775
-r2 band 6500-8000 REDEFINITION,registered,1,+0.0291,+0.0154,+0.0425,+0.0627,+0.0358,+0.0786
-r2 band 6500-8000 REDEFINITION,registered,2,+0.0291,+0.0159,+0.0428,+0.0627,+0.0350,+0.0782
+r2 band 6500-8000 REDEFINITION,registered,0,+0.0271,+0.0137,+0.0396,+0.0610,+0.0326,+0.0761
+r2 band 6500-8000 REDEFINITION,registered,1,+0.0271,+0.0134,+0.0405,+0.0610,+0.0339,+0.0767
+r2 band 6500-8000 REDEFINITION,registered,2,+0.0271,+0.0139,+0.0406,+0.0610,+0.0332,+0.0760
 r2 cliff attacks,registered,0,-0.0181,-0.0366,+0.0068,+0.0541,+0.0280,+0.0806
 r2 cliff attacks,registered,1,-0.0181,-0.0355,+0.0095,+0.0541,+0.0289,+0.0811
 r2 cliff attacks,registered,2,-0.0181,-0.0365,+0.0081,+0.0541,+0.0293,+0.0816
@@ -127,8 +127,8 @@ r2 flat all_rt_poly_22050,registered,1,+0.0790,+0.0662,+0.0911,+0.0690,+0.0533,+
 r2 flat all_rt_poly_22050,registered,2,+0.0790,+0.0667,+0.0918,+0.0690,+0.0530,+0.0896
 r2 cliff all_band_4000_6500 REDEFINITION,registered,0,-0.0244,-0.0400,+0.0018,+0.0032,-0.0200,+0.0345
 r2 flat all_band_4000_6500 REDEFINITION,registered,0,+0.0754,+0.0618,+0.0888,+0.0656,+0.0494,+0.0852
-r2 cliff all_band_6500_8000 REDEFINITION,registered,0,+0.0178,-0.0033,+0.0380,+0.0917,+0.0402,+0.1343
-r2 flat all_band_6500_8000 REDEFINITION,registered,0,+0.0342,+0.0209,+0.0479,+0.0246,+0.0063,+0.0474
+r2 cliff all_band_6500_8000 REDEFINITION,registered,0,+0.0112,-0.0099,+0.0314,+0.0827,+0.0299,+0.1271
+r2 flat all_band_6500_8000 REDEFINITION,registered,0,+0.0343,+0.0207,+0.0477,+0.0235,+0.0056,+0.0466
 change A07 lp_6900_pcm16,"same draw, after minus before",0,-0.0032,-0.0129,+0.0063,-0.0550,-0.0705,-0.0083
 change A07 lp_6900_pcm16,"same draw, after minus before",1,-0.0032,-0.0143,+0.0064,-0.0550,-0.0700,-0.0103
 change A07 lp_6900_pcm16,"same draw, after minus before",2,-0.0032,-0.0137,+0.0067,-0.0550,-0.0697,-0.0125

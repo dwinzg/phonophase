@@ -109,7 +109,10 @@ asserted for H1 on the strength of the eval result.
 **The eval ASYMMETRY is nonetheless not that artifact, as far as these
 equalisers can tell.** One identical low pass at 6900 Hz on both arms takes the
 planted soxr LQ ASYMMETRY from +0.059 to +0.001 [-0.017, +0.018]. The same low
-pass leaves the eval ASYMMETRY at +0.061 [+0.042, +0.078]. The two also behave
+pass leaves the eval ASYMMETRY at +0.061 [+0.042, +0.078]. About a quarter of
+the band the statistic reads is then stopband, so the sturdier figure is the
+one restricted to 4000 to 6500 Hz, +0.046 [+0.028, +0.064], which still clears
+half of the unmodified value. The two also behave
 differently in LEVEL: under the low pass the planted difference grows to +0.130
 in every category alike, and the eval LEVEL stays at +0.048. So whatever
 separates bonafide from spoofed speech in the corpus, it is not a soxr LQ style
@@ -126,9 +129,13 @@ reflects how the spectral envelope of synthetic speech differs in the upper
 band, with nothing particular to phase, is consistent with everything here.
 
 **Pooled over four attacks, the ASYMMETRY does not survive equalisation.** The
-split was chosen after seeing the data and is not uniform within the four. It
-is a hypothesis for a new registration on a partition that had no part in
-forming it.
+split was chosen after seeing the data, is not uniform within the four, and
+depends on which attacks are pooled. And on these four the unmodified ASYMMETRY
+was never a phase effect in sonorants: `mgd_hf_std` separates no better than
+`mfcc_frame_spread` in any sonorant or obstruent category, and the ASYMMETRY is
+positive only because the magnitude statistic separates obstruents better
+still. It is a hypothesis for a new registration on a partition that had no
+part in forming it.
 
 Taken together: H1 stands as an observation made under pre-registration. Its
 cause is undecided. A band limiting artifact of one kind reproduces it and is
@@ -344,7 +351,7 @@ sub band in place of the upper half.
 |---|---|---|
 | `mgd_hf_std`, 4000 to 8000 Hz, registered | +0.0479 [+0.0347, +0.0609] | +0.0630 [+0.0451, +0.0795] |
 | MGD dispersion, 4000 to 6500 Hz | +0.0445 [+0.0299, +0.0583] | +0.0461 [+0.0275, +0.0641] |
-| MGD dispersion, 6500 to 8000 Hz | +0.0291 [+0.0158, +0.0418] | +0.0627 [+0.0349, +0.0775] |
+| MGD dispersion, 6500 to 8000 Hz | +0.0271 [+0.0137, +0.0396] | +0.0610 [+0.0326, +0.0761] |
 
 ### Do the treatments equalise anything
 
@@ -396,7 +403,7 @@ Exploratory.
 | low pass 6900 Hz, 16 bit | +0.0135 [-0.0113, +0.0411] | +0.0780 [+0.0580, +0.0961] |
 | round trip, resample_poly (equalises nothing) | +0.0485 [+0.0251, +0.0766] | +0.0690 [+0.0539, +0.0884] |
 | redefined, 4000 to 6500 Hz | +0.0032 [-0.0200, +0.0345] | +0.0656 [+0.0494, +0.0852] |
-| redefined, 6500 to 8000 Hz | +0.0917 [+0.0402, +0.1343] | +0.0246 [+0.0063, +0.0474] |
+| redefined, 6500 to 8000 Hz | +0.0827 [+0.0299, +0.1271] | +0.0235 [+0.0056, +0.0466] |
 
 | change in ASYMMETRY, same draw | A07 A08 A16 A19 | the other nine |
 |---|---|---|
@@ -477,6 +484,11 @@ is not a mean of per attack AUCs.
    upper limit; the other descriptors did not change.
 
 ## Limits
+
+- The two arm contrasts fold each separation about 0.5, which discards its
+  sign. They show what a treatment does to genuine speech against itself. They
+  do not show how the same treatment on one class would add to or subtract from
+  a real difference between classes, which depends on which class carries it.
 
 - One corpus, one language, seg=run only. The window segmentation was
   calibrated and not carried through the interventions.

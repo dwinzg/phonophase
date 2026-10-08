@@ -102,7 +102,7 @@ thirteen, the asymmetry that H1 states is
 | clear and negative, a reversal | 1 | A19, and only just, q = 0.047 |
 | undecided | 8 | A07, A10, A11, A12, A13, A15, A16, A18 |
 
-Undecided is not a reversal. Each attack contributes about 230 utterances, so
+Undecided is not a reversal. Each attack contributes 115 utterances, so
 most per attack intervals are simply too wide to rank. The pooled result above
 is strong because it pools.
 
