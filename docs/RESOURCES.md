@@ -62,8 +62,10 @@ though it were funded.
 Pre-registered in `docs/PREREGISTRATION.md` before the data was touched, run on
 ASVspoof 2019 LA eval, attacks A07 to A19, none seen in training. 2,995
 utterances, 137,992 slices, bootstraps clustered by source utterance. Sonorant
-advantage **+0.048 [+0.039, +0.057]** against obstruent −0.015, all four
-falsification conditions passed at 6 to 7 times the required power.
+advantage **+0.048 [+0.035, +0.061]** against obstruent −0.015, sonorant minus
+obstruent **+0.063 [+0.045, +0.080]**, all four falsification conditions decided
+in its favour. Scope limits by clustering and by choice of statistic are in
+`docs/ROBUSTNESS.md`.
 
 **Falsifier:** the sonorant advantage interval includes zero, or the ordering
 reverses. Neither occurred.
@@ -307,7 +309,7 @@ without knowing it.
 
 ### `phonophase.phonology`
 
-IPA to PanPhon's 24 articulatory features, 296 of 387 phone symbols. Replaces a
+IPA to PanPhon's 24 articulatory features, 380 of 388 phone symbols. Replaces a
 seven category English shaped map that covered 41. **Known limitation:** symbols
 containing digits are rejected, which drops 91 tone marked phones and excludes
 Mandarin, Vietnamese and Thai entirely. Fix before any tonal language work, task

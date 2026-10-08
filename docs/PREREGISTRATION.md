@@ -126,11 +126,21 @@ mirror. Bootstraps clustered by source utterance throughout.
 
 | Condition, fixed in advance | seg=run | seg=window |
 |---|---|---|
-| 1. sonorant advantage excludes zero and is positive | PASS, +0.048 [+0.039, +0.057] | PASS, +0.046 [+0.037, +0.056] |
+| 1. sonorant advantage excludes zero and is positive | PASS, +0.048 [+0.035, +0.061] | PASS, +0.046 [+0.033, +0.060] |
 | 2. sonorant advantage exceeds obstruent | PASS, +0.048 vs −0.015 | PASS, +0.046 vs −0.017 |
 | 3. phase clears chance in 2 of 3 sonorants | PASS, 3 of 3 | PASS, 3 of 3 |
 | 4. present on A01 to A06 but absent on eval | does not fire, see below | does not fire, see below |
 | Required sample size, 200+ bonafide utterances per sonorant category | met, 1344 / 1211 / 1493 | met |
+
+The intervals in row 1 were first recorded here as [+0.039, +0.057] and
+[+0.037, +0.056]. Those came from resampling each category independently and
+were too narrow; the ones shown resample utterances once per draw for all three
+categories. Point estimates and verdicts are unchanged.
+
+The analysis script has since gained a third printed state, UNDECIDED, for a
+condition that turns on a bootstrap bound within Monte Carlo error of its
+threshold. No bound is near its threshold under the registered settings, and
+the script's output for this table under them is unchanged.
 
 The last row is the *Required sample size* requirement, which is a power
 precondition and not one of the four falsification conditions. Until
@@ -172,12 +182,12 @@ stated in. Bootstraps clustered by source utterance, 2,000 draws.
 
 **These intervals come from the shared draw estimator**, `shared_cluster_draws`
 in `src/phonophase/stats.py`, in which one resample of source utterances serves
-every phoneme category in a draw. The intervals reported elsewhere in this
-document, including rows 1 to 3 of the outcome table above, predate that
-correction: they come from the earlier design that resampled each category
-independently and averaged the results, which discarded the dependence between
-categories fed by the same utterance. Point estimates are identical under both.
-Widths are not, so the numbers below are not comparable with the ones above.
+every phoneme category in a draw. Row 1 of the outcome table above was first
+recorded from the earlier design, which resampled each category independently
+and averaged the results, discarding the dependence between categories fed by
+the same utterance. It has since been re-issued from the shared draw, as the
+note under that table says, so the eval figures below and the ones above now
+agree. Point estimates are identical under both designs.
 
 | seg | quantity | A01 to A06 | eval A07 to A19 |
 |---|---|---|---|
@@ -216,9 +226,8 @@ Reproduce with
 The estimator is imported from `scripts/analyse_slices.py` rather than
 reimplemented, so the two cannot disagree by construction. Run on the whole dev
 table it reproduces that script's own output for dev to every printed digit.
-Its eval point estimates reproduce the 2026-09-18 figures in the table further
-up, +0.048 and +0.046; the eval widths do not, and are not meant to, because
-those rows predate the shared draw correction.
+Its eval figures reproduce row 1 of the table further up, +0.048 and +0.046 with
+the re-issued intervals.
 
 **The effect is roughly twice as large on the six train systems**, 0.074 against
 0.048 on the LEVEL and 0.132 against 0.063 on the ASYMMETRY. That is not what

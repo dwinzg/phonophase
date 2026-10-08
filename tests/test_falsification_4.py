@@ -297,7 +297,7 @@ def test_a_bound_within_monte_carlo_error_of_zero_is_undecided_not_absent():
     absent on the first and present on the second.
     """
     on_the_edge = {"estimate": 0.048, "ci_low": -0.001, "ci_high": 0.081,
-                   "excludes_zero": False, "undecided": True}
+                   "excludes_zero": False, "positive": None}
     assert presence(on_the_edge) is None
     assert condition_4(True, presence(on_the_edge)) == UNRESOLVED
 

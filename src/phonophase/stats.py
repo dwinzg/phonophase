@@ -73,40 +73,47 @@ def percentile_interval(draws, alpha: float = 0.05, null: float = 0.0,
     The number of draws below the true q quantile is binomial(n, q), so the
     order statistics at ranks n q -+ z sqrt(n q (1-q)) bracket it with no
     assumption about the shape of the bootstrap distribution. The default z is
-    the 99 percent one, so a bound reported as settled changes side on roughly
-    one seed in a hundred at worst, rather than one in twenty.
+    the 99 percent one. A band is None when there are too few draws for those
+    ranks to exist, a few hundred at the default settings, and nothing is then
+    reported as settled.
 
-    `undecided` is True when the answer to "does the interval exclude `null`"
-    differs across those bands. Undecided is not rejected and it is not
-    confirmed either. `draws_to_settle` is roughly the draw count at which the
-    band would clear the null, from the band shrinking as 1/sqrt(n); it is None
-    when the result is decided, or when the bound sits on the null exactly and
-    no draw count would settle it.
+    Three answers come back, each True, False, or None for not settled at this
+    draw count:
+
+        above_null      the lower bound is above `null`
+        below_null      the upper bound is below `null`
+        `undecided`     is True when "the interval excludes `null`" is not
+                        settled
+
+    This is about Monte Carlo error only. A settled bound can still belong to
+    an interval that covers poorly, for instance one over 13 clusters. And it
+    stops one seed printing a pass where another prints a fail; a bound near
+    the edge of its band can still read as settled on one seed and not settled
+    on the next.
     """
     x = np.sort(np.asarray(draws, dtype=np.float64))
     n = x.size
-    if n == 0:
-        raise ValueError("percentile_interval needs at least one draw")
+    if n == 0 or not np.isfinite(x).all():
+        raise ValueError("percentile_interval needs at least one draw, all finite")
+    if not 0.0 < alpha < 1.0:
+        raise ValueError(f"alpha must be between 0 and 1, got {alpha}")
     lo, hi = np.percentile(x, [100 * alpha / 2, 100 * (1 - alpha / 2)])
 
     def band(q):
         half = z * np.sqrt(n * q * (1 - q))
         low_rank = int(np.floor(n * q - half)) - 1
         high_rank = int(np.ceil(n * q + half))
-        return (float(x[min(max(low_rank, 0), n - 1)]),
-                float(x[min(max(high_rank, 0), n - 1)]))
+        if low_rank < 0 or high_rank > n - 1:
+            return None
+        return float(x[low_rank]), float(x[high_rank])
 
     low_band, high_band = band(alpha / 2), band(1 - alpha / 2)
-    answers = {bool(a > null or b < null) for a in low_band for b in high_band}
-    undecided = len(answers) > 1
-
-    draws_to_settle = None
-    if undecided:
-        needed = []
-        for bound, (a, b) in ((lo, low_band), (hi, high_band)):
-            if a <= null <= b and bound != null:
-                needed.append(n * ((b - a) / 2 / abs(bound - null)) ** 2)
-        draws_to_settle = int(np.ceil(max(needed))) if needed else None
+    above = (None if low_band is None else True if low_band[0] > null
+             else False if low_band[1] <= null else None)
+    below = (None if high_band is None else True if high_band[1] < null
+             else False if high_band[0] >= null else None)
+    settled = (above is True or below is True
+               or (above is False and below is False))
 
     return {
         "ci_low": float(lo),
@@ -114,8 +121,9 @@ def percentile_interval(draws, alpha: float = 0.05, null: float = 0.0,
         "low_band": low_band,
         "high_band": high_band,
         "excludes_null": bool(lo > null or hi < null),
-        "undecided": undecided,
-        "draws_to_settle": draws_to_settle,
+        "above_null": above,
+        "below_null": below,
+        "undecided": not settled,
     }
 
 
@@ -178,8 +186,14 @@ def _cluster_draw(rng, prepared):
     return np.concatenate(parts) if parts else np.empty(0, dtype=np.int64)
 
 
-def _cluster_index(y_true, groups):
-    """Prepare both classes for the cluster bootstrap."""
+def _cluster_index(y_true, groups, stratify: bool = True):
+    """
+    Prepare the clusters for the bootstrap, within each class or, with
+    `stratify=False`, once across both. See shared_cluster_draws.
+    """
+    if not stratify:
+        everything = np.zeros(np.asarray(groups).size, dtype=np.int64)
+        return [_prepare_clusters(everything, groups, 0)]
     prepared = [_prepare_clusters(y_true, groups, label) for label in (1, 0)]
     for idx_sorted, starts, _ in prepared:
         if starts.size == 0:
@@ -194,6 +208,7 @@ def bootstrap_auc_ci(
     alpha: float = 0.05,
     seed: int = 0,
     groups=None,
+    stratify: bool = True,
 ) -> dict:
     """
     Return the observed AUC with a percentile bootstrap confidence interval.
@@ -217,7 +232,8 @@ def bootstrap_auc_ci(
     observed = float(roc_auc_score(y_true, scores))
     rng = np.random.default_rng(seed)
 
-    clusters = _cluster_index(y_true, groups) if groups is not None else None
+    clusters = (_cluster_index(y_true, groups, stratify)
+                if groups is not None else None)
 
     draws = []
     for _ in range(n_boot):
@@ -238,7 +254,7 @@ def bootstrap_auc_ci(
         "n_pos": int(pos_idx.size),
         "n_neg": int(neg_idx.size),
         "n_clusters_pos": int(clusters[0][1].size) if clusters else None,
-        "n_clusters_neg": int(clusters[1][1].size) if clusters else None,
+        "n_clusters_neg": int(clusters[-1][1].size) if clusters else None,
         # An interval spanning 0.5 means the statistic has not been shown to
         # separate the classes at all.
         "crosses_chance": bool(lo <= 0.5 <= hi),
@@ -353,16 +369,18 @@ def shared_cluster_draws(y_true, groups, n_boot: int, seed: int = 0,
         One source utterance yields slices in every category it contains, so the
         per category advantages are not independent. Drawing them independently
         discards the dependence they share and shrinks the variance of their
-        mean by roughly the number of categories, which understated every
-        published multi category interval by about 40 percent.
+        mean, by about half on the eval table, so the interval on a mean over
+        three categories came out 40 to 55 percent narrower than it should.
 
     What a shared draw buys, and what it costs
         A mean over categories gets WIDER, because the shared utterance effect
-        no longer averages away. A difference between two groups of categories
-        gets NARROWER, because that same shared effect cancels in a difference
-        and only a paired draw can exploit the cancellation. Both are correct
-        and they pull in opposite directions, which is the reason to state the
-        quantity before quoting an interval.
+        no longer averages away. For a difference between two groups of
+        categories two effects compete: each group mean gets wider for the same
+        reason, and the two group means become positively correlated, which
+        cancels in the difference. When the shared effect dominates, the
+        difference gets narrower; on the eval table the two nearly offset and
+        the interval barely moves. So state the quantity before quoting an
+        interval, and measure rather than assume which way it went.
 
     Pass the POOLED labels and groups, over every category the caller will
     compute inside the draw. The caller then splits the returned rows by
@@ -375,11 +393,7 @@ def shared_cluster_draws(y_true, groups, n_boot: int, seed: int = 0,
     speaker's rows into both classes, so whatever the speaker contributes to
     both is kept paired. The class ratio then varies from draw to draw.
     """
-    if stratify:
-        clusters = _cluster_index(y_true, groups)
-    else:
-        everything = np.zeros(np.asarray(groups).size, dtype=np.int64)
-        clusters = [_prepare_clusters(everything, groups, 0)]
+    clusters = _cluster_index(y_true, groups, stratify)
     rng = np.random.default_rng(seed)
     for _ in range(n_boot):
         yield _cluster_draw(rng, clusters)

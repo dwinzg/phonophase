@@ -165,7 +165,8 @@ def _normalise(result, key):
             "ci_low": float(result["ci_low"]),
             "ci_high": float(result["ci_high"]),
             "excludes_zero": bool(result["excludes_zero"]),
-            "undecided": bool(result.get("undecided", False)),
+            "positive": result.get("positive", bool(
+                result["excludes_zero"] and result[key] > 0)),
             "categories": tuple(result.get("categories", ()))}
 
 
@@ -202,8 +203,8 @@ def presence(result):
     excludes zero from below is a reversal and not a presence.
 
     None is returned when there was nothing to measure, and when the interval's
-    bound is within Monte Carlo error of zero, so that another seed could answer
-    the other way. That is a third outcome and collapsing it into False would
+    lower bound is within Monte Carlo error of zero, so that another seed could
+    answer the other way. That is a third outcome and collapsing it into False would
     let missing data, or the seed, fire a condition.
     """
     if result is None:
@@ -211,8 +212,8 @@ def presence(result):
     estimate = result.get("estimate")
     if estimate is None or not np.isfinite(estimate):
         return None
-    if result.get("undecided"):
-        return None
+    if "positive" in result:
+        return result["positive"]
     return bool(result["excludes_zero"] and estimate > 0)
 
 

@@ -32,6 +32,8 @@ Why this file asserts two things that pull in opposite directions
 
 What is NOT claimed here
     Not that the correction changes any verdict. It is a correction to widths.
+    Nor that pairing narrows the ASYMMETRY on every table: on the eval table the
+    two designs give nearly the same interval.
     Whether an interval still excludes zero is a question for the real table and
     is recorded with the run that measured it, not asserted in a unit test.
 """
@@ -300,11 +302,11 @@ def test_a_near_chance_group_loses_most_of_the_pairing_benefit_to_folding():
     the other group's draws that the paired draw exists to exploit.
 
     This was found by accident, in a fixture built with a near chance obstruent
-    group, and it is kept because it explains something real: on the eval table
-    the obstruent side sits near zero, and the measured difference between the
-    two draw designs on the ASYMMETRY there is at most 0.004, against about 40
-    percent on the LEVEL. The mechanism is not that the asymmetry is immune to
-    the estimator. It is that folding has already spent the pairing.
+    group. It is a property of this fixture and is NOT why the eval table's
+    ASYMMETRY interval barely moves between draw designs: there, folding
+    reflects only a few percent of draws under utterance clustering, and the
+    interval is unchanged because the larger variance of each group mean and the
+    correlation between them nearly offset.
     """
     clear = _shared_utterance_table(obstruent_shift=0.8)
     near_chance = _shared_utterance_table(obstruent_shift=0.0)
@@ -359,24 +361,45 @@ def test_a_category_absent_from_a_draw_is_skipped_rather_than_counted_as_zero():
     an advantage of zero would drag the mean toward zero in proportion to how
     often it happens.
 
-    Built so the sixth category is reachable by only a few utterances, which a
-    cluster draw misses outright in a noticeable share of draws.
+    Asserted on `draw_mean` directly with a hand built draw, because on a
+    realistic table a miss is too rare for an interval to show the difference.
     """
-    data = _shared_utterance_table()
-    rare = "AFFRICATES"
-    # Twelve utterances per class, which is the least `usable` accepts. Taking
-    # the first twelve of the sorted ids would have taken bonafide only, left the
-    # category with one class, and quietly dropped it from the analysis instead
-    # of testing what happens when a draw misses it.
-    thin = [f"B{i:03d}" for i in range(12)] + [f"S{i:03d}" for i in range(12)]
-    keep = np.isin(data[rare]["u"], np.asarray(thin))
-    data[rare] = {k: (v[keep] if isinstance(v, np.ndarray) else v)
-                  for k, v in data[rare].items()}
+    rng = np.random.default_rng(0)
+    n = 200
+    y = np.tile([0, 1], n)
+    owner = np.repeat([0, 1], n)
+    phase = y * 2.0 + rng.normal(size=2 * n)
+    magnitude = rng.normal(size=2 * n)
+    everything = np.arange(2 * n)
 
-    result = advantage_ci(data, OBSTRUENTS, BOOT, 0)
-    assert result is not None
-    assert rare in result["categories"]
-    assert -1.0 < result["ci_low"] < result["ci_high"] < 1.0
+    first_only = everything[owner == 0]
+    alone = analyse_slices.draw_mean(first_only, owner, y, phase, magnitude, [0])
+    assert alone > 0.2, "the fixture must have a real advantage to dilute"
+
+    missed = analyse_slices.draw_mean(first_only, owner, y, phase, magnitude, [0, 1])
+    assert missed == alone, "a category the draw missed must not count as zero"
+
+    one_class = np.concatenate([first_only, everything[(owner == 1) & (y == 0)]])
+    assert analyse_slices.draw_mean(one_class, owner, y, phase, magnitude,
+                                    [0, 1]) == alone, (
+        "a category the draw reached with one class only must be skipped too")
+
+    assert analyse_slices.draw_mean(first_only, owner, y, phase, magnitude,
+                                    [1]) is None
+
+
+def test_the_interval_is_the_one_asked_for():
+    """A 90 percent interval reported as a 95 percent one passes most tests."""
+    data = _shared_utterance_table()
+    wide = advantage_ci(data, SONORANTS, BOOT, 0)
+    narrow = advantage_ci(data, SONORANTS, BOOT, 0, alpha=0.5)
+    assert wide["ci_low"] < narrow["ci_low"] < narrow["ci_high"] < wide["ci_high"]
+    assert (narrow["ci_high"] - narrow["ci_low"]) < 0.5 * (wide["ci_high"] - wide["ci_low"])
+
+    draws = np.random.default_rng(0).normal(size=1000)
+    r = stats.percentile_interval(draws)
+    lo, hi = np.percentile(draws, [2.5, 97.5])
+    assert r["ci_low"] == lo and r["ci_high"] == hi
 
 
 # --------------------------------------------------------------------------

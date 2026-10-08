@@ -32,8 +32,30 @@ from spoofed speech more strongly in sonorants than in obstruents.**
 | AFFRICATES | 0.536 | [0.496, 0.574] |
 | PLOSIVES | 0.511 | [0.499, 0.522] |
 
-Sonorant advantage **+0.048 [+0.039, +0.057]** against obstruent −0.015. All
-four falsification conditions passed at 6 to 7 times the required power.
+Sonorant advantage **+0.048 [+0.035, +0.061]** against obstruent −0.015, and
+the difference between them, which is the quantity H1 asserts, **+0.063
+[+0.045, +0.080]**. The first three falsification conditions passed at 6 to 7
+times the required power, and the fourth, which compares partitions, does not
+fire (`scripts/falsification_4.py`).
+
+An earlier version of this page gave the first interval as [+0.039, +0.057].
+That came from resampling each phoneme category independently, which ignores
+that one utterance feeds all three, and was too narrow.
+
+**How far that reaches depends on what is resampled**, and
+`docs/ROBUSTNESS.md` has the table. The difference between sonorants and
+obstruents excludes zero whether the bootstrap resamples utterances, speakers
+or synthesis systems. The sonorant advantage on its own does not: resampling
+the 13 synthesis systems puts its lower bound on zero, and the analysis script
+reports that as undecided rather than printing whichever verdict the random
+seed produced.
+
+**It is also specific to this pair of statistics.** Against the three cepstral
+statistics and high frequency energy the difference holds. Against spectral
+tilt, a magnitude statistic with no phase content, it is +0.009 [-0.003,
++0.033], not distinguishable from zero: tilt shows nearly the same sonorant
+over obstruent pattern. So this is not evidence that the pattern is unique to
+phase.
 
 The result agrees to within 0.002 on both segmentations, which is worth less
 than it sounds and is stated here rather than left to look impressive. The two
@@ -99,7 +121,7 @@ nasalisation, length and retroflexion, which are exactly the contrasts that
 distinguish languages.
 
 `phonophase.phonology` replaces it with PanPhon's 24 articulatory features,
-raising coverage to 296 phones. Features are universal by construction, so the
+raising coverage to 380 of the 388 symbols, tone marked vowels included. Features are universal by construction, so the
 comparison stays well defined between languages whose inventories do not
 overlap.
 
@@ -145,7 +167,7 @@ detected by the instrument directly. It is worth reading even if you never touch
 phase.
 
 **You want to check or extend the finding itself.** The eval table ships in the
-repository, the analysis runs in about thirty seconds on CPU, and the
+repository, the analysis runs in about a minute on CPU, and the
 falsification conditions were written down before the data was touched. Trying
 to break it is a welcome use and is easier than reproducing it.
 
@@ -190,13 +212,14 @@ uploads and no corpus download.
 `results/eval_slices.csv.gz` is the data behind the table above.
 
 ```bash
-gunzip -k results/eval_slices.csv.gz
-python scripts/analyse_slices.py --table results/eval_slices.csv --seg run
-python scripts/analyse_slices.py --table results/eval_slices.csv --seg window
+python scripts/analyse_slices.py --table results/eval_slices.csv.gz --seg run
+python scripts/analyse_slices.py --table results/eval_slices.csv.gz --seg window
+python scripts/analyse_slices.py --table results/eval_slices.csv.gz --cluster system
 ```
 
-Roughly thirty seconds, no GPU. It prints each falsification condition and a
-verdict.
+About a minute each on a laptop CPU, no GPU. It prints each falsification
+condition and a verdict, and says UNDECIDED when a bootstrap bound is too close
+to its threshold for the draw count to settle.
 
 ## Tests
 
@@ -249,11 +272,6 @@ which every corpus available to us currently fails.
 **Try to break a claim.** The falsifiers are written down in
 `docs/PREREGISTRATION.md` and `docs/PREREGISTRATION-H3.md`. A clean negative is
 a contribution and gets written up as one, not reframed.
-
-**Tone marked phones.** `phonophase.phonology` rejects any symbol containing a
-digit, which drops 91 symbols and excludes Mandarin, Vietnamese and Thai
-entirely. Stripping the tone digit, parsing the base vowel and carrying tone as
-a separate covariate would open every tonal language.
 
 **Forced alignment.** Both current segmentations are approximately a 60 ms
 window around a CTC argmax peak, and 73% of slices are numerically identical

@@ -30,7 +30,13 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "scripts"))
 sys.path.insert(0, os.path.dirname(__file__))
 
 import analyse_slices  # noqa: E402
-from analyse_slices import UNDECIDED, at_least, require_cluster  # noqa: E402
+from analyse_slices import (  # noqa: E402
+    UNDECIDED,
+    at_least,
+    condition_1,
+    overall,
+    require_cluster,
+)
 from phonophase.stats import (  # noqa: E402
     bootstrap_auc_ci,
     cluster_groups,
@@ -86,28 +92,53 @@ def test_a_bound_sitting_on_the_null_is_undecided_whichever_side_it_lands():
     assert undecided / seeds >= 0.97, undecided / seeds
 
 
-def test_a_bound_well_clear_of_the_null_is_decided_and_needs_no_more_draws():
-    draws = np.random.default_rng(0).normal(loc=5.0, size=2000)
-    r = percentile_interval(draws)
-    assert not r["undecided"] and r["excludes_null"]
-    assert r["draws_to_settle"] is None
+def test_a_bound_well_clear_of_the_null_is_settled_on_the_side_it_is_on():
+    above = percentile_interval(np.random.default_rng(0).normal(loc=5.0, size=2000))
+    assert above["above_null"] is True and above["below_null"] is False
+    assert above["excludes_null"] and not above["undecided"]
 
     straddling = percentile_interval(np.random.default_rng(0).normal(size=2000))
-    assert not straddling["undecided"] and not straddling["excludes_null"]
+    assert straddling["above_null"] is False and straddling["below_null"] is False
+    assert not straddling["excludes_null"] and not straddling["undecided"]
+
+    below = percentile_interval(np.random.default_rng(0).normal(loc=-5.0, size=2000))
+    assert below["above_null"] is False and below["below_null"] is True
+    assert below["excludes_null"] and not below["undecided"]
 
 
-def test_an_undecided_bound_says_how_many_draws_would_settle_it():
-    """More than were used, since the band has to shrink to clear the null."""
-    draws = np.random.default_rng(3).normal(loc=1.959964 + 0.02, size=2000)
-    r = percentile_interval(draws)
-    assert r["undecided"]
-    assert r["draws_to_settle"] is None or r["draws_to_settle"] > 2000
+def test_too_few_draws_to_bracket_a_bound_settle_nothing():
+    """
+    With a handful of draws the ranks the band needs do not exist. Clipping them
+    to the smallest and largest draw gave a band that covered the true quantile
+    22 percent of the time at ten draws, under a label that says 99.
+    """
+    for n in (3, 10, 100):
+        r = percentile_interval(np.random.default_rng(0).normal(loc=5.0, size=n))
+        assert r["low_band"] is None and r["above_null"] is None, n
+        assert r["undecided"], f"{n} draws were reported as settling a verdict"
+    assert not percentile_interval(
+        np.random.default_rng(0).normal(loc=5.0, size=1000))["undecided"]
 
 
-def test_the_null_is_a_parameter_because_an_auc_is_tested_against_a_half():
+def test_a_draw_that_is_not_a_number_is_refused_rather_than_read_as_a_fail():
+    for bad in ([], [0.1, float("nan"), 0.2]):
+        try:
+            percentile_interval(bad)
+        except ValueError:
+            continue
+        raise AssertionError(f"{bad} must be refused")
+
+
+def test_an_auc_is_tested_against_a_half_not_against_zero():
+    """
+    Pure noise must cross chance and must be settled about it. Tested against
+    zero instead, an AUC interval near 0.5 would read as excluding the null.
+    """
     rng = np.random.default_rng(0)
     y = np.repeat([0, 1], 300)
-    strong = bootstrap_auc_ci(y, y + rng.normal(0, 0.5, y.size), n_boot=400)
+    noise = bootstrap_auc_ci(y, rng.normal(size=y.size), n_boot=1000)
+    assert noise["crosses_chance"] and not noise["chance_undecided"]
+    strong = bootstrap_auc_ci(y, y + rng.normal(0, 0.5, y.size), n_boot=1000)
     assert not strong["crosses_chance"] and not strong["chance_undecided"]
 
 
@@ -125,12 +156,73 @@ def test_undecided_cells_never_become_a_pass_or_a_fail():
     assert at_least(2, clear=0, unsettled=1) is False, "cannot reach 2 either way"
 
 
+def _level(low_band, positive):
+    return {"advantage": 0.5 * (low_band[0] + low_band[1]) + 0.04,
+            "ci_low": low_band[0], "ci_high": low_band[0] + 0.08,
+            "positive": positive, "undecided": positive is None, "n_draws": 2000}
+
+
+def test_condition_1_is_undecided_only_when_the_lower_bound_is_near_zero():
+    assert condition_1(None) is None
+    assert condition_1(_level((0.02, 0.03), True)) is True
+    assert condition_1(_level((-0.002, 0.003), None)) is UNDECIDED
+    assert condition_1(_level((-0.05, -0.04), False)) is False
+    below_with_its_top_on_zero = {**_level((-0.05, -0.04), False), "undecided": True}
+    assert condition_1(below_with_its_top_on_zero) is False
+
+
+def test_an_interval_wholly_below_zero_fails_condition_1_however_close_its_top():
+    """
+    The condition is "excludes zero and is positive". An interval of
+    [-0.037, -0.002] has its UPPER bound within Monte Carlo error of zero, so
+    whether it excludes zero is unsettled, but the condition fails either way.
+    Reporting it as undecided would let a decided failure print as
+    "not a rejection".
+    """
+    draws = np.random.default_rng(0).normal(loc=-0.02, scale=0.02 / 1.96, size=2000)
+    interval = percentile_interval(draws)
+    assert interval["undecided"], "the fixture's upper bound must sit on zero"
+    assert interval["above_null"] is False
+
+    data = _speaker_table()
+    data = {c: {**d, analyse_slices.PHASE: d[analyse_slices.MAGNITUDE] * 1.0,
+                analyse_slices.MAGNITUDE: d["y"] + d[analyse_slices.MAGNITUDE]}
+            for c, d in data.items()}
+    level = analyse_slices.advantage_ci(data, analyse_slices.SONORANTS, 600, 0)
+    assert level["ci_high"] < 0, "magnitude separates and phase does not, by construction"
+    assert condition_1(level) is False
+
+
+def test_the_overall_verdict_over_every_combination_of_states():
+    """
+    A decided failure is a failure. An undecided condition is neither a pass
+    nor a fail and must never print as either. A condition that could not be
+    evaluated is not a pass.
+    """
+    T, F, U = True, False, UNDECIDED
+    for c1 in (T, F, U, None):
+        for c2 in (T, F):
+            for c3 in (T, F, U):
+                got = overall([c1, c2, c3])
+                states = (c1, c2, c3)
+                if any(s is F for s in states):
+                    assert got == "failed", states
+                elif any(s is U for s in states):
+                    assert got == "undecided", states
+                elif c1 is None:
+                    assert got == "failed", states
+                else:
+                    assert got == "supported", states
+
+
 def test_the_registered_interval_functions_report_whether_they_are_settled():
     data = _speaker_table()
-    level = analyse_slices.advantage_ci(data, analyse_slices.SONORANTS, 200, 0)
-    asym = analyse_slices.asymmetry_ci(data, 200, 0)
+    level = analyse_slices.advantage_ci(data, analyse_slices.SONORANTS, 600, 0)
+    asym = analyse_slices.asymmetry_ci(data, 600, 0)
     for r in (level, asym):
-        assert {"undecided", "draws_to_settle", "excludes_zero"} <= set(r)
+        assert {"undecided", "positive", "excludes_zero"} <= set(r)
+    assert level["positive"] is True and not level["undecided"], (
+        "phase separates by a full standard deviation in this fixture")
 
 
 # --------------------------------------------------------------------------
@@ -220,6 +312,51 @@ def test_speaker_clustering_is_refused_when_a_row_has_no_speaker():
             assert "speaker" in str(exc)
         else:
             raise AssertionError("a table with an unplaced row must be refused")
+
+
+def test_speaker_clustering_is_refused_on_a_handful_of_speakers():
+    """
+    A speaker column holding one constant value gave an interval of zero width
+    and printed a pass.
+    """
+    data = _speaker_table()
+    for d in data.values():
+        d["speaker"] = np.full(d["speaker"].size, "everyone")
+    for level in ("speaker", "speaker-paired"):
+        try:
+            require_cluster(data, level)
+        except SystemExit as exc:
+            assert "1 speakers" in str(exc)
+        else:
+            raise AssertionError("one speaker must not be resampled")
+
+
+def test_the_paired_draw_reaches_the_per_category_interval_too():
+    """
+    The per category table and condition 3 come from bootstrap_auc_ci. Under
+    speaker-paired it must make the same paired draw as the LEVEL does, or one
+    run mixes two designs under one heading.
+    """
+    d = _speaker_table()["NASALS"]
+    args = dict(n_boot=300, seed=0, groups=d["speaker"])
+    stratified = bootstrap_auc_ci(d["y"], d[analyse_slices.PHASE], **args)
+    paired = bootstrap_auc_ci(d["y"], d[analyse_slices.PHASE], stratify=False, **args)
+    assert (stratified["ci_low"], stratified["ci_high"]) != (
+        paired["ci_low"], paired["ci_high"])
+    assert paired["ci_low"] < paired["auc"] < paired["ci_high"]
+
+
+def test_a_statistic_the_table_lacks_or_one_compared_with_itself_is_refused():
+    root = os.path.join(os.path.dirname(__file__), "..")
+    table = os.path.join(root, "results", "eval_slices.csv.gz")
+    analyse_slices.check_columns(table, "mgd_hf_std", "hf_lf_tilt")
+    for phase, magnitude in (("mgd_hf_std", "no_such_column"),
+                             ("mgd_hf_std", "mgd_hf_std")):
+        try:
+            analyse_slices.check_columns(table, phase, magnitude)
+        except SystemExit:
+            continue
+        raise AssertionError((phase, magnitude))
 
 
 def test_the_shipped_table_gets_its_speakers_from_the_protocol():

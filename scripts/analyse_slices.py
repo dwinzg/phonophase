@@ -1,9 +1,12 @@
 """
 Run the pre-registered test on the table produced by slice_and_probe.py.
 
-The decision procedure in docs/PREREGISTRATION.md is implemented literally,
-including all four falsification conditions, and the verdict is printed. That
-is the point. A procedure fixed in advance and executed mechanically is the
+The decision procedure in docs/PREREGISTRATION.md is implemented as written,
+and the verdict is printed. One thing is added to it: a condition that turns on
+a bootstrap bound too close to its threshold for the draw count to settle is
+reported as UNDECIDED rather than as whichever of PASS and FAIL the random seed
+produced. Under the registered settings no bound is near its threshold and the
+output is what it always was. That is the point. A procedure fixed in advance and executed mechanically is the
 only defence against fitting a story to whatever the data happens to show,
 which has already happened twice in this project.
 
@@ -47,6 +50,7 @@ OBSTRUENTS = ["FRICATIVES", "PLOSIVES", "AFFRICATES"]
 
 PHASE = "mgd_hf_std"
 MAGNITUDE = "mfcc_frame_spread"
+REGISTERED_PAIR = (PHASE, MAGNITUDE)
 
 
 def open_table(path):
@@ -133,9 +137,16 @@ def require_cluster(data, cluster):
         if any(np.isin(d["speaker"], sorted(placeholders)).any()
                for d in data.values()):
             raise SystemExit(
-                f"--cluster {cluster} needs a speaker for every row. This table "
-                "has rows with none, and --protocol does not list their "
-                "utterance ids.")
+                f"--cluster {cluster} needs a speaker for every row, and this "
+                "table has rows with none. Either its speaker column holds a "
+                "placeholder, or it has no speaker column and --protocol is "
+                "missing or does not list those utterance ids.")
+        speakers = set().union(*(set(d["speaker"].tolist()) for d in data.values()))
+        if len(speakers) < MIN_UTTERANCES:
+            raise SystemExit(
+                f"--cluster {cluster} found {len(speakers)} speakers. Resampling "
+                f"fewer than {MIN_UTTERANCES} clusters gives an interval that "
+                "means nothing.")
         return
     if cluster != "system":
         return
@@ -170,12 +181,40 @@ def at_least(needed, clear, unsettled):
     return UNDECIDED if clear + unsettled >= needed else False
 
 
-def settle_note(result):
-    """How many draws would settle an undecided bound, as a phrase."""
-    needed = result["draws_to_settle"]
-    if needed is None:
-        return "and the bound sits on zero, so no draw count settles it"
-    return f"about {needed:,} draws would settle it"
+def condition_1(son):
+    """
+    Falsification condition 1: the sonorant advantage interval excludes zero
+    and is positive. That is a statement about the LOWER bound alone, so it is
+    undecided only when the lower bound is within Monte Carlo error of zero. An
+    interval lying wholly below zero fails, however close its upper bound is.
+    """
+    if son is None:
+        return None
+    return UNDECIDED if son["positive"] is None else son["positive"]
+
+
+def overall(states):
+    """
+    The verdict over conditions 1 to 3, each True, False, UNDECIDED or None for
+    not evaluated. A decided failure is a failure whatever else is undecided.
+    """
+    decided = [s for s in states if s is not None]
+    if any(s is False for s in decided):
+        return "failed"
+    if any(s is UNDECIDED for s in decided):
+        return "undecided"
+    return "supported" if len(decided) == 3 else "failed"
+
+
+def check_columns(path, phase, magnitude):
+    """Refuse a statistic the table does not have, or one compared with itself."""
+    with open_table(path) as fh:
+        header = next(csv.reader(fh))
+    missing = [c for c in (phase, magnitude) if c not in header]
+    if missing:
+        raise SystemExit(f"{path} has no column {', '.join(missing)}")
+    if phase == magnitude:
+        raise SystemExit("--phase and --magnitude name the same column")
 
 
 MIN_SLICES = 30
@@ -277,7 +316,9 @@ def _interval_fields(interval):
     return {"ci_low": interval["ci_low"], "ci_high": interval["ci_high"],
             "excludes_zero": interval["excludes_null"],
             "undecided": interval["undecided"],
-            "draws_to_settle": interval["draws_to_settle"]}
+            # True, False, or None when the lower bound is within Monte Carlo
+            # error of zero.
+            "positive": interval["above_null"]}
 
 
 def advantage_ci(data, categories, n_boot, seed, alpha=0.05, cluster="utterance"):
@@ -292,8 +333,9 @@ def advantage_ci(data, categories, n_boot, seed, alpha=0.05, cluster="utterance"
     ONE draw serves every category, which is a correction. This function used to
     resample each category independently and average the results. One utterance
     feeds all three categories, so independent draws discarded the dependence
-    they share and shrank the variance of their mean: every published LEVEL
-    interval was about 40 percent too narrow. The conclusions survive the
+    they share and shrank the variance of their mean: on the eval table the
+    corrected LEVEL interval is about 40 percent wider clustered by utterance
+    and about 55 percent wider clustered by system. The conclusions survive the
     correction, the widths do not. See shared_cluster_draws in
     src/phonophase/stats.py.
 
@@ -333,14 +375,16 @@ def asymmetry_ci(data, n_boot, seed, alpha=0.05, cluster="utterance"):
     confused them, so both are reported and neither is called "the effect".
 
     Both group means come from ONE draw over all six categories, so the
-    difference is a difference rather than two separately reported numbers. That
-    matters in the opposite direction from the LEVEL: sonorant and obstruent
-    slices largely come from the same utterances, so whatever those utterances
-    contribute is common to both means and cancels here. Pairing therefore
-    TIGHTENS this interval where it WIDENS the LEVEL. An earlier version drew
-    each category independently and said in this docstring that the real
-    asymmetry interval was probably narrower than the one it reported; it was,
-    and this is the estimator that measures it.
+    difference is a difference rather than two separately reported numbers.
+    Sonorant and obstruent slices largely come from the same utterances, so
+    two things happen at once under a shared draw. Each group mean gets a
+    larger variance, as the LEVEL does, and the two group means become
+    positively correlated, which subtracts in a difference. Which wins depends
+    on the data. On the eval table they nearly offset: the two group means
+    correlate at about +0.3 clustered by utterance and the interval is within
+    a few percent of what independent per category draws gave, slightly
+    narrower by utterance and slightly wider by system. The independent draws
+    were wrong twice over and the errors cancelled.
 
     No verdict is computed from this. The falsification conditions are left
     exactly as docs/PREREGISTRATION.md states them.
@@ -393,6 +437,9 @@ def run_by_language(args, speakers):
 
     print(f"H2, per language. table {args.table}, segmentation {args.seg}, "
           f"clustered by {args.cluster}")
+    if (PHASE, MAGNITUDE) != REGISTERED_PAIR:
+        print(f"SENSITIVITY ANALYSIS, NOT THE REGISTERED TEST. "
+              f"{PHASE} against {MAGNITUDE}")
     print(f"languages: {', '.join(sorted(languages))}\n")
     print(f"{'LANGUAGE':<12} {'SONORANT ADV':>14} {'95% CI':>20} {'OBSTRUENT ADV':>15}  VERDICT")
     print("-" * 78)
@@ -406,11 +453,12 @@ def run_by_language(args, speakers):
         if son is None:
             print(f"{lang:<12} {'too few':>14}")
             continue
-        holds = bool(son["excludes_zero"] and son["advantage"] > 0 and (
-            obs is None or (np.isfinite(obs["advantage"])
-                            and son["advantage"] > obs["advantage"])))
-        verdict = ("undecided at this draw count" if son["undecided"]
-                   else "holds" if holds else "does not hold")
+        ordered = bool(obs is None or (np.isfinite(obs["advantage"])
+                                       and son["advantage"] > obs["advantage"]))
+        level = condition_1(son)
+        verdict = ("does not hold" if level is False or not ordered
+                   else "undecided at this draw count" if level is UNDECIDED
+                   else "holds")
         print(f"{lang:<12} {son['advantage']:>+14.3f} "
               f"{'[%+.3f, %+.3f]' % (son['ci_low'], son['ci_high']):>20} "
               f"{(obs['advantage'] if obs else float('nan')):>+15.3f}  "
@@ -421,6 +469,7 @@ def run_by_language(args, speakers):
 
 
 def main():
+    global PHASE, MAGNITUDE
     ap = argparse.ArgumentParser()
     ap.add_argument("--table", required=True)
     ap.add_argument("--seg", default="run", choices=["run", "window"])
@@ -438,11 +487,26 @@ def main():
     ap.add_argument("--protocol", default=DEFAULT_PROTOCOL,
                     help="ASVspoof protocol file, used to find the speaker of a "
                          "row when the table has no speaker column")
+    ap.add_argument("--phase", default=PHASE,
+                    help="column used as the phase statistic. The registered "
+                         "one is the default")
+    ap.add_argument("--magnitude", default=MAGNITUDE,
+                    help="column used as the magnitude statistic. The "
+                         "registered one is the default. Any other choice is a "
+                         "sensitivity analysis, not the registered test, and "
+                         "picking the best of several is not a comparison")
     ap.add_argument("--by-language", action="store_true",
                     help="run the same test separately per language. This is "
                          "the H2 cross lingual test. If the effect is "
                          "articulatory it should hold in every language")
     args = ap.parse_args()
+
+    check_columns(args.table, args.phase, args.magnitude)
+    PHASE, MAGNITUDE = args.phase, args.magnitude
+    # The registration fixes the pair of statistics and clustering by source
+    # utterance. Anything else bounds the scope of the result and gets no
+    # verdict on H1.
+    registered = (PHASE, MAGNITUDE) == REGISTERED_PAIR and args.cluster == "utterance"
 
     speakers = (read_speaker_map(args.protocol)
                 if os.path.exists(args.protocol) else {})
@@ -470,7 +534,8 @@ def main():
             print(f"{cat:<16} {f'{n_b}/{n_s}':>12} {f'{u_b}/{u_s}':>12}   too few")
             continue
         r = bootstrap_auc_ci(d["y"], d[PHASE], n_boot=args.n_boot,
-                             seed=args.seed, groups=cluster_groups(d, args.cluster))
+                             seed=args.seed, groups=cluster_groups(d, args.cluster),
+                             stratify=args.cluster != "speaker-paired")
         sep = max(r["auc"], 1 - r["auc"])
         lo, hi = ((r["ci_low"], r["ci_high"]) if r["auc"] >= 0.5
                   else (1 - r["ci_high"], 1 - r["ci_low"]))
@@ -486,7 +551,9 @@ def main():
     asym = asymmetry_ci(data, args.n_boot, args.seed, cluster=args.cluster)
 
     print("\n" + "=" * 70)
-    print("PRE-REGISTERED TEST, docs/PREREGISTRATION.md")
+    print("PRE-REGISTERED TEST, docs/PREREGISTRATION.md" if registered else
+          f"NOT THE REGISTERED TEST. {PHASE} against {MAGNITUDE}, "
+          f"clustered by {args.cluster}")
     print("=" * 70)
     for name, r in (("sonorants", son), ("obstruents", obs)):
         if r is None:
@@ -502,7 +569,8 @@ def main():
     # twice. No falsification condition is computed from the line below.
     if asym is not None:
         print(f"  {'asymmetry':<12} sonorant minus obstruent {asym['asymmetry']:+.3f} "
-              f"[{asym['ci_low']:+.3f}, {asym['ci_high']:+.3f}]")
+              f"[{asym['ci_low']:+.3f}, {asym['ci_high']:+.3f}]"
+              + ("  not settled at this draw count" if asym["undecided"] else ""))
     print(f"  {'clustered by':<12} {args.cluster}")
 
     print("\nFalsification conditions, stated in advance:")
@@ -511,13 +579,11 @@ def main():
     if son is None:
         verdicts.append(("1. sonorant advantage interval excludes zero", None, "unavailable"))
     else:
-        ok = (UNDECIDED if son["undecided"]
-              else son["excludes_zero"] and son["advantage"] > 0)
+        ok = condition_1(son)
         detail = f"{son['advantage']:+.3f} [{son['ci_low']:+.3f}, {son['ci_high']:+.3f}]"
-        if son["undecided"]:
-            detail += ("\n         the bound nearest zero is within Monte Carlo "
-                       f"error of it at {son['n_draws']} draws, "
-                       + settle_note(son))
+        if ok is UNDECIDED:
+            detail += ("\n         the lower bound is within Monte Carlo error of "
+                       f"zero at {son['n_draws']} draws")
         verdicts.append(("1. sonorant advantage interval excludes zero and is positive",
                          ok, detail))
 
@@ -572,15 +638,20 @@ def main():
         print("=" * 70)
         return
 
-    decided = [v[1] for v in verdicts[:3] if v[1] is not None]
-    if UNDECIDED in decided and False not in decided:
+    outcome = overall([v[1] for v in verdicts[:3]])
+    if not registered:
+        print("Not the registered test, so this is no verdict on H1. Under this")
+        print("setting conditions 1 to 3 read: "
+              + {"supported": "all pass.", "undecided": "undecided at this draw count.",
+                 "failed": "at least one fails."}[outcome])
+    elif outcome == "undecided":
         # A bound within Monte Carlo error of its threshold prints PASS on one
         # seed and FAIL on another. Neither is a result.
         print("UNDECIDED at this draw count. A falsification condition turns on")
         print("a bootstrap bound that another seed would put on the other side")
         print("of its threshold. This is NOT a rejection and NOT a confirmation.")
         print("Rerun with a larger --n-boot.")
-    elif len(decided) == 3 and all(decided):
+    elif outcome == "supported":
         print("H1 SUPPORTED on this partition.")
         if len(powered) < 3:
             print("Power condition not met, so treat as provisional and say so.")
