@@ -200,19 +200,20 @@ def test_the_overall_verdict_over_every_combination_of_states():
     evaluated is not a pass.
     """
     T, F, U = True, False, UNDECIDED
-    for c1 in (T, F, U, None):
-        for c2 in (T, F):
-            for c3 in (T, F, U):
-                got = overall([c1, c2, c3])
-                states = (c1, c2, c3)
-                if any(s is F for s in states):
-                    assert got == "failed", states
-                elif any(s is U for s in states):
-                    assert got == "undecided", states
-                elif c1 is None:
-                    assert got == "failed", states
-                else:
-                    assert got == "supported", states
+    for primary in (T, F, U, None):
+        for c1 in (T, F, U, None):
+            for c2 in (T, F):
+                for c3 in (T, F, U):
+                    states = (primary, c1, c2, c3)
+                    got = overall(list(states))
+                    if any(s is F for s in states):
+                        assert got == "failed", states
+                    elif any(s is U for s in states):
+                        assert got == "undecided", states
+                    elif any(s is None for s in states):
+                        assert got == "failed", states
+                    else:
+                        assert got == "supported", states
 
 
 def test_the_registered_interval_functions_report_whether_they_are_settled():
@@ -223,6 +224,97 @@ def test_the_registered_interval_functions_report_whether_they_are_settled():
         assert {"undecided", "positive", "excludes_zero"} <= set(r)
     assert level["positive"] is True and not level["undecided"], (
         "phase separates by a full standard deviation in this fixture")
+
+
+def _run_main(table, *extra):
+    """The script's printed output for one command line."""
+    import contextlib
+    import io
+    argv, out = sys.argv, io.StringIO()
+    pair = analyse_slices.PHASE, analyse_slices.MAGNITUDE
+    sys.argv = ["analyse_slices.py", "--table", table, *extra]
+    try:
+        with contextlib.redirect_stdout(out):
+            analyse_slices.main()
+    finally:
+        sys.argv = argv
+        analyse_slices.PHASE, analyse_slices.MAGNITUDE = pair
+    return out.getvalue()
+
+
+def _write_table(path, data, flat_obstruents=False):
+    import csv
+    rng = np.random.default_rng(1)
+    with open(path, "w", newline="") as fh:
+        w = csv.writer(fh)
+        w.writerow(["utterance_id", "speaker", "label", "attack", "category",
+                    "seg", analyse_slices.PHASE, analyse_slices.MAGNITUDE])
+        for category, d in data.items():
+            for i in range(d["y"].size):
+                phase = d[analyse_slices.PHASE][i]
+                if flat_obstruents and category in analyse_slices.OBSTRUENTS:
+                    phase = rng.normal()
+                w.writerow([d["u"][i], d["speaker"][i], d["y"][i], d["attack"][i],
+                            category, "run", phase, d[analyse_slices.MAGNITUDE][i]])
+
+
+def test_the_printed_verdict_follows_the_states_end_to_end():
+    """
+    The pieces above are tested alone. This runs the script itself, because a
+    verdict that is computed correctly and printed wrongly is still wrong.
+    """
+    import tempfile
+    with tempfile.TemporaryDirectory() as tmp:
+        table = os.path.join(tmp, "t.csv")
+        _write_table(table, _speaker_table(n_speakers=30), flat_obstruents=True)
+
+        settled = _run_main(table, "--n-boot", "600")
+        assert "PRE-REGISTERED TEST" in settled
+        assert "[PASS] sonorant advantage exceeds obstruent" in settled
+        assert "[PASS] 1." in settled
+        assert "H1 SUPPORTED" in settled
+
+        # Too few draws for any bound to be settled, so nothing may print as a
+        # pass or as a rejection.
+        unsettled = _run_main(table, "--n-boot", "40")
+        assert "[UNDECIDED] sonorant advantage exceeds obstruent" in unsettled
+        assert "[UNDECIDED] 1." in unsettled
+        assert "[UNDECIDED] 3." in unsettled
+        assert "UNDECIDED at this draw count" in unsettled
+        assert "SUPPORTED" not in unsettled and "REJECTED" not in unsettled
+
+        other = _run_main(table, "--n-boot", "600", "--cluster", "speaker-paired")
+        assert "NOT THE REGISTERED TEST" in other
+        assert "no verdict on H1" in other and "H1 SUPPORTED" not in other
+
+
+def test_a_clear_level_does_not_carry_h1_when_the_difference_is_not_clear():
+    """
+    H1's primary test is the difference between sonorants and obstruents. With
+    phase separating equally in both groups the level passes and the
+    difference does not, and the script must not print SUPPORTED.
+    """
+    import tempfile
+    with tempfile.TemporaryDirectory() as tmp:
+        table = os.path.join(tmp, "t.csv")
+        _write_table(table, _speaker_table(n_speakers=30))
+        out = _run_main(table, "--n-boot", "600")
+        assert "[PASS] 1." in out
+        assert "[FAIL] sonorant advantage exceeds obstruent" in out
+        assert "H1 SUPPORTED" not in out
+
+
+def test_the_script_asks_for_the_paired_draw_when_told_to():
+    """Otherwise the speaker-paired row is the speaker row under another name."""
+    data = _speaker_table()
+    paired = analyse_slices.advantage_ci(data, analyse_slices.SONORANTS, 300, 0,
+                                         cluster="speaker-paired")
+    apart = analyse_slices.advantage_ci(data, analyse_slices.SONORANTS, 300, 0,
+                                        cluster="speaker")
+    assert (paired["ci_low"], paired["ci_high"]) != (apart["ci_low"], apart["ci_high"])
+    paired = analyse_slices.asymmetry_ci(data, 300, 0, cluster="speaker-paired")
+    apart = analyse_slices.asymmetry_ci(data, 300, 0, cluster="speaker")
+    assert (paired["ci_low"], paired["ci_high"]) != (apart["ci_low"], apart["ci_high"])
 
 
 # --------------------------------------------------------------------------

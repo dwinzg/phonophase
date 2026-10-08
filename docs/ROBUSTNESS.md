@@ -51,7 +51,8 @@ width within 0.004 of the row above it.
 
 What this says:
 
-1. **The ASYMMETRY excludes zero under every clustering**, with a lower bound
+1. **For the registered pair of statistics, the ASYMMETRY excludes zero under
+   every clustering**, with a lower bound
    never below +0.018 on any seed or segmentation. It is the quantity H1
    asserts, and it is the robust one. The lower bound was computed on seeds 0
    to 2 of both segmentations.
@@ -91,7 +92,9 @@ script still reports as UNDECIDED. The bound is on zero.
 
 More draws answer the Monte Carlo question and nothing more. A percentile
 interval over 13 clusters covers less often than its nominal rate, and a margin
-of 0.002 is well inside what that shortfall could account for. The reading this
+of 0.002 is well inside what that shortfall could account for. The margin also
+rests on treating the 1,500 bonafide utterances as independent, which the
+speaker rows above show they are not. The reading this
 supports is that under system clustering the LEVEL is not distinguishable from
 zero, and the ASYMMETRY is.
 

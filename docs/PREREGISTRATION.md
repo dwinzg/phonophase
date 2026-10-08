@@ -137,10 +137,13 @@ The intervals in row 1 were first recorded here as [+0.039, +0.057] and
 were too narrow; the ones shown resample utterances once per draw for all three
 categories. Point estimates and verdicts are unchanged.
 
-The analysis script has since gained a third printed state, UNDECIDED, for a
-condition that turns on a bootstrap bound within Monte Carlo error of its
-threshold. No bound is near its threshold under the registered settings, and
-the script's output for this table under them is unchanged.
+The analysis script has since gained two things. It evaluates the primary test
+as worded above, the interval on the sonorant minus obstruent difference, which
+on this table is +0.063 [+0.045, +0.080] on seg=run and +0.063 [+0.045, +0.080]
+on seg=window, and passes. And it prints a third state, UNDECIDED, for a test
+that turns on a bootstrap bound within Monte Carlo error of its threshold. No
+bound is near its threshold under the registered settings, so every line the
+script printed for this table before, it still prints.
 
 The last row is the *Required sample size* requirement, which is a power
 precondition and not one of the four falsification conditions. Until

@@ -61,7 +61,7 @@ though it were funded.
 
 Pre-registered in `docs/PREREGISTRATION.md` before the data was touched, run on
 ASVspoof 2019 LA eval, attacks A07 to A19, none seen in training. 2,995
-utterances, 137,992 slices, bootstraps clustered by source utterance. Sonorant
+utterances, 68,996 slices in each of two segmentations, bootstraps clustered by source utterance. Sonorant
 advantage **+0.048 [+0.035, +0.061]** against obstruent −0.015, sonorant minus
 obstruent **+0.063 [+0.045, +0.080]**, all four falsification conditions decided
 in its favour. Scope limits by clustering and by choice of statistic are in

@@ -16,7 +16,7 @@ one. See `docs/SCOPE.md`.
 
 Pre-registered in `docs/PREREGISTRATION.md` before the data was touched, then
 run on the ASVspoof 2019 LA **eval** partition, attacks A07 to A19, none seen in
-training. 2,995 utterances, 137,992 slices, bootstraps clustered by source
+training. 2,995 utterances, 68,996 slices in each of two segmentations, bootstraps clustered by source
 utterance.
 
 **Dispersion of Modified Group Delay over the upper spectrum separates bonafide
@@ -34,8 +34,8 @@ from spoofed speech more strongly in sonorants than in obstruents.**
 
 Sonorant advantage **+0.048 [+0.035, +0.061]** against obstruent −0.015, and
 the difference between them, which is the quantity H1 asserts, **+0.063
-[+0.045, +0.080]**. The first three falsification conditions passed at 6 to 7
-times the required power, and the fourth, which compares partitions, does not
+[+0.045, +0.080]**. The first three falsification conditions passed with 6 to 7
+times the required number of bonafide utterances, and the fourth, which compares partitions, does not
 fire (`scripts/falsification_4.py`).
 
 An earlier version of this page gave the first interval as [+0.039, +0.057].

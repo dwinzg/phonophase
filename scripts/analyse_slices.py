@@ -187,6 +187,9 @@ def condition_1(son):
     and is positive. That is a statement about the LOWER bound alone, so it is
     undecided only when the lower bound is within Monte Carlo error of zero. An
     interval lying wholly below zero fails, however close its upper bound is.
+
+    The primary test has the same form on the asymmetry interval, and is
+    decided by the same function.
     """
     if son is None:
         return None
@@ -195,15 +198,16 @@ def condition_1(son):
 
 def overall(states):
     """
-    The verdict over conditions 1 to 3, each True, False, UNDECIDED or None for
-    not evaluated. A decided failure is a failure whatever else is undecided.
+    The verdict over the primary test and conditions 1 to 3, each True, False,
+    UNDECIDED or None for not evaluated. A decided failure is a failure
+    whatever else is undecided, and a test that was not evaluated is not a
+    pass.
     """
-    decided = [s for s in states if s is not None]
-    if any(s is False for s in decided):
+    if any(s is False for s in states):
         return "failed"
-    if any(s is UNDECIDED for s in decided):
+    if any(s is UNDECIDED for s in states):
         return "undecided"
-    return "supported" if len(decided) == 3 else "failed"
+    return "supported" if all(s is True for s in states) else "failed"
 
 
 def check_columns(path, phase, magnitude):
@@ -573,6 +577,19 @@ def main():
               + ("  not settled at this draw count" if asym["undecided"] else ""))
     print(f"  {'clustered by':<12} {args.cluster}")
 
+    # The primary test as the registration words it: the sonorant mean
+    # advantage exceeds the obstruent mean advantage with a 95% interval
+    # excluding zero. That is the ASYMMETRY interval. For a long time only the
+    # falsification conditions below were evaluated, none of which is this.
+    primary = condition_1(asym)
+    mark = ("n/a " if primary is None else "UNDECIDED" if primary is UNDECIDED
+            else "PASS" if primary else "FAIL")
+    print(f"\nPrimary test:\n  [{mark}] sonorant advantage exceeds obstruent "
+          "advantage, interval excludes zero")
+    if asym is not None:
+        print(f"         {asym['asymmetry']:+.3f} "
+              f"[{asym['ci_low']:+.3f}, {asym['ci_high']:+.3f}]")
+
     print("\nFalsification conditions, stated in advance:")
     verdicts = []
 
@@ -638,17 +655,17 @@ def main():
         print("=" * 70)
         return
 
-    outcome = overall([v[1] for v in verdicts[:3]])
+    outcome = overall([primary] + [v[1] for v in verdicts[:3]])
     if not registered:
         print("Not the registered test, so this is no verdict on H1. Under this")
-        print("setting conditions 1 to 3 read: "
+        print("setting the primary test and conditions 1 to 3 read: "
               + {"supported": "all pass.", "undecided": "undecided at this draw count.",
                  "failed": "at least one fails."}[outcome])
     elif outcome == "undecided":
         # A bound within Monte Carlo error of its threshold prints PASS on one
         # seed and FAIL on another. Neither is a result.
-        print("UNDECIDED at this draw count. A falsification condition turns on")
-        print("a bootstrap bound that another seed would put on the other side")
+        print("UNDECIDED at this draw count. The primary test or a condition turns")
+        print("on a bootstrap bound that another seed would put on the other side")
         print("of its threshold. This is NOT a rejection and NOT a confirmation.")
         print("Rerun with a larger --n-boot.")
     elif outcome == "supported":
