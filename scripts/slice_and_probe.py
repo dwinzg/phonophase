@@ -224,6 +224,70 @@ def group_runs(chars):
     return runs
 
 
+def load_aligner(device):
+    """
+    Load the alignment model once and return speech -> one phone per 20ms frame.
+
+    Loaded as feature extractor plus tokenizer rather than through
+    Wav2Vec2Processor, and with do_phonemize disabled.
+
+    Wav2Vec2Processor builds the phoneme tokenizer with phonemization on,
+    which initialises an espeak backend at load time and raises
+    "espeak not installed on your system" on any machine without it,
+    including a stock Colab runtime. We never phonemize text. We only decode
+    the model's CTC output into IPA symbols, which needs the vocabulary and
+    nothing else. Disabling it removes a system dependency outright.
+    """
+    from transformers import (Wav2Vec2FeatureExtractor, Wav2Vec2ForCTC,
+                              Wav2Vec2PhonemeCTCTokenizer)
+    from transformers.utils import logging as hf_logging
+    hf_logging.set_verbosity_error()
+
+    feature_extractor = Wav2Vec2FeatureExtractor.from_pretrained(MODEL_ID)
+    tokenizer = Wav2Vec2PhonemeCTCTokenizer.from_pretrained(MODEL_ID, do_phonemize=False)
+    model = Wav2Vec2ForCTC.from_pretrained(MODEL_ID).to(device).eval()
+    inv_vocab = {v: k for k, v in tokenizer.get_vocab().items()}
+
+    def chars_for(speech):
+        inputs = feature_extractor(speech, sampling_rate=SR,
+                                   return_tensors="pt").input_values.to(device)
+        with torch.no_grad():
+            logits = model(inputs).logits
+        return [inv_vocab[t.item()].lower() for t in torch.argmax(logits, dim=-1)[0]]
+
+    return chars_for
+
+
+def iter_slices(n_samples, runs, segs):
+    """
+    Yield (category, char, seg, first, last, a, b) for every slice long enough
+    to keep, where a and b are sample bounds into a signal of n_samples.
+
+    Split out of run() so a second pass can cut different audio at exactly the
+    boundaries a first pass found, without a second copy of this arithmetic.
+    """
+    for char, first, last in runs:
+        category = CHAR_TO_CATEGORY.get(char)
+        if not category:
+            continue
+
+        spans = {}
+        if "run" in segs:
+            spans["run"] = (first * FRAME_SEC - MARGIN_SEC,
+                            last * FRAME_SEC + MARGIN_SEC)
+        if "window" in segs:
+            # The legacy fixed window, centred on the run's first frame.
+            centre = (first + 0.5) * FRAME_SEC
+            spans["window"] = (centre - WINDOW_SEC / 2, centre + WINDOW_SEC / 2)
+
+        for seg, (s0, s1) in spans.items():
+            a = max(0, int(s0 * SR))
+            b = min(n_samples, int(s1 * SR))
+            if (b - a) <= MIN_SLICE_SEC * SR:
+                continue
+            yield category, char, seg, first, last, a, b
+
+
 def already_done(path):
     if not os.path.exists(path):
         return set()
@@ -376,29 +440,12 @@ def run(items, args, segs, total=None, audio_is_array=False):
     check_header_compatible(args.out, FIELDS)
     print(f"segmentations: {', '.join(segs)}")
 
-    from transformers import (Wav2Vec2FeatureExtractor, Wav2Vec2ForCTC,
-                              Wav2Vec2PhonemeCTCTokenizer)
-    from transformers.utils import logging as hf_logging
-    hf_logging.set_verbosity_error()
-
     device = "cuda" if torch.cuda.is_available() else "cpu"
     print(f"device: {device}")
     if device == "cpu":
         print("WARNING: this is a GPU job. On CPU it will take many hours.")
 
-    # Loaded as feature extractor plus tokenizer rather than through
-    # Wav2Vec2Processor, and with do_phonemize disabled.
-    #
-    # Wav2Vec2Processor builds the phoneme tokenizer with phonemization on,
-    # which initialises an espeak backend at load time and raises
-    # "espeak not installed on your system" on any machine without it,
-    # including a stock Colab runtime. We never phonemize text. We only decode
-    # the model's CTC output into IPA symbols, which needs the vocabulary and
-    # nothing else. Disabling it removes a system dependency outright.
-    feature_extractor = Wav2Vec2FeatureExtractor.from_pretrained(MODEL_ID)
-    tokenizer = Wav2Vec2PhonemeCTCTokenizer.from_pretrained(MODEL_ID, do_phonemize=False)
-    model = Wav2Vec2ForCTC.from_pretrained(MODEL_ID).to(device).eval()
-    inv_vocab = {v: k for k, v in tokenizer.get_vocab().items()}
+    chars_for = load_aligner(device)
 
     os.makedirs(os.path.dirname(os.path.abspath(args.out)) or ".", exist_ok=True)
     new_file = not os.path.exists(args.out)
@@ -425,46 +472,25 @@ def run(items, args, segs, total=None, audio_is_array=False):
                                           orig_sr=sr, target_sr=SR)
             speech = speech.astype(np.float64)
 
-            inputs = feature_extractor(speech, sampling_rate=SR,
-                                       return_tensors="pt").input_values.to(device)
-            with torch.no_grad():
-                logits = model(inputs).logits
-            chars = [inv_vocab[t.item()].lower() for t in torch.argmax(logits, dim=-1)[0]]
+            chars = chars_for(speech)
 
             label = 0 if label_str == "bonafide" else 1
             if speaker == UNKNOWN_SPEAKER:
                 print(f"  no speaker id for {utt} (not in the protocol file)")
 
-            for char, first, last in group_runs(chars):
-                category = CHAR_TO_CATEGORY.get(char)
-                if not category:
+            for category, char, seg, first, last, a, b in iter_slices(
+                    len(speech), group_runs(chars), segs):
+                stats = slice_statistics(speech[a:b])
+                if stats is None:
                     continue
-
-                spans = {}
-                if "run" in segs:
-                    spans["run"] = (first * FRAME_SEC - MARGIN_SEC,
-                                    last * FRAME_SEC + MARGIN_SEC)
-                if "window" in segs:
-                    # The legacy fixed window, centred on the run's first frame.
-                    centre = (first + 0.5) * FRAME_SEC
-                    spans["window"] = (centre - WINDOW_SEC / 2, centre + WINDOW_SEC / 2)
-
-                for seg, (s0, s1) in spans.items():
-                    a = max(0, int(s0 * SR))
-                    b = min(len(speech), int(s1 * SR))
-                    if (b - a) <= MIN_SLICE_SEC * SR:
-                        continue
-                    stats = slice_statistics(speech[a:b])
-                    if stats is None:
-                        continue
-                    writer.writerow({
-                        "utterance_id": utt, "speaker": speaker, "label": label,
-                        "attack": attack, "language": language, "corpus": corpus,
-                        "category": category, "phoneme": char, "seg": seg,
-                        "start_frame": first, "n_frames": last - first,
-                        "duration_s": round((b - a) / SR, 4), **stats,
-                    })
-                    written += 1
+                writer.writerow({
+                    "utterance_id": utt, "speaker": speaker, "label": label,
+                    "attack": attack, "language": language, "corpus": corpus,
+                    "category": category, "phoneme": char, "seg": seg,
+                    "start_frame": first, "n_frames": last - first,
+                    "duration_s": round((b - a) / SR, 4), **stats,
+                })
+                written += 1
         except Exception as exc:
             print(f"  skipped {utt}: {exc}")
 
