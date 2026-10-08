@@ -341,12 +341,9 @@ after the data was seen. A p value from a test incapable of returning a small
 one, without that stated. A count of how many cells came out positive, where the
 cells have intervals that were never corrected or reported.
 
-## Citing
-
-`CITATION.cff` is in the repository root.
-
 ## License
 
 MIT, see `LICENSE`. Covers the source code only. The speech corpora retain their
 own terms, recorded per entry in `configs/datasets.yaml`, and at least one is
-non commercial.
+non commercial. The result tables and the protocol file shipped here derive from
+ASVspoof 2019 and carry its attribution terms, see `NOTICE.md`.
