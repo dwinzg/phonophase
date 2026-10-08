@@ -66,18 +66,26 @@ has a 60 ms floor. Their agreement rules out a coding difference between the two
 paths. It does not show the finding survives a different way of cutting the
 audio, and forced alignment would be the test that does.
 
-A physical account has been proposed and is not established. Sonorants are
-voiced and periodic and carry coherent harmonic phase that a vocoder must
-reconstruct. Obstruents are aperiodic, so phase is close to random in genuine
-speech too and there is little structure for an artifact to disturb. Two
-measurements stand in the way of asserting it. A magnitude statistic, spectral
-tilt, shows nearly the same pattern (`docs/ROBUSTNESS.md`). And a sample rate
-conversion applied to genuine speech, with no synthesis involved, reproduces
-the sonorant advantage in full, though not the difference between sonorants and
-obstruents, which survives when both classes are low passed identically
-(`docs/BAND-EDGE.md`). On four of the thirteen attacks, the ones whose audio
-stops near 7.7 kHz, that difference does not survive, a split noticed after the
-fact and not yet tested on other data.
+A physical account was proposed for this: sonorants are voiced and periodic
+and carry coherent harmonic phase that a vocoder must reconstruct, while
+obstruents are aperiodic. **It is not established, and two measurements count
+against asserting it.**
+
+A low quality sample rate conversion applied to genuine speech, with no
+synthesis involved, reproduces the result at full size: sonorant advantage
++0.055, sonorant minus obstruent +0.059 [+0.040, +0.077], same direction and
+same category order (`docs/BAND-EDGE.md`). That particular artifact is ruled
+out as the cause here, because low passing both classes identically removes it
+and leaves the eval difference at +0.061 [+0.042, +0.078]. But it shows the
+signature is not specific to synthesis. And a magnitude statistic, spectral
+tilt, shows nearly the same pattern as the phase statistic
+(`docs/ROBUSTNESS.md`). An account in which the upper band spectral envelope of
+synthetic speech differs, with nothing particular to phase, fits everything
+measured so far.
+
+Pooled over the four attacks whose audio stops near 7.7 kHz, the difference
+does not survive the low pass. That split was noticed after the fact, is not
+uniform within the four, and has not been tested on other data.
 
 ### Three things it does not say
 

@@ -256,6 +256,46 @@ def test_two_arm_rows_relabels_the_second_arm_and_keeps_the_utterance_ids():
     assert set(d["attack"][d["y"] == 1].tolist()) == {"treated"}
 
 
+def test_each_arm_carries_its_own_table_and_the_treated_one_is_label_1():
+    """
+    Arm 1 built from the base table would make every contrast a comparison of
+    a recording with itself, and swapped arms would reverse every signed AUC.
+    """
+    base, treated = paired_rows(n_utt=12, effect=5.0)
+    rows = B.two_arm_rows(base, treated, "treated")
+    half = len(rows) // 2
+    assert [r[A.PHASE] for r in rows[:half]] == [r[A.PHASE] for r in base]
+    assert [r[A.PHASE] for r in rows[half:]] == [r[A.PHASE] for r in treated]
+    assert {r["attack"] for r in rows[:half]} == {"-"}
+    assert {r["attack"] for r in rows[half:]} == {"treated"}
+    data = B.to_data(rows)
+    nasals = data["NASALS"]
+    assert nasals["bonafide_label"] == 0
+    assert (nasals[A.PHASE][nasals["y"] == 1].mean()
+            > nasals[A.PHASE][nasals["y"] == 0].mean() + 3.0)
+
+
+def test_two_arm_rows_refuses_arms_that_hold_different_slices():
+    base, treated = paired_rows(n_utt=12)
+    try:
+        B.two_arm_rows(base, treated[:-1], "treated")
+    except ValueError:
+        return
+    raise AssertionError("arms of different slices must be refused")
+
+
+def test_a_sliced_row_is_label_0_for_bonafide_and_1_for_spoof():
+    """Label 1 is SPOOF. The other convention inverts every direction."""
+    import tempfile
+    with tempfile.TemporaryDirectory() as tmp:
+        item = _write_utterance(tmp, noise(2.0))
+        for label_str, attack, want in (("bonafide", "-", 0), ("spoof", "A07", 1)):
+            labelled = (item[0], item[1], attack, item[3], item[4], label_str, item[6])
+            rows = B.slice_utterance(labelled, [("m", 10, 13)], "none", ["run"])
+            assert rows and {r["label"] for r in rows} == {want}
+            assert {r["attack"] for r in rows} == {attack}
+
+
 def test_two_arm_rows_drops_spoofed_rows_from_both_arms():
     rows = synthetic_rows(n_utt=12)
     arms = B.two_arm_rows(rows, rows, "treated")

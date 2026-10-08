@@ -264,12 +264,17 @@ def cmd_slice(args):
     jobs = [(r, alignment[r[1]], args.treatment, segs, args.band) for r in items]
     fields = S.FIELDS + ([BAND_COLUMN] if args.band else [])
     written = 0
-    with open_out(args.out) as fh, ProcessPoolExecutor(args.jobs) as pool:
-        writer = csv.DictWriter(fh, fieldnames=fields)
-        writer.writeheader()
-        for rows in pool.map(_slice_job, jobs, chunksize=16):
-            writer.writerows(rows)
-            written += len(rows)
+    try:
+        with open_out(args.out) as fh, ProcessPoolExecutor(args.jobs) as pool:
+            writer = csv.DictWriter(fh, fieldnames=fields)
+            writer.writeheader()
+            for rows in pool.map(_slice_job, jobs, chunksize=16):
+                writer.writerows(rows)
+                written += len(rows)
+    except BaseException:
+        # A table cut short by a missing file reads as a complete one later.
+        os.remove(args.out)
+        raise
     print(f"{args.treatment}: {written} rows from {len(items)} utterances to {args.out}")
 
 
@@ -450,6 +455,9 @@ def two_arm_rows(base_rows, treated_rows, name):
     arm0 = [r for r in base_rows if int(r["label"]) == bona]
     arm1 = [{**r, "label": 1 - bona, "attack": name} for r in treated_rows
             if int(r["label"]) == bona]
+    key = ("utterance_id", "category", "seg")
+    if [[r[k] for k in key] for r in arm0] != [[r[k] for k in key] for r in arm1]:
+        raise ValueError("the two arms do not hold the same slices in the same order")
     return arm0 + arm1
 
 
@@ -530,9 +538,8 @@ def print_level_asymmetry(data, n_boot, seeds, joint):
 
 def cmd_r1(args):
     """Bonafide against treated bonafide. No synthesis on either side."""
-    base = load_rows(args.base, args.seg)
-    treated = base if not args.treated_base else load_rows(args.treated_base, args.seg)
-    rows = two_arm_rows(treated, load_rows(args.treated, args.seg), "treated")
+    arm0 = load_rows(args.treated_base or args.base, args.seg)
+    rows = two_arm_rows(arm0, load_rows(args.treated, args.seg), "treated")
     data = to_data(rows)
     print(f"arm 0 {args.treated_base or args.base} (bonafide rows)\n"
           f"arm 1 {args.treated} (bonafide rows)\nseg={args.seg}, "

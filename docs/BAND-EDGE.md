@@ -38,6 +38,10 @@ mismatch, is descriptive only.
 A mixed outcome is undecided and both numbers are given. A bound that changes
 sign across seeds is undecided.
 
+The rules were written down before any audio was read. They enter the
+repository in the same commit as the results, so the repository itself cannot
+show that.
+
 Two things were fixed after M1 and before M3, because they depend on M1. The
 low pass cutoff is 0.9 times the lowest group median 30 dB bandwidth, rounded
 down to 100 Hz, which is 6900 Hz. The sub band for the redefined statistic is
@@ -45,15 +49,31 @@ down to 100 Hz, which is 6900 Hz. The sub band for the redefined statistic is
 
 ## Outcome against each rule
 
-**R1: mixed, so undecided.** With soxr HQ, which is also librosa's default, the
-ASYMMETRY is +0.0079 [+0.0033, +0.0127] when utterances are drawn jointly, on
-three seeds, so the rule as written fires. With `scipy.signal.resample_poly` it
-is -0.0001 [-0.0016, +0.0015] and the rule does not fire. Under the unpaired
-draw neither interval excludes zero. The sign and size depend on the filter and
-on whether the output is rounded back to 16 bit: across twelve contrasts the
-ASYMMETRY runs from -0.028 to +0.042. The largest, soxr LQ at +0.042
-[+0.034, +0.049], is two thirds of H1's and is not phase selective. The two
-named resamplers give 13 percent of H1's ASYMMETRY and none of it.
+**R1: fires.** The rule names a 16 to 22.05 to 16 kHz round trip and no
+resampler. Of the resamplers tried, the outcome depends on which, and on
+whether the output is rounded back to 16 bit as every file in the corpus is.
+
+| round trip, then 16 bit | LEVEL | ASYMMETRY, unpaired draw |
+|---|---|---|
+| soxr LQ | +0.055 [+0.043, +0.067] | **+0.059 [+0.040, +0.077]** |
+| soxr HQ, librosa's default | -0.003 [-0.013, +0.012] | -0.028 [-0.045, +0.006] |
+| `scipy.signal.resample_poly` | +0.009 | +0.000 [-0.016, +0.019] |
+| for comparison, eval bonafide against spoof | +0.048 [+0.035, +0.061] | +0.063 [+0.045, +0.080] |
+
+The unpaired draw is the estimator the registered analysis uses, so the rows
+are comparable. With soxr LQ, whose passband starts to roll off near 6 kHz,
+genuine speech against the same genuine speech reproduces the eval result in
+size, in direction (the treated arm is lower on `mgd_hf_std` and higher on
+`mfcc_frame_spread`, as the spoofed side is), and in category order (nasals
+highest at 0.626, obstruents near zero advantage). Three seeds, no bound moves
+by more than 0.001. With the two sharper resamplers there is no positive
+ASYMMETRY once the output is 16 bit. Without the rounding soxr HQ gives +0.008
+[+0.003, +0.013] under the joint draw; that compares float output with 16 bit
+originals and is not a contrast the corpus contains.
+
+So a band limiting step with no synthesis in it can produce H1's signature.
+Whether one did, in the corpus, is what R2 asks. R1 fires and R2 is quiet,
+which is the mixed outcome the rules call undecided.
 
 **R2: quiet.** Half of the unmodified ASYMMETRY is +0.0315. After the identical
 round trip on everything it is +0.047 [+0.028, +0.065] with soxr HQ and +0.062
@@ -68,46 +88,53 @@ p = 0.10. With n = 13 only |rho| of 0.555 or more reaches p < 0.05.
 
 **A finding the rules did not anticipate, selected after M1.** Four attacks,
 A07, A08, A16 and A19, carry a hard band edge near 7.7 kHz that bonafide does
-not have. Against those four alone the ASYMMETRY is +0.054 [+0.028, +0.081]
+not have. Pooled, the ASYMMETRY against those four is +0.054 [+0.028, +0.081]
 unmodified and +0.014 [-0.011, +0.041] after the low pass, a change of -0.041
 [-0.052, -0.022]. Against the other nine it is +0.067 [+0.052, +0.086]
-unmodified and +0.078 [+0.058, +0.096] after. Applied to the four alone, R2's
-own criteria would fire. The split was chosen after seeing M1 and M2, so this
-is exploratory and is not a test.
+unmodified and +0.078 [+0.058, +0.096] after. That is one pooled contrast and
+not a statement about each of the four. Taken singly only A07 loses its
+ASYMMETRY with an interval excluding zero; A08 keeps it; A19's was negative and
+moves toward zero. The movement is on the obstruent side and leans on the
+affricate cell, 32 to 60 spoofed slices per attack. The split was chosen after
+seeing M1 and M2, so this is exploratory and is not a test.
 
 ## What this changes about H1, and what it does not
 
-**The band edge does not account for the pooled ASYMMETRY.** The low pass is
-shown below to remove a planted resampling difference completely, and after it
-the eval ASYMMETRY is +0.061 [+0.042, +0.078] against +0.063 unmodified. The
-registered analysis script run on the low passed table prints the same figures.
+**H1's signature is not specific to synthesis.** A low quality sample rate
+round trip applied to genuine speech reproduces the LEVEL and the ASYMMETRY at
+the size the eval comparison shows. The first rule was written to detect exactly
+this and it fires. No articulatory or phase reconstruction mechanism can be
+asserted for H1 on the strength of the eval result.
 
-**R1 fired by its letter and the rule was badly drawn.** It asked only for a
-positive interval excluding zero and set no size. One of the two named
-resamplers meets it, at one eighth of H1's ASYMMETRY, with a sign that reverses
-when the output is rounded to 16 bit, and the other does not. That is reported
-here as mixed and undecided. It is not rewritten as a pass: a rule with a size
-criterion would have to be registered and run on other data.
+**The eval ASYMMETRY is nonetheless not that artifact, as far as these
+equalisers can tell.** One identical low pass at 6900 Hz on both arms takes the
+planted soxr LQ ASYMMETRY from +0.059 to +0.001 [-0.017, +0.018]. The same low
+pass leaves the eval ASYMMETRY at +0.061 [+0.042, +0.078]. The two also behave
+differently in LEVEL: under the low pass the planted difference grows to +0.130
+in every category alike, and the eval LEVEL stays at +0.048. So whatever
+separates bonafide from spoofed speech in the corpus, it is not a soxr LQ style
+roll off, and it is not something above 6.9 kHz.
 
-**A resampler alone reproduces the LEVEL.** The soxr round trip on bonafide
-speech gives a phase minus magnitude advantage of +0.083 in sonorants, larger
-than H1's +0.048, with the magnitude statistic at chance. So the LEVEL on its
-own is not evidence of anything specific to synthesis. Only the ASYMMETRY
-distinguishes the eval result from what a resampler does, and it does so by
-size, +0.063 against +0.008.
+**What the low pass cannot rule out** is a difference in spectral shape below
+its cutoff that is not a simple roll off. The nine attacks without a hard edge
+are still separable from bonafide on edge slope, AUC 0.31 to 0.71. And spectral
+tilt, a magnitude statistic, shows the same sonorant over obstruent pattern as
+`mgd_hf_std` both before and after the low pass: with `hf_lf_tilt` as the
+comparator the ASYMMETRY is +0.006 [-0.005, +0.032] on the low passed table
+(`docs/ROBUSTNESS.md` has the unmodified figure). An account in which H1
+reflects how the spectral envelope of synthetic speech differs in the upper
+band, with nothing particular to phase, is consistent with everything here.
 
-**On four of the thirteen attacks the ASYMMETRY is a top of band effect.** This
-split was chosen after seeing the data, so it is a hypothesis and not a result.
-If it holds, H1 is a statement about the nine attacks whose audio reaches
-Nyquist. It needs registering and testing on a partition that had no part in
+**Pooled over four attacks, the ASYMMETRY does not survive equalisation.** The
+split was chosen after seeing the data and is not uniform within the four. It
+is a hypothesis for a new registration on a partition that had no part in
 forming it.
 
-**Spectral tilt still matches it after equalisation.** With `hf_lf_tilt` as the
-magnitude comparator the ASYMMETRY on the low passed table is +0.006
-[-0.005, +0.032], as it is on the unmodified one (`docs/ROBUSTNESS.md`). The
-band edge is not what makes tilt track the phase statistic.
-
-None of this supports stating a mechanism for H1 more strongly than before.
+Taken together: H1 stands as an observation made under pre-registration. Its
+cause is undecided. A band limiting artifact of one kind reproduces it and is
+ruled out for the eval comparison; a spectral envelope account is not ruled
+out; an account specific to phase has no support that the envelope account does
+not share.
 
 ## Calibration
 
@@ -251,6 +278,8 @@ comparison the spoofed side is the lower one.
 | resampler choice: soxr HQ arm against poly arm, both round tripped | +0.1018 [+0.0993, +0.1043] | +0.0087 [+0.0040, +0.0138] | +0.0087 [-0.0130, +0.0355] |
 | soxr HQ, then rounded to 16 bit | -0.0029 [-0.0038, -0.0021] | -0.0277 [-0.0309, -0.0243] | -0.0277 [-0.0452, +0.0055] |
 | resample_poly, then rounded to 16 bit | +0.0089 [+0.0079, +0.0096] | +0.0001 [-0.0015, +0.0018] | +0.0001 [-0.0155, +0.0186] |
+| soxr LQ, then rounded to 16 bit | +0.0551 [+0.0517, +0.0583] | +0.0594 [+0.0536, +0.0654] | +0.0594 [+0.0404, +0.0773] |
+| soxr LQ then 16 bit, both arms then low passed at 6900 Hz and 16 bit | +0.1302 [+0.1262, +0.1341] | +0.0005 [-0.0059, +0.0070] | +0.0005 [-0.0169, +0.0184] |
 
 Seed 0 shown. Seeds 1 and 2 move no bound by more than 0.004 and change no
 sign; all three are in `results/band_edge_summary.csv`.
@@ -281,9 +310,11 @@ Seed 0, joint draw.
 
 The intermediate rate does not matter. The filter does, and not monotonically
 in steepness. soxr LQ is the one treatment whose ASYMMETRY excludes zero under
-the unpaired draw as well, and it is not phase selective: it moves
-`mfcc_frame_spread` to 0.53 to 0.62 folded, where the others leave it at 0.50
-to 0.52. It is a visible low pass and not a band edge artifact.
+the unpaired draw as well. It also moves `mfcc_frame_spread`, to 0.53 to 0.62
+folded, where the others leave it at 0.50 to 0.52. That does not set it apart
+from the eval comparison, where the magnitude statistic separates at 0.51 to
+0.56 too. Its 16 bit form is in the table above and is the contrast that
+decides R1.
 
 ## M3b, the identical treatment on both classes
 
@@ -418,15 +449,17 @@ is not a mean of per attack AUCs.
    variants, of which the rule names 3; it is an "or" rule, so more variants
    make firing more likely, and none fired. M2 reports 10 correlations twice.
    The subset analysis reports 2 subsets by 7 treatments, plus 4 attacks.
-5. **Is any count a count of signs?** No. "Two of four" above refers to paired
-   intervals excluding zero and both are printed.
+5. **Is any count a count of signs?** No. The four attack figure is one pooled
+   contrast. By paired intervals excluding zero, one of the four loses its
+   ASYMMETRY and one gains.
 6. **Does the conclusion survive a defensible change of definition?** R2 quiet
    survives float against 16 bit, two equalisers, and a sub band clear of the
-   edges. R1 does not survive: it changes sign with the resampler and with
-   rounding. The subset finding survives three valid equalisers and the sub
+   edges. R1 depends on the resampler: it fires at full size with soxr LQ and
+   not with soxr HQ or resample_poly once the output is 16 bit. The subset finding survives three valid equalisers and the sub
    band redefinition, and is not uniform across the four attacks.
-7. **Is undecided being reported as refuted?** R1 is reported as undecided. R3
-   is reported as not detected at stated power.
+7. **Is undecided being reported as refuted?** R1 fires and R2 is quiet, and
+   the cause of H1 is reported as undecided. R3 is reported as not detected at
+   stated power.
 8. **Does the power make the test capable of the answer it gives?** R2: the
    pooled interval has half width 0.018 against a threshold distance of 0.016
    to 0.031 from half, and the low pass was shown to remove a planted
@@ -488,6 +521,17 @@ python scripts/analyse_slices.py --table <low passed table> --magnitude hf_lf_ti
 
 where the table is the output of `band_edge.py slice --treatment "lp:6900>pcm16"`
 below.
+
+The contrast that decides R1, and the equaliser applied to it. `$A` is the
+tracked alignment, `results/band_edge_alignment.csv.gz`:
+
+```bash
+B="python scripts/band_edge.py"; S="--manifest $AUDIO/manifest.csv --alignment $A --only bonafide --segmentations run"
+$B slice $S --treatment "rt:soxr_lq:22050>pcm16" --out $OUT/lq.csv.gz
+$B slice $S --treatment "rt:soxr_lq:22050>pcm16>lp:6900>pcm16" --out $OUT/lq_lp.csv.gz
+$B r1 --base $OUT/none.csv.gz --treated $OUT/lq.csv.gz --seeds 0 1 2
+$B r1 --base $OUT/none.csv.gz --treated-base $OUT/lp_pcm16.csv.gz --treated $OUT/lq_lp.csv.gz
+```
 
 `$AUDIO` is the extracted archive, `$OUT` a scratch directory. Run with
 `PYTHONPATH=src`.
