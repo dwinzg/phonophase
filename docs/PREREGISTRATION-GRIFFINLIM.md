@@ -19,7 +19,7 @@ small. Separations run 0.51 to 0.60 and the asymmetry is 0.048.
 
 Every result in this repository so far has the same shape: a phase statistic
 beats a magnitude statistic by a little, on audio where the synthetic side
-differs from the genuine side in **everything at once** — speaker, sentence,
+differs from the genuine side in **everything at once**, speaker, sentence,
 recording chain, magnitude envelope and phase. Nothing has ever shown that
 `mgd_hf_std` responds to phase rather than to one of the other things.
 
@@ -107,8 +107,8 @@ processing artifact of the comparison itself. Registered as: pooled
 per cent cluster-bootstrap interval on the difference excluding zero.
 
 **G3, the articulatory prediction. About `ASYM`.** If the mechanism behind H1 is
-articulatory — coherent harmonic phase in voiced sonorants is what a system has
-to reconstruct and gets wrong — then `ASYM` should be positive within this
+articulatory, coherent harmonic phase in voiced sonorants is what a system has
+to reconstruct and gets wrong, then `ASYM` should be positive within this
 system, where every phone's phase is reconstructed from scratch. Registered as:
 `ASYM` positive with a 95 per cent interval excluding zero.
 
@@ -168,7 +168,7 @@ those two readings make opposite predictions here.
 `docs/RESOURCES.md` records an alternative, as something to register rather
 than assert: **the operative variable may be parametric excitation modelling
 rather than phase reconstruction as such.** The evidence for it is the same A11
-observation — the two largest asymmetries on ASVspoof eval are Vocaine and
+observation, the two largest asymmetries on ASVspoof eval are Vocaine and
 STRAIGHT, both classical source-filter vocoders with explicit excitation
 models, and the Griffin-Lim system is not near them.
 
@@ -261,8 +261,8 @@ through 16 to 22.05 to 16 kHz:
 | `hf_lf_tilt` | -6.047 | -6.082 | 0.504 | crosses chance |
 
 1003 slices per arm from 150 utterances. A resampler, with no synthesis
-anywhere, moves the phase statistic to 0.576 — inside the 0.51 to 0.60 range
-that H1's whole result occupies — and leaves the magnitude statistic, the
+anywhere, moves the phase statistic to 0.576, inside the 0.51 to 0.60 range
+that H1's whole result occupies, and leaves the magnitude statistic, the
 energy control and the tilt control at chance. **That is precisely the
 signature G1 and G2 predict.** If only the `griffin_lim` side were resampled,
 this design would return a clean confirmation of G1 and G2 from nothing but
@@ -315,7 +315,7 @@ synthesis and F5 below fires.
 ## Primary test
 
 **Registered as primary: the unpaired estimator with paired resampling.**
-Folded separation as H1 defines it — `abs(AUC - 0.5) + 0.5` — computed over all
+Folded separation as H1 defines it, `abs(AUC - 0.5) + 0.5`, computed over all
 slices of each class within a phoneme category, with a cluster bootstrap whose
 resampling unit is the **utterance pair**: a draw picks `original_file` pair ids
 and takes both members of each drawn pair together, one shared draw serving
@@ -440,7 +440,7 @@ separation H1 ever measured on real ASVspoof attacks was between 0.511 and
 0.13 to 0.34 against its own source, is not detecting phase reconstruction
 artifacts. If F3 fires, the reading of `mgd_hf_std` as a phase-artifact
 statistic is abandoned, and with it the mechanism H1 was given. H1's empirical
-result stands — it was pre-registered and confirmed — but it stops being
+result stands, it was pre-registered and confirmed, but it stops being
 evidence about phase and becomes an unexplained separation between two
 statistics.
 
@@ -461,8 +461,8 @@ phase, and the articulatory reading of H1 is abandoned rather than qualified.
 ### What a null `ASYM` means, decided now
 
 If `ASYM` comes back with an interval including zero while F3 and F4 do not
-fire — the phase statistic separates strongly, the direction is right, and the
-asymmetry is absent — then `mgd_hf_std` is confirmed as a phase-artifact
+fire, the phase statistic separates strongly, the direction is right, and the
+asymmetry is absent, then `mgd_hf_std` is confirmed as a phase-artifact
 statistic and the **articulatory** part of the account is not supported by this
 control. A11 makes that a live possibility and H3's dev result argues the other
 way, which is why it is registered rather than assumed either way. It is
