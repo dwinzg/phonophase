@@ -576,3 +576,68 @@ Consequences, recorded so they are not rediscovered:
 One slicing pass over 2000 files, 4.1 hours of audio, the same pipeline as the
 eval run. Analysis is CPU and takes minutes. The M-AILABS English archives are
 7.47 and 3.47 GiB and both routes are live.
+
+---
+
+## Addendum, 2026-10-08, written before the run
+
+Nothing above is edited. No `griffin_lim` file has been measured on either side
+of any comparison. This addendum exists because a test run since on ASVspoof
+2019 LA, recorded in `docs/BAND-EDGE.md`, bears on three statements in "The
+trap, and the mitigation written into the design".
+
+### 1. The two null figures do not say whether the audio was requantised
+
+The 0.576 and 0.592 nulls above were computed on resampled arrays, and this
+document does not record whether those arrays were rounded back to 16 bit
+before the statistics were taken. It matters. On ASVspoof bonafide speech a
+soxr HQ round trip gives a phase minus magnitude advantage of +0.083 in
+sonorants when float output is compared with 16 bit originals, and -0.003 once
+the output is rounded to 16 bit. The two figures stand as recorded, with that
+caveat on what they measured.
+
+**Added requirement.** Record the sample format of the MLAAD files and of the
+M-AILABS sources before anything is computed. After the last resampling step,
+round every array on both sides to 16 bit, and say so beside every result.
+
+### 2. `NULL_asym` has now been measured elsewhere, and it is not small
+
+The text above says a resampling artifact "has no obvious reason to be indexed
+to articulation". On ASVspoof bonafide speech, a soxr LQ round trip through
+22.05 kHz, rounded to 16 bit, against the same speech untreated, gives an
+ASYMMETRY of +0.059 [+0.040, +0.077], the size of H1's own, in the same
+direction and category order. soxr HQ and `resample_poly` give none. So the
+artifact can be indexed to articulation, and whether it is depends on the
+filter, which for MLAAD is unknown.
+
+**Added null.** Step 5 re-runs two processing nulls on the English source
+side. A third is added: the same round trip with soxr LQ. `NULL_sep` and
+`NULL_asym` are the largest of the three.
+
+### 3. Passing both sides through one resampler is only a partial equaliser
+
+Mitigation 1 rests on both sides carrying "one identical downsample and one
+identical anti-alias transition". Tested with a planted difference: a soxr HQ
+round trip applied to one arm, then the same round trip applied to both, left
+an ASYMMETRY of +0.018 where +0.008 had been planted. An identical linear phase
+low pass on both arms, followed by rounding to 16 bit, removed planted
+differences to within 0.001.
+
+**Added secondary analysis.** After the registered analysis, and reported
+beside it, the same comparison is repeated with one identical linear phase low
+pass applied to both sides at 0.8625 of the common band limit, 6900 Hz for an
+8 kHz limit, then rounding to 16 bit. `mgd_hf_std` is still not redefined.
+
+### What is and is not changed
+
+The hypotheses, the primary test, the sample size, the statistical discipline
+and both tiers of falsification conditions are unchanged, and the registered
+verdict is the one they produce. The additions are a recording requirement, one
+more null, and one secondary analysis.
+
+One reading rule is fixed now, because the secondary analysis could otherwise
+be used selectively. If the registered analysis supports G3 and the low passed
+one gives an `ASYM` below half of the registered value with an interval that
+includes zero, the result is reported as not separable from a band edge
+artifact, whatever the registered verdict says. If both agree, the secondary
+analysis adds nothing and is reported in one line.
