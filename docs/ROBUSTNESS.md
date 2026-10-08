@@ -98,6 +98,27 @@ speaker rows above show they are not. The reading this
 supports is that under system clustering the LEVEL is not distinguishable from
 zero, and the ASYMMETRY is.
 
+## Pooled against per system
+
+Every figure above pools the 13 systems into one spoofed class. Scoring each
+system alone against all bonafide speech, which `scripts/attack_analysis.py`
+prints, and taking the mean of the 13 values with a t interval on 12 degrees of
+freedom:
+
+| quantity | pooled | mean of 13 per system values | negative on |
+|---|---|---|---|
+| LEVEL | +0.048 | +0.030 [-0.012, +0.071] | A08, A13, A19 |
+| ASYMMETRY | +0.063 | +0.052 [+0.012, +0.093] | A19 |
+
+The pooled LEVEL is larger than the typical per system one. The magnitude
+statistic runs in different directions on different systems, which cancels
+when they are pooled and lowers its pooled separation, so part of the pooled
+LEVEL is that cancellation and not the phase statistic separating better within
+a system. The per system LEVEL is not distinguishable from zero. The ASYMMETRY
+is, on this view as on the others. A mean over systems treats each as one
+observation and ignores the sampling error within it, so these intervals are a
+second opinion on the system clustered rows and not a replacement for them.
+
 ## The result is specific to one pair of statistics
 
 The registered pair is `mgd_hf_std` against `mfcc_frame_spread`. The table
@@ -154,6 +175,7 @@ python scripts/analyse_slices.py --table results/eval_slices.csv.gz --cluster sp
 python scripts/analyse_slices.py --table results/eval_slices.csv.gz --cluster speaker
 python scripts/analyse_slices.py --table results/eval_slices.csv.gz --cluster system
 python scripts/analyse_slices.py --table results/eval_slices.csv.gz --cluster system --n-boot 40000
+python scripts/attack_analysis.py --table results/eval_slices.csv.gz
 python scripts/analyse_slices.py --table results/eval_slices.csv.gz --magnitude hf_lf_tilt
 python scripts/analyse_slices.py --table results/eval_slices.csv.gz --phase mgd_std
 ```
