@@ -1,13 +1,17 @@
 # PhonoPhase
 
-**Where does the phase artifact of speech synthesis live, and is that location a
-property of articulation rather than of language?**
+**Does a group delay statistic separate genuine from synthetic speech more in
+some classes of sound than in others, and if so, why?**
 
-Speech synthesis reproduces what a voice sounds like far more readily than it
-reproduces the phase structure a real vocal tract produces. The residue is
-detectable, but it is not spread evenly through speech. This project measures
-where it concentrates, in articulatory terms, and tests whether that map holds
-in languages absent from training.
+This project started from an idea: that speech synthesis leaves a phase
+artifact, and that the artifact concentrates where a real vocal tract produces
+coherent harmonic structure. It pre-registered a test of the pattern that idea
+predicts, and the pattern was confirmed. The idea itself was not. Later tests
+in this repository show the same pattern arising with no synthesis at all, and
+show a magnitude statistic tracking it, so what causes it is an open question.
+
+What is here is the instrument, one confirmed observation, and a record of
+what that observation has and has not survived.
 
 This is a measurement study. It is not a detector, and it does not compete with
 one. See `docs/SCOPE.md`.
@@ -16,8 +20,8 @@ one. See `docs/SCOPE.md`.
 
 Pre-registered in `docs/PREREGISTRATION.md` before the data was touched, then
 run on the ASVspoof 2019 LA **eval** partition, attacks A07 to A19, none seen in
-training. 2,995 utterances, 68,996 slices in each of two segmentations, bootstraps clustered by source
-utterance.
+training. 2,995 utterances, 68,996 slices in each of two segmentations,
+bootstraps clustered by source utterance.
 
 **Dispersion of Modified Group Delay over the upper spectrum separates bonafide
 from spoofed speech more strongly in sonorants than in obstruents.**
@@ -35,8 +39,8 @@ from spoofed speech more strongly in sonorants than in obstruents.**
 Sonorant advantage **+0.048 [+0.035, +0.061]** against obstruent −0.015, and
 the difference between them, which is the quantity H1 asserts, **+0.063
 [+0.045, +0.080]**. The first three falsification conditions passed with 6 to 7
-times the required number of bonafide utterances, and the fourth, which compares partitions, does not
-fire (`scripts/falsification_4.py`).
+times the required number of bonafide utterances, and the fourth, which
+compares partitions, does not fire (`scripts/falsification_4.py`).
 
 An earlier version of this page gave the first interval as [+0.039, +0.057].
 That came from resampling each phoneme category independently, which ignores
@@ -83,13 +87,16 @@ tilt, shows nearly the same pattern as the phase statistic
 synthetic speech differs, with nothing particular to phase, fits everything
 measured so far.
 
-Pooled over the four attacks whose audio stops near 7.7 kHz, the difference
-does not survive the low pass. That split was noticed after the fact, is not
-uniform within the four, and has not been tested on other data.
+On the eval partition, pooled over the four attacks whose audio stops near
+7.7 kHz, the difference did not survive the low pass. That split was noticed
+after the fact, so it was registered and tested on the development partition
+(`docs/PREREGISTRATION-BANDEDGE.md`), where it does not replicate: the
+difference survives the low pass on hard edged attacks, +0.105 [+0.083,
++0.125], as on full band ones, +0.089 [+0.073, +0.105].
 
 ### Three things it does not say
 
-**It is small.** Separation runs 0.51 to 0.60. This locates phase information,
+**It is small.** Separation runs 0.51 to 0.60. This locates a small difference,
 it does not detect anything.
 
 **Per attack, this data mostly cannot decide.** Scored per attack with
@@ -127,19 +134,27 @@ negative. Pooling the slices instead, three are, because A16 and A18 sit within
 0.0005 of zero and change side. `scripts/attack_analysis.py` prints both, for
 exactly this reason.
 
-**One language.** Whether it holds elsewhere is the open question.
+**One language.** Whether it holds elsewhere is open, and so is its cause.
 
 ## What comes next
 
-The seven category grouping above is too coarse and too English. It covers 41 of
-the 387 phone symbols the aligner emits, discarding aspiration, breathy voice,
+**The cause comes first.** Two accounts fit the confirmed pattern: one about
+phase, and one in which the upper band spectral envelope of synthetic speech
+differs and nothing is particular to phase. The registered positive control in
+`docs/PREREGISTRATION-GRIFFINLIM.md` is built to tell them apart, on a system
+whose magnitude is a real recording's and whose phase is wholly synthetic. It
+has not been run. Until it has, the cross lingual work below would be measuring
+a pattern without knowing what it is a pattern of.
+
+The seven category grouping above is also too coarse and too English. It covers
+41 of the 387 phone symbols the aligner emits, discarding aspiration, breathy voice,
 nasalisation, length and retroflexion, which are exactly the contrasts that
 distinguish languages.
 
 `phonophase.phonology` replaces it with PanPhon's 24 articulatory features,
-raising coverage to 380 of the 388 symbols, tone marked vowels included. Features are universal by construction, so the
-comparison stays well defined between languages whose inventories do not
-overlap.
+raising coverage to 380 of the 388 symbols, tone marked vowels included.
+Features are universal by construction, so the comparison stays well defined
+between languages whose inventories do not overlap.
 
 That turns the open question into something sharper and more useful. Regress
 separation on articulatory features, find which features carry the signal, and

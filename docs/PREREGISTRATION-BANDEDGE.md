@@ -114,3 +114,103 @@ best, and no per attack verdict is registered.
 
 Any departure from the procedure above is recorded here, dated, with its
 reason, before the result it affects is reported.
+
+---
+
+# Outcome
+
+Run 2026-10-08, after the registration above was committed and pushed. Nothing
+above this line was edited. No deviations.
+
+**B1 is supported. B2 is refuted. The split found on the evaluation partition
+does not replicate.**
+
+## Calibration
+
+The recomputed table reproduces `results/dev_slices.csv.gz` exactly: 5,092
+utterances, 228,362 of 228,362 slices matched over both segmentations, and
+`mgd_hf_std` and `mfcc_frame_spread` identical on every one.
+
+## Classification
+
+AUC of each descriptor, attack against development bonafide, spoof positive.
+
+| attack | 40 dB bandwidth | edge slope | class |
+|---|---|---|---|
+| A01 | 0.001 [0.000, 0.002] | 0.000 [0.000, 0.000] | hard edged |
+| A02 | 0.494 [0.484, 0.503] | 0.612 [0.587, 0.638] | full band |
+| A03 | 0.484 [0.473, 0.495] | 0.519 [0.489, 0.550] | full band |
+| A04 | 0.003 [0.000, 0.007] | 0.000 [0.000, 0.000] | hard edged |
+| A05 | 0.500 [0.492, 0.507] | 0.281 [0.255, 0.307] | full band |
+| A06 | 0.006 [0.002, 0.011] | 0.001 [0.000, 0.002] | hard edged |
+
+No attack is intermediate. The stated expectation was right about A04 and A06
+and wrong about A01, which is hard edged as well: median 40 dB bandwidth 7781
+Hz against 8000 Hz for bonafide.
+
+## The predictions
+
+ASYMMETRY, pooled against bonafide, 2,000 draws clustered by utterance. Seed 0
+shown. Seeds 1 and 2 move no bound by more than 0.003, and no bound is within
+its Monte Carlo band of a threshold.
+
+| group | unmodified | after the low pass | change, same draw |
+|---|---|---|---|
+| full band, A02 A03 A05 | +0.091 [+0.074, +0.107] | +0.089 [+0.073, +0.105] | -0.002 [-0.009, +0.006] |
+| hard edged, A01 A04 A06 | +0.120 [+0.085, +0.151] | +0.105 [+0.083, +0.125] | -0.015 [-0.043, +0.014] |
+
+**B1.** After the treatment the ASYMMETRY is +0.089, above half of +0.091, with
+an interval excluding zero, on all three seeds. Supported.
+
+**B2.** The precondition holds: the unmodified ASYMMETRY is positive with an
+interval excluding zero. After the treatment it is +0.105, above half of
++0.120, with an interval excluding zero, on all three seeds. That is the
+refutation condition as registered. The change is -0.015 with an interval that
+includes zero, short of the 0.020 the prediction required.
+
+## What follows
+
+As fixed in advance for this outcome: the evaluation split does not replicate
+and is not carried into any statement of H1. On the development partition the
+ASYMMETRY survives an identical low pass on both classes whether or not the
+attacks carry a hard band edge. Pooled over all six attacks it is +0.132
+[+0.118, +0.147] unmodified and +0.099 [+0.085, +0.113] after.
+
+## Per attack, descriptive only
+
+No per attack verdict was registered, and these are reported because the pooled
+hard edged group turns out to average over opposite signs. Seed 0.
+
+| attack | class | unmodified | after the low pass | change, same draw |
+|---|---|---|---|---|
+| A01 | hard edged | +0.355 [+0.333, +0.377] | +0.295 [+0.274, +0.317] | -0.060 [-0.070, -0.050] |
+| A04 | hard edged | -0.060 [-0.080, -0.028] | -0.012 [-0.034, +0.017] | +0.047 [+0.007, +0.073] |
+| A06 | hard edged | -0.084 [-0.110, -0.057] | -0.014 [-0.039, +0.013] | +0.070 [+0.058, +0.083] |
+| A02 | full band | +0.092 [+0.069, +0.113] | +0.096 [+0.073, +0.117] | +0.004 [-0.007, +0.015] |
+| A03 | full band | +0.075 [+0.054, +0.097] | +0.079 [+0.058, +0.101] | +0.005 [-0.004, +0.013] |
+| A05 | full band | +0.094 [+0.062, +0.122] | +0.080 [+0.046, +0.112] | -0.013 [-0.026, -0.000], not settled |
+
+The pooled hard edged figure is carried by A01. A04 and A06 have a negative
+ASYMMETRY, the reverse of H1, and the low pass moves both to zero. A04 is the
+same algorithm as the evaluation partition's A16 and A06 the same as A19, and
+A19 behaved the same way there: -0.079 unmodified, -0.024 after the low pass.
+That is two partitions agreeing on one algorithm, noticed after the fact, and
+it is a hypothesis.
+
+## Commands
+
+`$AUDIO` is a manifest of the 5,092 utterances, `$A` the tracked alignment
+`results/band_edge_dev_alignment.csv.gz`.
+
+```bash
+B="python scripts/band_edge.py"
+$B slice --manifest $AUDIO --alignment $A --segmentations run,window --out none.csv.gz
+$B slice --manifest $AUDIO --alignment $A --segmentations run --treatment "lp:6900>pcm16" --out lp.csv.gz
+$B describe --manifest $AUDIO --out ltas.csv.gz        # tracked as results/band_edge_dev_descriptors.csv.gz
+$B m1 --descriptors results/band_edge_dev_descriptors.csv.gz
+for G in "A02 A03 A05" "A01 A04 A06"; do
+  $B r2 --table none.csv.gz --attacks $G --seeds 0 1 2
+  $B r2 --table lp.csv.gz --attacks $G --seeds 0 1 2
+  $B change --before none.csv.gz --after lp.csv.gz --attacks $G --seeds 0 1 2
+done
+```

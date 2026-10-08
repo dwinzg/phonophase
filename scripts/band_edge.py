@@ -59,7 +59,7 @@ import slice_and_probe as S  # noqa: E402
 from phonophase.features import modified_group_delay  # noqa: E402
 from phonophase.probe import HOP, N_FFT, WIN, slice_statistics  # noqa: E402
 from phonophase.stats import (  # noqa: E402
-    bootstrap_auc_ci, shared_cluster_draws,
+    bootstrap_auc_ci, percentile_interval, shared_cluster_draws,
 )
 
 SR = S.SR
@@ -461,6 +461,16 @@ def two_arm_rows(base_rows, treated_rows, name):
     return arm0 + arm1
 
 
+def _interval(value, draws, alpha):
+    """
+    A percentile interval that knows whether the draw count settles which side
+    of zero it lies on, see percentile_interval in src/phonophase/stats.py.
+    """
+    r = percentile_interval(draws, alpha)
+    return {"value": value, "ci_low": r["ci_low"], "ci_high": r["ci_high"],
+            "undecided": r["undecided"]}
+
+
 def level_asymmetry(data, n_boot, seed, joint=False, alpha=0.05):
     """
     LEVEL, the obstruent advantage and the ASYMMETRY from one set of draws.
@@ -496,8 +506,7 @@ def level_asymmetry(data, n_boot, seed, joint=False, alpha=0.05):
     out = {"categories": every, "n_draws": len(draws), "draws": draws}
     for k, (name, value) in enumerate((("level", level), ("obstruent", obstruent),
                                        ("asymmetry", level - obstruent))):
-        lo, hi = np.percentile(draws[:, k], [100 * alpha / 2, 100 * (1 - alpha / 2)])
-        out[name] = {"value": value, "ci_low": float(lo), "ci_high": float(hi)}
+        out[name] = _interval(value, draws[:, k], alpha)
     return out
 
 
@@ -526,7 +535,9 @@ def print_per_category(data):
 
 
 def fmt(r):
-    return f"{r['value']:+.4f} [{r['ci_low']:+.4f}, {r['ci_high']:+.4f}]"
+    """An interval, marked when the draw count does not settle its sign."""
+    return (f"{r['value']:+.4f} [{r['ci_low']:+.4f}, {r['ci_high']:+.4f}]"
+            + (" (not settled)" if r["undecided"] else ""))
 
 
 def print_level_asymmetry(data, n_boot, seeds, joint):
@@ -578,10 +589,8 @@ def change(before_rows, after_rows, n_boot, seed, alpha=0.05):
         raise ValueError("the two tables did not yield the same draws")
     out = {}
     for k, name in enumerate(("level", "obstruent", "asymmetry")):
-        lo, hi = np.percentile(after["draws"][:, k] - before["draws"][:, k],
-                               [100 * alpha / 2, 100 * (1 - alpha / 2)])
-        out[name] = {"value": after[name]["value"] - before[name]["value"],
-                     "ci_low": float(lo), "ci_high": float(hi)}
+        out[name] = _interval(after[name]["value"] - before[name]["value"],
+                              after["draws"][:, k] - before["draws"][:, k], alpha)
     return out
 
 

@@ -345,7 +345,9 @@ def _sliced(rows):
 def test_change_is_zero_for_one_table_and_finds_a_removed_asymmetry():
     before = _sliced(synthetic_rows(shift=1.5))
     same = B.change(before, before, 100, seed=0)
-    assert same["asymmetry"] == {"value": 0.0, "ci_low": 0.0, "ci_high": 0.0}
+    assert (same["asymmetry"]["value"], same["asymmetry"]["ci_low"],
+            same["asymmetry"]["ci_high"]) == (0.0, 0.0, 0.0)
+    assert same["asymmetry"]["undecided"], "a change of exactly zero settles no sign"
 
     after = _sliced(synthetic_rows(shift=0.0))
     moved = B.change(before, after, 100, seed=0)

@@ -134,8 +134,17 @@ depends on which attacks are pooled. And on these four the unmodified ASYMMETRY
 was never a phase effect in sonorants: `mgd_hf_std` separates no better than
 `mfcc_frame_spread` in any sonorant or obstruent category, and the ASYMMETRY is
 positive only because the magnitude statistic separates obstruents better
-still. It is a hypothesis for a new registration on a partition that had no
+still. It was a hypothesis for a new registration on a partition that had no
 part in forming it.
+
+**That registration has been run, and the split does not replicate.**
+`docs/PREREGISTRATION-BANDEDGE.md` fixed the test on the development partition
+before its audio was read. Three of its six attacks are hard edged. Pooled over
+those three the ASYMMETRY is +0.120 unmodified and +0.105 [+0.083, +0.125]
+after the same low pass, which is the registered refutation. Pooled over the
+three full band attacks it is +0.091 and +0.089. So the split is not carried
+into any statement of H1, and the ASYMMETRY survives equalisation on a second
+partition.
 
 Taken together: H1 stands as an observation made under pre-registration. Its
 cause is undecided. A band limiting artifact of one kind reproduces it and is
