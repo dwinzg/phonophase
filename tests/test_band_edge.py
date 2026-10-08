@@ -298,6 +298,42 @@ def test_identical_arms_give_no_asymmetry_under_a_joint_draw():
     assert r["asymmetry"]["ci_low"] <= 0.0 <= r["asymmetry"]["ci_high"]
 
 
+def _sliced(rows):
+    return [{**r, "phoneme": "m", "start_frame": i, "n_frames": 1}
+            for i, r in enumerate(rows)]
+
+
+def test_change_is_zero_for_one_table_and_finds_a_removed_asymmetry():
+    before = _sliced(synthetic_rows(shift=1.5))
+    same = B.change(before, before, 100, seed=0)
+    assert same["asymmetry"] == {"value": 0.0, "ci_low": 0.0, "ci_high": 0.0}
+
+    after = _sliced(synthetic_rows(shift=0.0))
+    moved = B.change(before, after, 100, seed=0)
+    assert moved["asymmetry"]["value"] < -0.1
+    assert moved["asymmetry"]["ci_high"] < 0
+    separate = B.level_asymmetry(B.to_data(before), 100, 0)["asymmetry"]
+    assert (moved["asymmetry"]["ci_high"] - moved["asymmetry"]["ci_low"]
+            < 2 * (separate["ci_high"] - separate["ci_low"]))
+
+
+def test_change_refuses_tables_that_do_not_hold_the_same_slices():
+    before = _sliced(synthetic_rows(n_utt=12))
+    try:
+        B.change(before, before[1:], 10, seed=0)
+    except ValueError:
+        return
+    raise AssertionError("mismatched tables must be refused")
+
+
+def test_against_keeps_bonafide_and_the_named_attacks_only():
+    rows = synthetic_rows(n_utt=12, attack="A07") + [
+        r for r in synthetic_rows(n_utt=12, attack="A09") if r["label"] == "1"]
+    kept = B.against(rows, ["A09"])
+    assert {r["attack"] for r in kept} == {"-", "A09"}
+    assert B.against(rows, None) is rows
+
+
 def test_to_data_files_a_substitute_phase_column_only_when_asked():
     rows = [{**r, B.BAND_COLUMN: "7.0"} for r in synthetic_rows(n_utt=12)]
     assert B.to_data(rows)["NASALS"][A.PHASE][0] != 7.0

@@ -34,6 +34,7 @@ Usage
     python scripts/band_edge.py m2 --table base.csv.gz --descriptors ltas.csv.gz
     python scripts/band_edge.py r1 --base base.csv.gz --treated rt.csv.gz
     python scripts/band_edge.py r2 --table rt_all.csv.gz
+    python scripts/band_edge.py change --before base.csv.gz --after rt_all.csv.gz
 """
 
 from __future__ import annotations
@@ -489,7 +490,7 @@ def level_asymmetry(data, n_boot, seed, joint=False, alpha=0.05):
     draws = np.asarray(draws)
 
     level, obstruent = A.observed_mean(data, sides[0]), A.observed_mean(data, sides[1])
-    out = {"categories": every, "n_draws": len(draws)}
+    out = {"categories": every, "n_draws": len(draws), "draws": draws}
     for k, (name, value) in enumerate((("level", level), ("obstruent", obstruent),
                                        ("asymmetry", level - obstruent))):
         lo, hi = np.percentile(draws[:, k], [100 * alpha / 2, 100 * (1 - alpha / 2)])
@@ -548,14 +549,54 @@ def cmd_r1(args):
         print_level_asymmetry(data, args.n_boot, args.seeds, joint)
 
 
+def against(rows, attacks):
+    """Bonafide rows plus the named attacks, or every row when none are named."""
+    if not attacks:
+        return rows
+    print(f"bonafide against {' '.join(sorted(attacks))} only")
+    keep = set(attacks) | A.BONAFIDE_MARKERS
+    return [r for r in rows if r["attack"] in keep]
+
+
+def change(before_rows, after_rows, n_boot, seed, alpha=0.05):
+    """
+    How far a treatment moved LEVEL and ASYMMETRY, as after minus before.
+
+    Both tables hold the same slices in the same order, so one seed gives both
+    the same utterances in every draw and the difference is taken inside the
+    draw. Two separate intervals that overlap say nothing about whether the
+    treatment moved the quantity; this does.
+    """
+    key = ("utterance_id", "category", "phoneme", "start_frame", "n_frames", "label")
+    if [[r[k] for k in key] for r in before_rows] != [[r[k] for k in key] for r in after_rows]:
+        raise ValueError("the two tables do not hold the same slices in the same order")
+    before = level_asymmetry(to_data(before_rows), n_boot, seed)
+    after = level_asymmetry(to_data(after_rows), n_boot, seed)
+    if before["categories"] != after["categories"] or before["n_draws"] != after["n_draws"]:
+        raise ValueError("the two tables did not yield the same draws")
+    out = {}
+    for k, name in enumerate(("level", "obstruent", "asymmetry")):
+        lo, hi = np.percentile(after["draws"][:, k] - before["draws"][:, k],
+                               [100 * alpha / 2, 100 * (1 - alpha / 2)])
+        out[name] = {"value": after[name]["value"] - before[name]["value"],
+                     "ci_low": float(lo), "ci_high": float(hi)}
+    return out
+
+
+def cmd_change(args):
+    before = against(load_rows(args.before, args.seg), args.attacks)
+    after = [r for r in against(load_rows(args.after, args.seg), args.attacks)]
+    print(f"after {args.after} minus before {args.before}, seg={args.seg}, "
+          f"{args.n_boot} draws, utterance clustered, same draw for both")
+    for seed in args.seeds:
+        r = change(before, after, args.n_boot, seed)
+        print(f"  seed {seed}  LEVEL {fmt(r['level'])}  ASYMMETRY {fmt(r['asymmetry'])}")
+
+
 def cmd_r2(args):
     """The registered comparison on one table, with the registered estimator."""
-    rows = load_rows(args.table, args.seg)
-    if args.attacks:
-        keep = set(args.attacks) | A.BONAFIDE_MARKERS
-        rows = [r for r in rows if r["attack"] in keep]
-        print(f"bonafide against {' '.join(sorted(args.attacks))} only")
-    data = to_data(rows, phase=args.phase)
+    data = to_data(against(load_rows(args.table, args.seg), args.attacks),
+                   phase=args.phase)
     if args.phase != A.PHASE:
         print(f"REDEFINITION: the phase statistic is {args.phase}, not {A.PHASE}\n")
     print(f"table {args.table}, seg={args.seg}\n")
@@ -646,6 +687,10 @@ def main():
         treated_base=dict(default=None, help="arm 0 when both arms are treated"),
         seg=seg, n_boot=n_boot, seeds=seeds)
     add("r2", cmd_r2, table=dict(required=True), phase=dict(default=A.PHASE),
+        attacks=dict(nargs="+", default=None, help="restrict the spoof side"),
+        seg=seg, n_boot=n_boot, seeds=seeds)
+
+    add("change", cmd_change, before=dict(required=True), after=dict(required=True),
         attacks=dict(nargs="+", default=None, help="restrict the spoof side"),
         seg=seg, n_boot=n_boot, seeds=seeds)
 
