@@ -1,16 +1,64 @@
 # PhonoPhase
 
-**Does a group delay statistic separate genuine from synthetic speech more in
-some classes of sound than in others, and if so, why?**
+**Where in speech does a deepfake differ from a real voice, and what does the
+difference depend on?**
 
-A measurement study on ASVspoof 2019 LA. It pre-registered one pattern,
-confirmed it, and then tried to break its own explanation of it. The pattern
-held. The explanation did not.
+This is the first experiment in a line of work on speech deepfakes. Detectors
+already tell real from synthetic speech very well on the data they were trained
+on, and much less well on a new synthesiser, a new channel or a new language.
+One reason is that nobody can say what they have learned. This project works on
+that gap from the measurement side: instead of training a model, it takes one
+simple, interpretable statistic and asks where in the speech signal it carries
+information, sound class by sound class.
+
+## What we are trying to do
+
+1. **Locate the cue.** Cut every utterance into phones, group them by how they
+   are produced (vowels, nasals, approximants, fricatives, stops, affricates),
+   and measure how well a statistic separates real from synthetic speech inside
+   each group.
+2. **Test one specific idea.** The starting idea was that vocoders handle
+   voiced, periodic sounds differently from noisy ones, so a phase statistic
+   might help most in sonorants. That was written down as a hypothesis, with the conditions that
+   would refute it, before the evaluation data was touched.
+3. **Find out what causes it.** A pattern is only useful if it comes from the
+   synthesis and not from the corpus: its sample rate history, its band edges,
+   its speakers. Most of the work here is controls built to tell those apart.
+4. **Then ask whether it transfers.** If the cue is tied to how sounds are
+   produced and not to which language produces them, it should appear in a
+   language the synthesiser was never trained on. That experiment is designed
+   and not yet run.
+
+Where it stands: step 1 and step 2 are done and the pattern is confirmed. Step
+3 is where the first explanation lost its support, which is the main result so far. Step
+4 waits on step 3.
+
+## How this helps, and how to use it
+
+This is not a detector and does not compete with one. The statistics here
+separate the classes at 0.51 to 0.60 AUC, where a trained model (AASIST-L)
+reaches an equal error rate under 1%. What it offers is different:
+
+- **A way to ask what a cue depends on.** Point the pipeline at any corpus of
+  real and synthetic speech and it reports, per sound class and per synthesis
+  system, where a statistic separates the two, with intervals that respect the
+  fact that thousands of phones come from a few hundred utterances.
+- **A check for dataset shortcuts.** The controls here showed that a sample
+  rate conversion on real speech, with no synthesis at all, produces the same
+  signature as the deepfakes do. Anyone training or evaluating a detector on
+  ASVspoof-style data can run the same treatments (`scripts/band_edge.py`) to
+  see whether a feature is reading the synthesis or the file's processing
+  history.
+- **Statistics you can lift out.** `phonophase.stats` is standalone: a cluster
+  bootstrap with one draw shared across categories, intervals that say when the
+  draw count cannot settle a sign, and three-state verdicts. It applies to any
+  per-phone, per-frame or per-window measurement.
+- **A worked example of a result that was tested until part of it broke.** The
+  registrations, the falsifiers and the errors caught are all in `docs/`, for
+  anyone setting up a similar study.
 
 The short report, with figures, is [`report/phonophase.pdf`](report/phonophase.pdf).
-
-This is not a detector and does not compete with one. Separations here run from
-0.51 to 0.60 AUC. See `docs/SCOPE.md`.
+Scope and what is deliberately left out: `docs/SCOPE.md`.
 
 ## Findings
 
@@ -22,10 +70,12 @@ quantity, sonorant advantage minus obstruent advantage, is **+0.063 [+0.045,
 
 ![Separation by category](report/figures/separation.png)
 
-**2. It is robust.** The difference excludes zero whether the bootstrap
-resamples utterances, speakers or synthesis systems. It survives an identical
-low pass on both classes, on the eval partition and again on the development
-partition.
+**2. Pooled, it is robust.** The difference excludes zero whether the bootstrap
+resamples utterances, speakers or synthesis systems, and it survives an
+identical low pass on both classes on the eval partition. System by system it
+varies: one eval system and two development systems show the reverse, and on
+the development partition the same low pass lowers the pooled difference by a
+quarter.
 
 **3. Its cause is not established.** The idea behind the test was a phase
 artifact of vocoding. Two results count against asserting that:
@@ -41,7 +91,10 @@ artifact of vocoding. Two results count against asserting that:
 That particular resampling artifact is ruled out as the cause here: low passing
 both classes removes it and leaves the real difference at +0.061 [+0.042,
 +0.078]. A difference in the upper band spectral envelope of synthetic speech,
-with nothing particular to phase, fits everything measured so far.
+with nothing particular to phase, is not ruled out. It is also not shown:
+against upper band energy, another magnitude statistic, the difference stays
+at +0.054 [+0.040, +0.069]. The control that could tell the two accounts apart
+is registered and not yet run.
 
 **4. What does not hold.**
 
@@ -50,9 +103,9 @@ with nothing particular to phase, fits everything measured so far.
 - The pattern belongs to upper band group delay dispersion. Whole band group
   delay statistics do not show it.
 - A split by band edge that appeared on eval after the fact was registered and
-  tested on the development partition, and did not replicate. Band edges
-  still matter there: the three hard edged systems each move under the low
-  pass, in opposite directions.
+  tested on the development partition, and did not replicate. On that
+  partition the three hard edged systems each move under the low pass, in
+  opposite directions; that is three systems and not a rule.
 
 | | where |
 |---|---|

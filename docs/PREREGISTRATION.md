@@ -252,6 +252,20 @@ question for a design that varies attacks while holding speakers fixed.
 
 ## What this does not say
 
+**Corrected 2026-10-09.** Two things in this section are superseded and are
+left below as written. First, the per attack figures: they came from an
+earlier estimator and mix the LEVEL with the ASYMMETRY. With the current code
+the LEVEL is positive on 10 of 13 attacks, mean +0.030, from +0.141 on A14 to
+-0.092 on A08, and negative on A08, A13 and A19, not on A16. The ASYMMETRY,
+which is what H1 states, has a positive point estimate on 12 of 13, is clear
+after correction on four of them, and is clearly negative only on A19
+(`scripts/attack_analysis.py`). Signs counted across attacks are not a test. Second, the wording "where phase information
+concentrates", "a mechanistic lead" and "if the mechanism is articulatory":
+rule R1 of `docs/BAND-EDGE.md` fired, and its registered consequence is that
+no mechanism is stated for H1. Against a spectral tilt comparator the
+ASYMMETRY is +0.009 [-0.003, +0.033], so "phase" here means one group delay
+statistic against one cepstral statistic.
+
 **The effect is small.** Separation runs 0.51 to 0.60 and the sonorant advantage
 is 0.048. This is a statement about where phase information concentrates, not a
 detector. A single statistic at 0.60 is nowhere near useful on its own.

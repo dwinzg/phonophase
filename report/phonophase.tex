@@ -24,12 +24,12 @@ the upper spectrum separates genuine from synthetic speech more strongly in
 sonorants than in obstruents, relative to a cepstral statistic, on ASVspoof
 2019 LA: a difference of $+0.063$ \ci{+0.045}{+0.080} in folded AUC. The natural
 reading is a phase artifact of vocoding, concentrated where speech is periodic.
-We then tried to break that reading, and it does not hold. A low quality sample
+We then tried to break that reading, and it is not supported. A low quality sample
 rate conversion applied to genuine speech, with no synthesis involved,
 reproduces the pattern at full size. A magnitude statistic, spectral tilt,
-tracks it. The pattern itself is robust: it survives resampling of utterances,
-speakers and synthesis systems, and an identical low pass on both classes,
-on two partitions. We report it as a confirmed observation whose cause is
+tracks it. The pooled pattern survives resampling of utterances, speakers and
+synthesis systems, and an identical low pass on both classes on the
+evaluation partition; individual systems vary, and one reverses. We report it as a confirmed observation whose cause is
 undecided, and describe the checks that changed our own conclusion.
 \end{abstract}
 
@@ -58,7 +58,8 @@ partition, with systems A01 to A06, is used only for a second registered test.
 \citep{xu2022zeroshot} gives a frame-level phone sequence. Each run of a phone
 becomes a slice, assigned to one of six categories: nasals, approximants and
 steady vowels (sonorants), and fricatives, plosives and affricates
-(obstruents). This yields 68,996 slices on the evaluation partition. The
+(obstruents). This yields 64,693 slices on the evaluation partition, and 4,303 more of
+diphthongs, which are not in the test. The
 segmentation is approximate: 89\% of slices are a single 20\,ms frame widened
 to a 60\,ms floor.
 
@@ -88,7 +89,7 @@ a bound inside that band is reported as undecided.
 \centering
 \includegraphics[width=\columnwidth]{figures/separation.pdf}
 \caption{Separation of bonafide from spoofed speech by category, evaluation
-partition. The group delay statistic leads in sonorants and trails in
+partition. The group delay statistic leads in sonorants and not in
 obstruents.}
 \label{fig:separation}
 \end{figure}
@@ -112,9 +113,9 @@ utterances from the same speakers and systems. Figure~\ref{fig:clustering}
 asks more. The asymmetry excludes zero whether speakers or synthesis systems
 are resampled. The level does not: with 13 system clusters its lower bound
 sits on zero, and scored one system at a time its mean is $+0.030$
-\ci{-0.012}{+0.071}. The pooled level is inflated because the magnitude
+\ci{-0.012}{+0.071}. The pooled level is larger than that mean. The magnitude
 statistic runs in different directions on different systems, which cancels in
-the pool.
+a pool; how much of the gap that explains was not measured.
 
 \begin{figure}[t]
 \centering
@@ -146,15 +147,16 @@ leaves the real one.}
 \label{fig:resampler}
 \end{figure}
 
-An anti-alias filter is a group delay phenomenon at the band edge, which is
-what \mgd{} reads. We wrote three decision rules before reading any audio, then
+An anti-alias filter would be expected to change group delay near the band
+edge, which is what \mgd{} reads. We wrote three decision rules before
+reading any audio, though they entered the repository with the results, then
 compared each bonafide utterance with itself after a sample rate round trip,
 rounded back to 16 bit (Figure~\ref{fig:resampler}).
 
 With a low quality resampler, whose passband rolls off from about 6\,kHz, the
 asymmetry is $+0.059$ \ci{+0.040}{+0.077} and the level $+0.055$: the size,
-direction and category order of the real result. Two sharper resamplers give
-nothing. So the signature of H1 is not specific to synthesis, and the rule
+direction and category order of the real result. Two sharper resamplers do not
+reproduce it: one gives $+0.000$ and the other $-0.028$, the opposite sign. So the signature of H1 is not specific to synthesis, and the rule
 written to detect that fires.
 
 The same artifact is nonetheless not what the corpus shows. One identical
@@ -190,7 +192,7 @@ Four errors were caught by re-derivation rather than by review of our own
 reasoning, and each changed a published number or sentence.
 (i) Intervals on the level were first computed by resampling each category
 independently, which ignores that one utterance feeds all three; they were
-about 40\% too narrow.
+about 30\% too narrow.
 (ii) Under system clustering the printed verdict changed with the random seed.
 (iii) The registered primary test, the interval on the asymmetry, was printed
 but not used in the verdict.
