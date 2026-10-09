@@ -50,7 +50,9 @@ with nothing particular to phase, fits everything measured so far.
 - The pattern belongs to upper band group delay dispersion. Whole band group
   delay statistics do not show it.
 - A split by band edge that appeared on eval after the fact was registered and
-  tested on the development partition, and did not replicate.
+  tested on the development partition, and did not replicate. Band edges
+  still matter there: the three hard edged systems each move under the low
+  pass, in opposite directions.
 
 | | where |
 |---|---|

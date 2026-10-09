@@ -171,10 +171,57 @@ includes zero, short of the 0.020 the prediction required.
 ## What follows
 
 As fixed in advance for this outcome: the evaluation split does not replicate
-and is not carried into any statement of H1. On the development partition the
-ASYMMETRY survives an identical low pass on both classes whether or not the
-attacks carry a hard band edge. Pooled over all six attacks it is +0.132
-[+0.118, +0.147] unmodified and +0.099 [+0.085, +0.113] after.
+and is not carried into any statement of H1.
+
+**Corrected 2026-10-08, after an independent re-derivation.** This section
+first said that the ASYMMETRY survives an identical low pass on both classes
+whether or not the attacks carry a hard band edge. That reads more into the
+verdict than it holds, in two ways.
+
+The refutation of B2 rests on one attack. The hard edged pool is positive only
+because A01 is in it. A04 and A06 pooled without it give -0.064 [-0.083, -0.043] unmodified,
+which fails B2's precondition, so without A01 the prediction would have been
+untestable, not refuted. The registered consequence is the same for both, so
+the conclusion above does not depend on A01, but the word refuted does. After the low pass that pair gives +0.007 [-0.013, +0.026], a change of
++0.070 [+0.060, +0.080] on the same draw.
+
+The treatment is not inert on this partition. Pooled over all six attacks the
+ASYMMETRY is +0.132 [+0.118, +0.147] unmodified and +0.099 [+0.085, +0.113]
+after, a change of -0.033 [-0.039, -0.027] on the same draw, which excludes
+zero and is larger than either subgroup's change, because a folded statistic
+of a pool is not the average of its parts. Each hard edged attack moves under
+the low pass with an interval excluding zero, in opposite directions, and no
+full band attack moves by more than 0.013 (table below). So band edge class
+tracks whether the low pass moves the ASYMMETRY and not which way, and the
+opposite signs cancel in the registered pool.
+
+What the registered test does establish: the pooled prediction made from the
+evaluation partition failed, and on the full band attacks the ASYMMETRY keeps
+its size under equalisation.
+
+## Sensitivity, from the re-derivation, not registered
+
+Computed once, by independent code, and not reproduced with this repository's
+scripts. Neither verdict changes under any of these. The size of the change
+does.
+
+| variation | full band change | hard edged change |
+|---|---|---|
+| as registered | -0.002 [-0.009, +0.006] | -0.015 [-0.043, +0.014] |
+| affricates removed | -0.002 [-0.006, +0.002] | -0.030 [-0.041, -0.018] |
+| low pass at 6500 Hz | +0.012 [+0.004, +0.021] | -0.003 [-0.030, +0.025] |
+| low pass at 7300 Hz | +0.013 [+0.007, +0.019] | +0.008 [-0.018, +0.024] |
+
+Affricates are 1,459 of 114,181 slices and carry a third of the obstruent mean.
+The phase statistic after the low pass also depends on the filter design: a
+different 6900 Hz filter of similar quality moves it by about a third of the
+treatment's own effect. Read the changes above as signs and orders of
+magnitude. An independently built spectral descriptor gives the same three classes at
+40 dB and under any reasonable AUC threshold. At 30 dB it would class all three
+hard edged attacks as intermediate, and at 60 dB A04 and A06, while this
+repository's own 30 dB column still classes all three as hard edged. So the
+grouping depends on how bandwidth is defined, within the registered rule's
+limits.
 
 ## Per attack, descriptive only
 
@@ -191,7 +238,8 @@ hard edged group turns out to average over opposite signs. Seed 0.
 | A05 | full band | +0.094 [+0.062, +0.122] | +0.080 [+0.046, +0.112] | -0.013 [-0.026, -0.000], not settled |
 
 The pooled hard edged figure is carried by A01. A04 and A06 have a negative
-ASYMMETRY, the reverse of H1, and the low pass moves both to zero. A04 is the
+ASYMMETRY, the reverse of H1, and the low pass moves both toward zero, to
+intervals that include it. A04 is the
 same algorithm as the evaluation partition's A16 and A06 the same as A19, and
 A19 behaved the same way there: -0.079 unmodified, -0.024 after the low pass.
 That is two partitions agreeing on one algorithm, noticed after the fact, and

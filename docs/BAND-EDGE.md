@@ -143,8 +143,15 @@ before its audio was read. Three of its six attacks are hard edged. Pooled over
 those three the ASYMMETRY is +0.120 unmodified and +0.105 [+0.083, +0.125]
 after the same low pass, which is the registered refutation. Pooled over the
 three full band attacks it is +0.091 and +0.089. So the split is not carried
-into any statement of H1, and the ASYMMETRY survives equalisation on a second
-partition.
+into any statement of H1, and on the full band attacks the ASYMMETRY keeps its
+size under equalisation on a second partition.
+
+That verdict is narrower than it sounds. The hard edged pool is positive only
+because of A01; A04 and A06 have a negative ASYMMETRY that the low pass moves
+toward zero. Pooled over all six attacks the low pass lowers the ASYMMETRY by
+0.033 [0.027, 0.039]. So the treatment is not inert there, and band edge class
+tracks whether an attack moves under it, not which way. The outcome section of
+the registration has the detail and the sensitivity checks.
 
 Taken together: H1 stands as an observation made under pre-registration. Its
 cause is undecided. A band limiting artifact of one kind reproduces it and is
