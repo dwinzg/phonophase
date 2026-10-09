@@ -4,6 +4,13 @@ Set 2026-09-18, after the decision not to import the UBC ARC files. That
 decision is what makes this document necessary, because it changes what the
 project can honestly claim.
 
+> **Status, 2026-10-08.** The question below is the one this project set out
+> with, and it presupposes more than has been shown. The pattern it predicts was
+> confirmed. That the pattern is a *phase artifact of synthesis* was not: a
+> sample rate conversion with no synthesis in it reproduces it, and a magnitude
+> statistic tracks it. See `docs/BAND-EDGE.md` and `docs/ROBUSTNESS.md`. Read
+> "the phase artifact" below as "the pattern", and its cause as open.
+
 ## The question, stated precisely
 
 **Is the phase artifact left by speech synthesis a property of articulation
@@ -22,7 +29,8 @@ statistic at 0.60 detects nothing useful, and AASIST-L reaches 0.99% EER with
 What is interesting is not the level, it is the **asymmetry**. The artifact is
 not spread evenly through speech. It concentrates in sonorants, nasals,
 approximants and steady vowels, and is close to absent in plosives. That
-structure is the finding, and structure is what a mechanism looks like.
+structure is the finding. It was read here as what a mechanism looks like; see
+the status note above for why no mechanism is claimed now.
 
 ### It is not "generalise to all languages"
 
