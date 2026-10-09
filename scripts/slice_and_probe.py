@@ -81,10 +81,11 @@ import time
 os.environ.setdefault("HF_HUB_DISABLE_PROGRESS_BARS", "1")
 os.environ.setdefault("TRANSFORMERS_VERBOSITY", "error")
 
+import gzip
+
 import numpy as np
 import librosa
 import soundfile as sf
-import torch
 from tqdm import tqdm
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "src"))
@@ -241,6 +242,7 @@ def load_aligner(device):
     from transformers import (Wav2Vec2FeatureExtractor, Wav2Vec2ForCTC,
                               Wav2Vec2PhonemeCTCTokenizer)
     from transformers.utils import logging as hf_logging
+    import torch
     hf_logging.set_verbosity_error()
 
     feature_extractor = Wav2Vec2FeatureExtractor.from_pretrained(MODEL_ID)
@@ -289,12 +291,40 @@ def iter_slices(n_samples, runs, segs):
 
 
 def already_done(path):
+    """
+    Utterances a table already holds, so a rerun can skip them.
+
+    A run killed mid write leaves the last utterance short of rows and often
+    the last line short of a newline. On a plain file that utterance is cut
+    off the end and reported as not done, so the rerun writes it whole. A
+    gzip table is read only.
+    """
     if not os.path.exists(path):
         return set()
-    seen = set()
-    with open(path, newline="") as fh:
-        for row in csv.DictReader(fh):
-            seen.add(row["utterance_id"])
+    with open(path, "rb") as fh:
+        gz = fh.read(2) == b"\x1f\x8b"
+    if gz:
+        with gzip.open(path, "rt", newline="") as fh:
+            return {row["utterance_id"] for row in csv.DictReader(fh)}
+    seen, last, last_start = set(), None, None
+    with open(path, "rb+") as fh:
+        header = fh.readline()
+        if not header.endswith(b"\n"):
+            fh.truncate(0)
+            return set()
+        col = next(csv.reader([header.decode()])).index("utterance_id")
+        pos = fh.tell()
+        for line in iter(fh.readline, b""):
+            if not line.endswith(b"\n"):
+                break
+            uid = next(csv.reader([line.decode()]))[col]
+            if uid != last:
+                last, last_start = uid, pos
+            seen.add(uid)
+            pos = fh.tell()
+        if last is not None:
+            fh.truncate(last_start)
+            seen.discard(last)
     return seen
 
 
@@ -440,6 +470,7 @@ def run(items, args, segs, total=None, audio_is_array=False):
     check_header_compatible(args.out, FIELDS)
     print(f"segmentations: {', '.join(segs)}")
 
+    import torch
     device = "cuda" if torch.cuda.is_available() else "cpu"
     print(f"device: {device}")
     if device == "cpu":

@@ -68,7 +68,7 @@ def select_balanced(rows, n_bonafide: int, n_spoof: int, seed: int):
     for r in spoof:
         by_attack.setdefault(r[1], []).append(r)
 
-    quota = max(1, n_spoof // max(1, len(by_attack)))
+    quota = n_spoof // max(1, len(by_attack))
     for attack in sorted(by_attack):
         pool = by_attack[attack]
         chosen += [pool[i] for i in rng.permutation(len(pool))[:quota]]

@@ -93,7 +93,6 @@ from __future__ import annotations
 
 import argparse
 import csv
-import gzip
 import itertools
 import math
 import os
@@ -103,6 +102,9 @@ from collections import Counter
 import numpy as np
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "src"))
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+
+from analyse_slices import open_table  # noqa: E402
 
 from phonophase.stats import (  # noqa: E402
     _cluster_draw, _prepare_clusters, benjamini_hochberg, fast_auc,
@@ -195,9 +197,8 @@ def group_means(statistics, taxonomy, key):
 
 def load(path, seg):
     """Read one segmentation of a slice table into aligned arrays."""
-    opener = gzip.open if str(path).endswith(".gz") else open
     columns = {k: [] for k in ("y", "u", "attack", "category", "phase", "magnitude")}
-    with opener(path, "rt", newline="") as fh:
+    with open_table(path) as fh:
         for row in csv.DictReader(fh):
             if row["seg"] != seg:
                 continue
