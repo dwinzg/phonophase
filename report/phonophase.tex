@@ -177,7 +177,12 @@ pass (Figure~\ref{fig:split}). Because that split was chosen after seeing the
 data, we registered it and tested it on the development partition before
 reading its audio. Three of its six systems are hard-edged. Pooled over those
 three the asymmetry is $+0.105$ \ci{+0.083}{+0.125} after the low pass, so the
-split does not replicate.
+split does not replicate. An independent re-derivation reproduced these numbers
+and narrowed their reading: the pool is positive only because of one system
+(A01), the other two have a negative asymmetry that the low pass moves toward
+zero, and over all six systems the low pass lowers the asymmetry by $0.033$
+\ci{0.027}{0.039}. Band edges matter on this partition; the pooled prediction
+about them failed.
 
 \section{What we got wrong}
 
@@ -197,8 +202,9 @@ does too.
 
 One corpus and one language. Thirteen systems and 67 speakers. Percentile
 intervals, which cover less than their nominal rate with 13 clusters. A
-segmentation that is close to fixed windows. The development result has been
-computed once and not yet independently re-derived. The statistic pair was
+segmentation that is close to fixed windows. The development result was
+re-derived independently once; the size of the change under the low pass
+depends on the filter cutoff and on whether affricates are counted. The statistic pair was
 chosen on an earlier partition as the strongest of several, and the result is
 specific to it.
 
