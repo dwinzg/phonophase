@@ -288,6 +288,22 @@ def test_the_printed_verdict_follows_the_states_end_to_end():
         assert "no verdict on H1" in other and "H1 SUPPORTED" not in other
 
 
+def test_the_per_language_path_reports_the_same_three_states():
+    import tempfile
+    with tempfile.TemporaryDirectory() as tmp:
+        table = os.path.join(tmp, "t.csv")
+        _write_table(table, _speaker_table(n_speakers=30), flat_obstruents=True)
+        settled = _run_main(table, "--by-language", "--n-boot", "600")
+        assert any(line.endswith("  holds") for line in settled.splitlines()), settled
+        unsettled = _run_main(table, "--by-language", "--n-boot", "40")
+        assert "undecided at this draw count" in unsettled
+        assert "  holds" not in unsettled
+        other = _run_main(table, "--by-language", "--n-boot", "600",
+                          "--phase", analyse_slices.MAGNITUDE,
+                          "--magnitude", analyse_slices.PHASE)
+        assert "NOT THE REGISTERED TEST" in other
+
+
 def test_a_clear_level_does_not_carry_h1_when_the_difference_is_not_clear():
     """
     H1's primary test is the difference between sonorants and obstruents. With

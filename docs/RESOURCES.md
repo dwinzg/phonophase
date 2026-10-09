@@ -6,7 +6,9 @@ for fields like licence and URL. This page is for the judgements the registries
 cannot hold: which resources actually unblock something, which claims rest on
 what, and which ideas are currently floating free.
 
-Every number here has a command behind it in the project log.
+The working log that records the command behind each number here is kept
+outside this repository. Where a figure matters, the document it is cited from
+gives the command.
 
 ## How to read the status labels
 
@@ -61,8 +63,8 @@ though it were funded.
 
 Pre-registered in `docs/PREREGISTRATION.md` before the data was touched, run on
 ASVspoof 2019 LA eval, attacks A07 to A19, none seen in training. 2,995
-utterances, 68,996 slices in each of two segmentations, bootstraps clustered by source utterance. Sonorant
-advantage **+0.048 [+0.035, +0.061]** against obstruent −0.015, sonorant minus
+utterances, 68,996 slices in each of two segmentations, bootstraps clustered by
+source utterance. Sonorant advantage **+0.048 [+0.035, +0.061]** against obstruent −0.015, sonorant minus
 obstruent **+0.063 [+0.045, +0.080]**, all four falsification conditions decided
 in its favour. Scope limits by clustering and by choice of statistic are in
 `docs/ROBUSTNESS.md`.
@@ -70,7 +72,11 @@ in its favour. Scope limits by clustering and by choice of statistic are in
 **Falsifier:** the sonorant advantage interval includes zero, or the ordering
 reverses. Neither occurred.
 
-**What limits it:** one language, one corpus, separations of 0.51 to 0.60.
+**What limits it:** one language, one corpus, separations of 0.51 to 0.60. And
+its cause is undecided. A low quality sample rate conversion on genuine speech
+reproduces it at full size, and spectral tilt, a magnitude statistic, shows
+nearly the same pattern (`docs/BAND-EDGE.md`, `docs/ROBUSTNESS.md`). It is
+confirmed as an observation and not as a phase artifact.
 
 ### It concentrates in sonorants specifically
 
@@ -82,8 +88,9 @@ robust part: separation runs 0.576, 0.547, 0.515 across [+son,+voi],
 under a silence control. Voiced obstruents sit between sonorants and voiceless
 obstruents rather than with either.
 
-The defensible wording is that separation tracks **how much of the segment
-carries periodic, resonant structure**, which is a mechanism rather than a label.
+The wording adopted then was that separation tracks **how much of the segment
+carries periodic, resonant structure**. That describes the ladder. It is not an
+established mechanism, for the reasons given under the confirmed result above.
 
 **The decomposition into the two factors is NOT robust, and an earlier version
 of this page said it was.** The baseline crossed test gives son +0.0323 and voi
@@ -148,8 +155,8 @@ undecided.
 
 Two earlier claims were built from this cell by counting signs. "Reverses on 4 of
 13" counted the sign of a different quantity. "Positive on 12 of 13" counted
-uncorrected signs of point estimates. Both are recorded in the project log as
-errors rather than quietly restated.
+uncorrected signs of point estimates. Both are recorded as errors, here and in
+the README, rather than quietly restated.
 
 ### Griffin-Lim should show the largest phase deficit
 
