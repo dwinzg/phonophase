@@ -13,7 +13,8 @@ separates the arms on `mgd_hf_std` at 0.576 folded and leaves
 `mfcc_frame_spread` at 0.508, and that resampler choice alone gives 0.592
 against 0.504. That is phase selective and inside H1's own range. The registered
 confound control partials out high frequency energy and tilt, which is about
-level, and an anti-alias filter is a group delay phenomenon at the band edge.
+level, and an anti-alias filter would be expected to change group delay near
+the band edge. The filters themselves were not characterised.
 
 So: can a band edge or resampling difference between bonafide and spoofed audio
 account for H1? H1 is the ASYMMETRY, the phase minus magnitude advantage in
@@ -149,8 +150,11 @@ size under equalisation on a second partition.
 That verdict is narrower than it sounds. The hard edged pool is positive only
 because of A01; A04 and A06 have a negative ASYMMETRY that the low pass moves
 toward zero. Pooled over all six attacks the low pass lowers the ASYMMETRY by
-0.033 [0.027, 0.039]. So the treatment is not inert there, and band edge class
-tracks whether an attack moves under it, not which way. The outcome section of
+0.033 [0.027, 0.039]. So the treatment is not inert there. At this cutoff the three hard edged
+attacks are the ones that move, in both directions, which is three against
+three and not a rule: the full band pool moves at 6500 and 7300 Hz, and two
+of the four hard edged eval attacks do not move with an interval excluding
+zero. The outcome section of
 the registration has the detail and the sensitivity checks.
 
 Taken together: H1 stands as an observation made under pre-registration. Its
@@ -305,7 +309,9 @@ comparison the spoofed side is the lower one.
 | soxr LQ then 16 bit, both arms then low passed at 6900 Hz and 16 bit | +0.1302 [+0.1262, +0.1341] | +0.0005 [-0.0059, +0.0070] | +0.0005 [-0.0169, +0.0184] |
 
 Seed 0 shown. Seeds 1 and 2 move no bound by more than 0.004 and change no
-sign; all three are in `results/band_edge_summary.csv`.
+sign; all three are in `results/band_edge_summary.csv`, where the last two
+rows of this table are `r1 soxr_lq pcm16` and the `PC` row ending
+`bona_rt_soxr_lq_22050_pcm16_lp_6900_pcm16`.
 `librosa.resample` at its default returns samples identical to soxr HQ, so it
 has no row of its own.
 
