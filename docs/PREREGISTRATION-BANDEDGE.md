@@ -188,12 +188,17 @@ the conclusion above does not depend on A01, but the word refuted does. After th
 The treatment is not inert on this partition. Pooled over all six attacks the
 ASYMMETRY is +0.132 [+0.118, +0.147] unmodified and +0.099 [+0.085, +0.113]
 after, a change of -0.033 [-0.039, -0.027] on the same draw, which excludes
-zero and is larger than either subgroup's change, because a folded statistic
-of a pool is not the average of its parts. Each hard edged attack moves under
+zero and is larger than either subgroup's change. A separation computed on a
+pool is not the average of its parts. Each hard edged attack moves under
 the low pass with an interval excluding zero, in opposite directions, and no
-full band attack moves by more than 0.013 (table below). So band edge class
-tracks whether the low pass moves the ASYMMETRY and not which way, and the
-opposite signs cancel in the registered pool.
+full band attack moves by more than 0.013 (table below). So on this
+partition, at this cutoff, the hard edged attacks are the ones that move, in
+both directions, and the opposite signs cancel in the registered pool. That
+is three attacks against three and is a description, not a rule: A05's change
+is -0.013 [-0.026, -0.000], the full band pool moves by +0.012 and +0.013
+with intervals excluding zero at the two other cutoffs below, and on the
+evaluation partition two of the four hard edged attacks, A08 and A16, have
+changes whose intervals include zero (`docs/BAND-EDGE.md`).
 
 What the registered test does establish: the pooled prediction made from the
 evaluation partition failed, and on the full band attacks the ASYMMETRY keeps
@@ -203,8 +208,9 @@ its size under equalisation.
 
 The two cutoff rows are from `scripts/band_edge.py change` with the treatment
 `lp:6500>pcm16` or `lp:7300>pcm16`, seed 0, and agree with the independent
-re-derivation to within 0.001. The affricate row is from the independent code
-alone. Neither verdict changes under any of these. The size of the change
+re-derivation to within 0.001. The affricate row was computed by two
+independent implementations, which agree to within 0.001, and not by this
+repository's scripts, which have no option to drop a category. Neither verdict changes under any of these. The size of the change
 does.
 
 | variation | full band change | hard edged change |
@@ -244,8 +250,10 @@ ASYMMETRY, the reverse of H1, and the low pass moves both toward zero, to
 intervals that include it. A04 is the
 same algorithm as the evaluation partition's A16 and A06 the same as A19, and
 A19 behaved the same way there: -0.079 unmodified, -0.024 after the low pass.
-That is two partitions agreeing on one algorithm, noticed after the fact, and
-it is a hypothesis.
+The other pair does not agree: A04 moves from -0.060 to -0.012 here, a change
+of +0.047, and A16 moved from +0.027 to -0.012 there, a change of -0.039
+whose interval includes zero. So one algorithm of two behaves alike across
+partitions, noticed after the fact, and it is a hypothesis.
 
 ## Commands
 
