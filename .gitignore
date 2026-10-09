@@ -28,3 +28,10 @@ __pycache__/
 build/
 dist/
 results/dev_slices.csv
+
+# LaTeX build products. report/phonophase.pdf and .bbl are tracked on purpose.
+report/*.aux
+report/*.log
+report/*.out
+report/*.blg
+

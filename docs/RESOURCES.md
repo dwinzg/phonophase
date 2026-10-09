@@ -155,8 +155,8 @@ undecided.
 
 Two earlier claims were built from this cell by counting signs. "Reverses on 4 of
 13" counted the sign of a different quantity. "Positive on 12 of 13" counted
-uncorrected signs of point estimates. Both are recorded as errors, here and in
-the README, rather than quietly restated.
+uncorrected signs of point estimates. Both are recorded here as errors rather
+than quietly restated.
 
 ### Griffin-Lim should show the largest phase deficit
 
