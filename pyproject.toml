@@ -43,6 +43,8 @@ dependencies = [
 dev = ["pytest>=8.0", "ipython>=8.0"]
 # Only the alignment pass needs these, so they are not a runtime dependency.
 align = ["transformers>=4.40", "datasets>=2.18"]
+# Only scripts/make_report_figures.py needs this.
+report = ["matplotlib>=3.8"]
 
 [project.urls]
 Repository = "https://github.com/dwinzg/phonophase"

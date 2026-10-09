@@ -1,0 +1,29 @@
+\begin{thebibliography}{5}
+\providecommand{\natexlab}[1]{#1}
+
+\bibitem[{Efron and Tibshirani(1993)}]{efron1993bootstrap}
+Bradley Efron and Robert~J. Tibshirani. 1993.
+\newblock \emph{An Introduction to the Bootstrap}.
+\newblock Chapman \& Hall.
+
+\bibitem[{Jung et~al.(2022)Jung, Heo, Tak, Shim, Chung, Lee, Yu, and Evans}]{jung2022aasist}
+Jee-weon Jung, Hee-Soo Heo, Hemlata Tak, Hye-jin Shim, Joon~Son Chung, Bong-Jin Lee, Ha-Jin Yu, and Nicholas Evans. 2022.
+\newblock {AASIST}: Audio anti-spoofing using integrated spectro-temporal graph attention networks.
+\newblock In \emph{Proceedings of ICASSP}.
+
+\bibitem[{Murthy and Gadde(2003)}]{murthy2003mgd}
+Hema~A. Murthy and Venkata Gadde. 2003.
+\newblock The modified group delay function and its application to phoneme recognition.
+\newblock In \emph{Proceedings of ICASSP}.
+
+\bibitem[{Wang et~al.(2020)Wang, Yamagishi, Todisco, Delgado, Nautsch, Evans et~al.}]{wang2020asvspoof}
+Xin Wang, Junichi Yamagishi, Massimiliano Todisco, H{\'e}ctor Delgado, Andreas Nautsch, Nicholas Evans, et~al. 2020.
+\newblock {ASVspoof} 2019: A large-scale public database of synthesized, converted and replayed speech.
+\newblock \emph{Computer Speech \& Language}, 64:101114.
+
+\bibitem[{Xu et~al.(2022)Xu, Baevski, and Auli}]{xu2022zeroshot}
+Qiantong Xu, Alexei Baevski, and Michael Auli. 2022.
+\newblock Simple and effective zero-shot cross-lingual phoneme recognition.
+\newblock In \emph{Proceedings of Interspeech}.
+
+\end{thebibliography}
