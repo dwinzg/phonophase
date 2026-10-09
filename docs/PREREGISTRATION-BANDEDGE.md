@@ -182,7 +182,7 @@ The refutation of B2 rests on one attack. The hard edged pool is positive only
 because A01 is in it. A04 and A06 pooled without it give -0.064 [-0.083, -0.043] unmodified,
 which fails B2's precondition, so without A01 the prediction would have been
 untestable, not refuted. The registered consequence is the same for both, so
-the conclusion above does not depend on A01, but the word refuted does. After the low pass that pair gives +0.007 [-0.013, +0.026], a change of
+the conclusion above does not depend on A01, but the word refuted does. After the low pass that pair gives +0.007 [-0.014, +0.026], a change of
 +0.070 [+0.060, +0.080] on the same draw.
 
 The treatment is not inert on this partition. Pooled over all six attacks the
