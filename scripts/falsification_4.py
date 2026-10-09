@@ -271,7 +271,7 @@ def _print_partition(name, path, data, result):
         if r is None:
             print(f"  {label:<18} {'unmeasurable':>10}")
             continue
-        verdict = {True: "yes", False: "no", None: "not measurable"}[presence(r)]
+        verdict = {True: "yes", False: "no", None: "not measurable or not settled"}[presence(r)]
         shown = verdict if key != "obstruent_level" else "not a claim"
         print(f"  {label:<18} {r['estimate']:>+10.4f} "
               f"{'[%+.4f, %+.4f]' % (r['ci_low'], r['ci_high']):>22}  {shown}")
@@ -332,7 +332,7 @@ def main():
     for key, label in (("level", "LEVEL"), ("asymmetry", "ASYMMETRY")):
         t, e = presence(train_r[key]), presence(eval_r[key])
         verdicts[key] = condition_4(t, e)
-        shown = {True: "present", False: "absent", None: "not measurable"}
+        shown = {True: "present", False: "absent", None: "not measurable or not settled"}
         print(f"\n  {label}")
         print(f"    on {', '.join(wanted)}   {shown[t]}")
         print(f"    on eval A07 to A19        {shown[e]}")
@@ -360,8 +360,9 @@ def main():
         print(f"CONDITION 4 FIRES on {', '.join(fired)}. Per the registration "
               f"H1 is\nrejected. Write it up as a negative result.")
     else:
-        print("CONDITION 4 UNRESOLVED. Not enough data on at least one side to")
-        print("evaluate it. This is NOT a pass and NOT a rejection.")
+        print("CONDITION 4 UNRESOLVED. On at least one side there is not enough data,")
+        print("or a bound sits within Monte Carlo error of zero, in which case a")
+        print("larger --n-boot may settle it. This is NOT a pass and NOT a rejection.")
     print("=" * 74)
 
 
