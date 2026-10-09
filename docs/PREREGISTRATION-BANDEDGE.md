@@ -201,16 +201,18 @@ its size under equalisation.
 
 ## Sensitivity, from the re-derivation, not registered
 
-Computed once, by independent code, and not reproduced with this repository's
-scripts. Neither verdict changes under any of these. The size of the change
+The two cutoff rows are from `scripts/band_edge.py change` with the treatment
+`lp:6500>pcm16` or `lp:7300>pcm16`, seed 0, and agree with the independent
+re-derivation to within 0.001. The affricate row is from the independent code
+alone. Neither verdict changes under any of these. The size of the change
 does.
 
 | variation | full band change | hard edged change |
 |---|---|---|
 | as registered | -0.002 [-0.009, +0.006] | -0.015 [-0.043, +0.014] |
 | affricates removed | -0.002 [-0.006, +0.002] | -0.030 [-0.041, -0.018] |
-| low pass at 6500 Hz | +0.012 [+0.004, +0.021] | -0.003 [-0.030, +0.025] |
-| low pass at 7300 Hz | +0.013 [+0.007, +0.019] | +0.008 [-0.018, +0.024] |
+| low pass at 6500 Hz | +0.012 [+0.003, +0.021] | -0.003 [-0.031, +0.025] |
+| low pass at 7300 Hz | +0.013 [+0.007, +0.020] | +0.008 [-0.019, +0.024] |
 
 Affricates are 1,459 of 114,181 slices and carry a third of the obstruent mean.
 The phase statistic after the low pass also depends on the filter design: a
