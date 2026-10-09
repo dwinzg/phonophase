@@ -10,8 +10,8 @@ refers to, because the clauses refer to three different quantities and have been
 read as though they referred to one.
 
 The ambiguity is not academic. It has produced two published errors already, the
-"four attack reversals" and the "twelve of thirteen" count, both recorded in
-the project log as retractions.
+"four attack reversals" and the "twelve of thirteen" count, both recorded as
+retractions in `docs/RESOURCES.md`.
 
 ---
 
@@ -220,5 +220,5 @@ written down afterwards, which is the entire reason registrations exist.
    outcome record that it was not run.
 4. Report the system clustered LEVEL wherever the system clustered ASYMMETRY is
    reported.
-5. Correct the session summary in the project log, which states the system
-   clustered asymmetry as "H1 still stands" without the level beside it.
+5. Wherever the system clustered asymmetry is summarised as "H1 still
+   stands", put the level beside it.
