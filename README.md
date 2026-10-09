@@ -30,7 +30,7 @@ information, sound class by sound class.
    and not yet run.
 
 Where it stands: step 1 and step 2 are done and the pattern is confirmed. Step
-3 is where the first explanation failed, which is the main result so far. Step
+3 is where the first explanation lost its support, which is the main result so far. Step
 4 waits on step 3.
 
 ## How this helps, and how to use it
@@ -70,10 +70,12 @@ quantity, sonorant advantage minus obstruent advantage, is **+0.063 [+0.045,
 
 ![Separation by category](report/figures/separation.png)
 
-**2. It is robust.** The difference excludes zero whether the bootstrap
-resamples utterances, speakers or synthesis systems. It survives an identical
-low pass on both classes, on the eval partition and again on the development
-partition.
+**2. Pooled, it is robust.** The difference excludes zero whether the bootstrap
+resamples utterances, speakers or synthesis systems, and it survives an
+identical low pass on both classes on the eval partition. System by system it
+varies: one eval system and two development systems show the reverse, and on
+the development partition the same low pass lowers the pooled difference by a
+quarter.
 
 **3. Its cause is not established.** The idea behind the test was a phase
 artifact of vocoding. Two results count against asserting that:
@@ -89,7 +91,10 @@ artifact of vocoding. Two results count against asserting that:
 That particular resampling artifact is ruled out as the cause here: low passing
 both classes removes it and leaves the real difference at +0.061 [+0.042,
 +0.078]. A difference in the upper band spectral envelope of synthetic speech,
-with nothing particular to phase, fits everything measured so far.
+with nothing particular to phase, is not ruled out. It is also not shown:
+against upper band energy, another magnitude statistic, the difference stays
+at +0.054 [+0.040, +0.069]. The control that could tell the two accounts apart
+is registered and not yet run.
 
 **4. What does not hold.**
 
@@ -98,9 +103,9 @@ with nothing particular to phase, fits everything measured so far.
 - The pattern belongs to upper band group delay dispersion. Whole band group
   delay statistics do not show it.
 - A split by band edge that appeared on eval after the fact was registered and
-  tested on the development partition, and did not replicate. Band edges
-  still matter there: the three hard edged systems each move under the low
-  pass, in opposite directions.
+  tested on the development partition, and did not replicate. On that
+  partition the three hard edged systems each move under the low pass, in
+  opposite directions; that is three systems and not a rule.
 
 | | where |
 |---|---|
