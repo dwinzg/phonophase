@@ -1,303 +1,221 @@
 # PhonoPhase
 
-**Where does the phase artifact of speech synthesis live, and is that location a
-property of articulation rather than of language?**
+**Where in speech does a deepfake differ from a real voice, and what does the
+difference depend on?**
 
-Speech synthesis reproduces what a voice sounds like far more readily than it
-reproduces the phase structure a real vocal tract produces. The residue is
-detectable, but it is not spread evenly through speech. This project measures
-where it concentrates, in articulatory terms, and tests whether that map holds
-in languages absent from training.
+This is the first experiment in a line of work on speech deepfakes. Detectors
+already tell real from synthetic speech very well on the data they were trained
+on, and much less well on a new synthesiser, a new channel or a new language.
+One reason is that nobody can say what they have learned. This project works on
+that gap from the measurement side: instead of training a model, it takes one
+simple, interpretable statistic and asks where in the speech signal it carries
+information, sound class by sound class.
 
-This is a measurement study. It is not a detector, and it does not compete with
-one. See `docs/SCOPE.md`.
+## What we are trying to do
 
-## The finding so far
+1. **Locate the cue.** Cut every utterance into phones, group them by how they
+   are produced (vowels, nasals, approximants, fricatives, stops, affricates),
+   and measure how well a statistic separates real from synthetic speech inside
+   each group.
+2. **Test one specific idea.** The starting idea was that vocoders handle
+   voiced, periodic sounds differently from noisy ones, so a phase statistic
+   might help most in sonorants. That was written down as a hypothesis, with the conditions that
+   would refute it, before the evaluation data was touched.
+3. **Find out what causes it.** A pattern is only useful if it comes from the
+   synthesis and not from the corpus: its sample rate history, its band edges,
+   its speakers. Most of the work here is controls built to tell those apart.
+4. **Then ask whether it transfers.** If the cue is tied to how sounds are
+   produced and not to which language produces them, it should appear in a
+   language the synthesiser was never trained on. That experiment is designed
+   and not yet run.
 
-Pre-registered in `docs/PREREGISTRATION.md` before the data was touched, then
-run on the ASVspoof 2019 LA **eval** partition, attacks A07 to A19, none seen in
-training. 2,995 utterances, 137,992 slices, bootstraps clustered by source
-utterance.
+Where it stands: step 1 and step 2 are done and the pattern is confirmed. Step
+3 is where the first explanation lost its support, which is the main result so far. Step
+4 waits on step 3.
 
-**Dispersion of Modified Group Delay over the upper spectrum separates bonafide
-from spoofed speech more strongly in sonorants than in obstruents.**
+## How this helps, and how to use it
 
-| Category | separation | 95% CI |
-|---|---|---|
-| NASALS | 0.599 | [0.581, 0.616] |
-| VOWELS_MOVING | 0.581 | [0.561, 0.603] |
-| APPROXIMANTS | 0.580 | [0.560, 0.599] |
-| VOWELS_STEADY | 0.572 | [0.557, 0.587] |
-| FRICATIVES | 0.548 | [0.537, 0.559] |
-| AFFRICATES | 0.536 | [0.496, 0.574] |
-| PLOSIVES | 0.511 | [0.499, 0.522] |
+This is not a detector and does not compete with one. The statistics here
+separate the classes at 0.51 to 0.60 AUC, where a trained model (AASIST-L)
+reaches an equal error rate under 1%. What it offers is different:
 
-Sonorant advantage **+0.048 [+0.039, +0.057]** against obstruent −0.015. All
-four falsification conditions passed at 6 to 7 times the required power.
+- **A way to ask what a cue depends on.** Point the pipeline at any corpus of
+  real and synthetic speech and it reports, per sound class and per synthesis
+  system, where a statistic separates the two, with intervals that respect the
+  fact that thousands of phones come from a few hundred utterances.
+- **A check for dataset shortcuts.** The controls here showed that a sample
+  rate conversion on real speech, with no synthesis at all, produces the same
+  signature as the deepfakes do. Anyone training or evaluating a detector on
+  ASVspoof-style data can run the same treatments (`scripts/band_edge.py`) to
+  see whether a feature is reading the synthesis or the file's processing
+  history.
+- **Statistics you can lift out.** `phonophase.stats` is standalone: a cluster
+  bootstrap with one draw shared across categories, intervals that say when the
+  draw count cannot settle a sign, and three-state verdicts. It applies to any
+  per-phone, per-frame or per-window measurement.
+- **A worked example of a result that was tested until part of it broke.** The
+  registrations, the falsifiers and the errors caught are all in `docs/`, for
+  anyone setting up a similar study.
 
-The result agrees to within 0.002 on both segmentations, which is worth less
-than it sounds and is stated here rather than left to look impressive. The two
-segmentations are largely the same data. 73 percent of slices are numerically
-identical between them, the statistics correlate at 0.988, and 89 percent of
-`seg=run` slices are a single frame, because CTC argmax is peaky and the slicer
-has a 60 ms floor. Their agreement rules out a coding difference between the two
-paths. It does not show the finding survives a different way of cutting the
-audio, and forced alignment would be the test that does.
+The short report, with figures, is [`report/phonophase.pdf`](report/phonophase.pdf).
+Scope and what is deliberately left out: `docs/SCOPE.md`.
 
-There is a physical account. Sonorants are voiced and periodic and carry
-coherent harmonic phase that a vocoder must reconstruct. Obstruents are
-aperiodic, so phase is close to random in genuine speech too and there is little
-structure for an artifact to disturb.
+## Findings
 
-### Three things it does not say
+**1. The pattern is confirmed.** Dispersion of Modified Group Delay over the
+upper spectrum separates bonafide from spoofed speech more strongly in
+sonorants than in obstruents, relative to a cepstral statistic. The registered
+quantity, sonorant advantage minus obstruent advantage, is **+0.063 [+0.045,
++0.080]** on the eval partition, attacks A07 to A19.
 
-**It is small.** Separation runs 0.51 to 0.60. This locates phase information,
-it does not detect anything.
+![Separation by category](report/figures/separation.png)
 
-**Per attack, this data mostly cannot decide.** Scored per attack with
-`scripts/attack_analysis.py`, with intervals and FDR correction across the
-thirteen, the asymmetry that H1 states is
+**2. Pooled, it is robust.** The difference excludes zero whether the bootstrap
+resamples utterances, speakers or synthesis systems, and it survives an
+identical low pass on both classes on the eval partition. System by system it
+varies: one eval system and two development systems show the reverse, and on
+the development partition the same low pass lowers the pooled difference by a
+quarter.
 
-| | count | attacks |
-|---|---|---|
-| clear and positive | 4 | A08, A09, A14, A17 |
-| clear and negative, a reversal | 1 | A19, and only just, q = 0.047 |
-| undecided | 8 | A07, A10, A11, A12, A13, A15, A16, A18 |
+**3. Its cause is not established.** The idea behind the test was a phase
+artifact of vocoding. Two results count against asserting that:
 
-Undecided is not a reversal. Each attack contributes about 230 utterances, so
-most per attack intervals are simply too wide to rank. The pooled result above
-is strong because it pools.
+- A low quality sample rate conversion applied to genuine speech, with no
+  synthesis involved, reproduces the pattern at full size: +0.059 [+0.040,
+  +0.077], same direction, same category order.
+- A magnitude statistic with no phase content, spectral tilt, shows nearly the
+  same pattern. Against it the difference is +0.009 [-0.003, +0.033].
 
-The decided set is not stable either. On `seg=window` the same procedure gives
-seven clear positive rather than four, because A07, A10 and A13 sit close to the
-decision boundary and cross it. What holds on both segmentations is the core:
-A08, A09, A14 and A17 clear positive, A19 the only clear negative, A16 and A18
-undecided. Anything finer than that is being read off noise.
+![What reproduces it](report/figures/resampler.png)
 
-**An earlier version of this section reported the effect as reversing on four
-attacks, and a later one as holding on twelve of thirteen. Both were counting
-the sign of a point estimate, and neither is a result.** The four came from a
-different quantity, whether phase beats magnitude in sonorants at all, which H1
-does not claim: A08 and A13 are negative on that and clearly positive on the
-asymmetry, meaning phase loses to magnitude everywhere on those attacks and
-loses less in sonorants. The twelve came from counting uncorrected signs, which
-is the same error in the opposite direction.
+That particular resampling artifact is ruled out as the cause here: low passing
+both classes removes it and leaves the real difference at +0.061 [+0.042,
++0.078]. A difference in the upper band spectral envelope of synthetic speech,
+with nothing particular to phase, is not ruled out. It is also not shown:
+against upper band energy, another magnitude statistic, the difference stays
+at +0.054 [+0.040, +0.069]. The control that could tell the two accounts apart
+is registered and not yet run.
 
-The count of reversals is not even stable under the definition. Averaging the
-per category advantages, as the pre-registration specifies, one attack is
-negative. Pooling the slices instead, three are, because A16 and A18 sit within
-0.0005 of zero and change side. `scripts/attack_analysis.py` prints both, for
-exactly this reason.
+**4. What does not hold.**
 
-**One language.** Whether it holds elsewhere is the open question.
+- The sonorant advantage on its own, +0.048, is not distinguishable from zero
+  when the 13 synthesis systems are resampled.
+- The pattern belongs to upper band group delay dispersion. Whole band group
+  delay statistics do not show it.
+- A split by band edge that appeared on eval after the fact was registered and
+  tested on the development partition, and did not replicate. On that
+  partition the three hard edged systems each move under the low pass, in
+  opposite directions; that is three systems and not a rule.
+
+| | where |
+|---|---|
+| the registered test and its outcome | `docs/PREREGISTRATION.md` |
+| how far the result reaches, by clustering and by statistic | `docs/ROBUSTNESS.md` |
+| the resampling and band edge test | `docs/BAND-EDGE.md` |
+| the split, registered and run | `docs/PREREGISTRATION-BANDEDGE.md` |
+| the errors made and caught along the way | `docs/RESOURCES.md` |
 
 ## What comes next
 
-The seven category grouping above is too coarse and too English. It covers 41 of
-the 387 phone symbols the aligner emits, discarding aspiration, breathy voice,
-nasalisation, length and retroflexion, which are exactly the contrasts that
-distinguish languages.
+The cause. A positive control is registered in
+`docs/PREREGISTRATION-GRIFFINLIM.md`, on a system whose magnitude is a real
+recording's and whose phase is wholly synthetic. It can separate a phase
+account from a spectral envelope account, and it has not been run. Cross
+lingual work (`docs/H2-DESIGN.md`) waits on it.
 
-`phonophase.phonology` replaces it with PanPhon's 24 articulatory features,
-raising coverage to 296 phones. Features are universal by construction, so the
-comparison stays well defined between languages whose inventories do not
-overlap.
+## Reproduce the result
 
-That turns the open question into something sharper and more useful. Regress
-separation on articulatory features, find which features carry the signal, and
-use that to predict from a language's phone inventory how much signal to expect
-**before any labelled data exists in it**. Then test at both extremes of that
-prediction.
-
-Full plan in `docs/PLAN.md`. The design threat to watch is in `docs/SCOPE.md`,
-and it is real. Different languages are synthesised by different systems, so a
-language effect and a vocoder effect are confounded unless the comparison is
-made within a single multilingual synthesiser.
-
-## Who this is for
-
-Four uses, ordered by how ready each one is. Nothing here is a detector, and
-none of it competes with AASIST-L at 0.99% EER on 85,000 parameters.
-
-**You need cluster robust statistics for a per segment speech measurement.**
-`phonophase.stats` has no dependency on the rest of the package and is the piece
-most worth lifting. If you compute a statistic per phoneme, per frame or per
-window, your observations are not independent: many come from one utterance and
-share a speaker, a channel and, for synthetic audio, one synthesis system.
-Bootstrapping them as independent understates the interval by roughly the square
-root of slices per utterance. In our pilot, 129 slices came from 23 utterances.
-`bootstrap_auc_ci(..., groups=utterance_id)` is the fix, and
-`paired_bootstrap_delta` is the right way to compare two statistics measured on
-the same samples.
-
-**You want to know where a signal concentrates across phoneme classes, in your
-own corpus.** `scripts/make_manifest.py` builds a manifest from common directory
-layouts, `slice_and_probe.py --manifest` aligns and reduces in one GPU pass
-emitting both segmentations, and `analyse_slices.py` reports per class with
-clustered intervals. Language is carried through, so `--by-language` works. None
-of this is specific to deepfakes: it needs a per segment statistic and a class
-label, whatever they mean.
-
-**You are checking anti-spoofing work, yours or someone else's, for known
-failure modes.** `docs/RESOURCES.md` lists nine ways this measurement goes
-wrong, every one of them made and caught here, with what it looked like. Two are
-detected by the instrument directly. It is worth reading even if you never touch
-phase.
-
-**You want to check or extend the finding itself.** The eval table ships in the
-repository, the analysis runs in about thirty seconds on CPU, and the
-falsification conditions were written down before the data was touched. Trying
-to break it is a welcome use and is easier than reproducing it.
-
-## Install
+The eval table ships in the repository. No GPU, no corpus, about a minute each.
 
 ```bash
 python3 -m venv .venv && source .venv/bin/activate
-pip install -e ".[dev]"        # instrument and tests
-pip install -e ".[align]"      # adds transformers and datasets for the GPU pass
+pip install -e ".[dev]"
+
+python scripts/analyse_slices.py --table results/eval_slices.csv.gz
+python scripts/analyse_slices.py --table results/eval_slices.csv.gz --cluster system
+python scripts/analyse_slices.py --table results/eval_slices.csv.gz --magnitude hf_lf_tilt
 ```
 
-Install torch first for your platform. It is deliberately not a dependency,
-because the right build is platform specific and Colab already has one.
+The script prints the primary test, each falsification condition and a verdict.
+It says UNDECIDED when a bootstrap bound is too close to its threshold for the
+draw count to settle, and gives no verdict on H1 for any setting that is not
+the registered one.
 
-## Use
-
-Measure on ASVspoof, streaming the corpus so nothing needs downloading.
+## Use it on your own audio
 
 ```bash
-python scripts/slice_and_probe.py \
-    --hf-dataset SpeechAntiSpoofingBenchmarks/ASVspoof2019_LA \
-    --limit-bonafide 1500 --limit-spoof 1500 \
-    --segmentations run,window --out results/eval_slices.csv
+pip install torch                 # your platform's build, see pyproject.toml
+pip install -e ".[align]"
 
-python scripts/analyse_slices.py --table results/eval_slices.csv --seg run
+python scripts/make_manifest.py --root data/mycorpus --layout lang_label \
+    --corpus mycorpus --out manifests/mycorpus.csv
+python scripts/slice_and_probe.py --manifest manifests/mycorpus.csv --out results/mycorpus.csv
+python scripts/analyse_slices.py --table results/mycorpus.csv --by-language
 ```
 
-Measure on any other corpus, which is how the cross lingual test runs.
+`slice_and_probe.py` aligns, slices and reduces each slice to nine statistics
+in one pass. `scripts/band_edge.py` applies a treatment to the audio (a
+resampling round trip, a low pass) with the alignment held fixed, which is how
+the band edge tests were run. `notebooks/confirmatory_run.ipynb` runs the
+confirmatory pass on a Colab GPU.
 
-```bash
-python scripts/make_manifest.py --root data/mlaad --layout lang_label \
-    --corpus mlaad --out manifests/mlaad.csv
-python scripts/slice_and_probe.py --manifest manifests/mlaad.csv --out results/mlaad.csv
-python scripts/analyse_slices.py --table results/mlaad.csv --by-language
-```
+## What is worth reusing
 
-`notebooks/confirmatory_run.ipynb` runs the whole thing on a Colab GPU with two
-uploads and no corpus download.
-
-## Reproducing the finding
-
-`results/eval_slices.csv.gz` is the data behind the table above.
-
-```bash
-gunzip -k results/eval_slices.csv.gz
-python scripts/analyse_slices.py --table results/eval_slices.csv --seg run
-python scripts/analyse_slices.py --table results/eval_slices.csv --seg window
-```
-
-Roughly thirty seconds, no GPU. It prints each falsification condition and a
-verdict.
+- **`phonophase.stats`**, which has no dependency on the rest of the package.
+  A cluster bootstrap in which one draw serves every category, a percentile
+  interval that knows whether the draw count settles its sign, and paired
+  comparisons of two statistics on the same samples. If you compute a statistic
+  per phoneme, per frame or per window, your observations are not independent,
+  and this is the fix.
+- **The failure modes**, in `docs/RESOURCES.md`: nine ways this kind of
+  measurement goes wrong, each one made and caught here.
 
 ## Tests
 
 ```bash
-./scripts/run_tests.sh     # no pytest required
 pytest tests/              # after pip install -e ".[dev]"
+./scripts/run_tests.sh     # no pytest required
 ```
 
 ## Layout
 
 ```
-src/phonophase/    the instrument
+src/phonophase/    the instrument: features, statistics, phonology
 scripts/           command line entry points
 tests/             run standalone or under pytest
-configs/           dataset and literature registries, ASVspoof protocols
-docs/              scope, research design, pre-registration, plan
+configs/           dataset and literature registries, ASVspoof protocol
+docs/              scope, registrations, robustness and band edge records
+report/            the short report and its figures
+results/           slice tables and the numbers behind the figures
 notebooks/         Colab confirmatory run
-results/           the confirmed result and its data
 ```
-
-## Method notes
-
-Six failure modes were found and corrected while building this, every one of
-them general rather than local to one codebase. They are documented in
-`docs/SCOPE.md` and the instrument detects the last two directly.
-
-Group delay computed with a signal wide ramp instead of a per frame one,
-correlating 0.999999 with frame index. Raw group delay presented as Modified
-Group Delay with no cepstral smoothing or compression. Per file normalisation
-dividing out the dispersion being measured. Fixed width windows around CTC peaks
-described as phoneme segments. Best of many statistics compared against best of
-many others, turning zero of six into four of six. Slices from one utterance
-bootstrapped as independent observations, when 129 came from 23.
 
 ## Contributing
 
-Issues and pull requests are welcome. The project has an unusual bar, described
-below, and it is worth reading first because it is the reason anything here can
-be trusted.
+Issues and pull requests are welcome. Branch from `main`, add tests built on
+data whose answer is known by construction, and open a pull request. CI runs
+the suite on every one.
 
-### What would help most
+The bar is unusual and is the reason anything here can be trusted:
 
-**Run the instrument on a corpus we do not have.** The open question is whether
-the effect is a property of articulation or of English, and it is falsifiable in
-one additional language. Two properties make a corpus especially useful: a
-phone inventory that breaks the sonority and voicing collinearity, for example a
-sizeable voiceless sonorant inventory, and more than five genuine speakers,
-which every corpus available to us currently fails.
+- Every claim ships with the command that produced it.
+- Pre-registration is binding. A new idea found in data already seen is a new
+  registration, tested on data that had no part in forming it.
+- Undecided is not rejected, and it is not confirmed.
+- Every bootstrap is clustered. Report the size of an effect, not only whether
+  its interval clears zero.
+- No best of many comparisons.
 
-**Try to break a claim.** The falsifiers are written down in
-`docs/PREREGISTRATION.md` and `docs/PREREGISTRATION-H3.md`. A clean negative is
-a contribution and gets written up as one, not reframed.
-
-**Tone marked phones.** `phonophase.phonology` rejects any symbol containing a
-digit, which drops 91 symbols and excludes Mandarin, Vietnamese and Thai
-entirely. Stripping the tone digit, parsing the base vowel and carrying tone as
-a separate covariate would open every tonal language.
-
-**Forced alignment.** Both current segmentations are approximately a 60 ms
-window around a CTC argmax peak, and 73% of slices are numerically identical
-between them. A real test of segmentation sensitivity needs proper alignment.
-
-### The rules a contribution has to meet
-
-They exist because this project's predecessor produced headline numbers nobody,
-including their author, could reproduce.
-
-- **Every claim ships with the command that produced it and its output.** A
-  result that cannot be reproduced from what is written is not recorded.
-- **Pre-registration is binding.** Do not change a primary test after seeing
-  results. Register a new hypothesis and test it on data that had no part in
-  forming it.
-- **Undecided is not rejected.** A test with too little data has refuted
-  nothing, and the analysis scripts distinguish the two.
-- **Cluster every bootstrap by source utterance.** Always pass `groups=`.
-- **No best of many comparisons.** Selecting the best phase statistic and
-  comparing it against the best magnitude statistic once turned zero of six
-  into four of six.
-- **Report the magnitude, not only the interval.** Effects here run 0.51 to 0.60
-  separation. Solid and meaningful are different things.
-
-### How to send it
-
-Branch from `main` as `task/T<id>-<slug>`, commit, push, and open a pull
-request. Tests run with `./scripts/run_tests.sh`, no pytest required. New
-analysis code is expected to carry tests built on data whose answer is known by
-construction, which is how everything in `tests/` is written.
-
-### What will be turned down
-
-A claim with no command behind it. A result from a primary test that changed
-after the data was seen. A p value from a test incapable of returning a small
-one, without that stated. A count of how many cells came out positive, where the
-cells have intervals that were never corrected or reported.
+Trying to break a claim is a welcome contribution. The falsifiers are written
+down in the registration documents, and a clean negative gets written up as
+one.
 
 ## Citing
 
-`CITATION.cff` is in the repository root.
+See `CITATION.cff`.
 
 ## License
 
-MIT, see `LICENSE`. Covers the source code only. The speech corpora retain their
-own terms, recorded per entry in `configs/datasets.yaml`, and at least one is
-non commercial.
+MIT for the source code, see `LICENSE`. The result tables and the protocol file
+derive from ASVspoof 2019 and carry its attribution terms, see `NOTICE.md`. The
+terms of every corpus this project reads are in `configs/datasets.yaml`.

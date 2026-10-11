@@ -96,7 +96,10 @@ def main():
         rows.append({
             "path": path,
             "label": label,
-            "utterance_id": os.path.splitext(os.path.basename(path))[0],
+            # The path under --root, not the file name: en/real/0001.wav and
+            # de/fake/0001.wav are different utterances.
+            "utterance_id": os.path.splitext(
+                os.path.relpath(path, args.root))[0].replace(os.sep, "_"),
             "attack": "-",
             "language": args.language or language,
             "corpus": args.corpus,

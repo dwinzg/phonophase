@@ -33,7 +33,10 @@ from sonority_voicing import (  # noqa: E402
     analyse,
     assign_cells,
     bonafide_label,
+    cluster_groups,
+    contrast_label,
     drop_quietest,
+    subset_rows,
     cell_of,
     folded_from_auc,
     verdict,
@@ -212,6 +215,128 @@ def test_the_drop_is_reported_per_class_because_it_can_be_lopsided():
 
 
 # --------------------------------------------------------------------------
+# what the intervals generalise to, which the audit showed was the real issue
+# --------------------------------------------------------------------------
+
+def test_system_clustering_resamples_utterances_for_real_and_systems_for_fake():
+    """
+    The spoof side of the eval table is 1,495 utterances from 13 synthesis
+    systems. Clustering it by utterance makes the interval a statement about
+    more utterances from those same 13 systems. For a claim about speech, or
+    about synthesis in general, the system is the exchangeable unit and the
+    effective n is 13.
+
+    Bonafide has no system, so it stays clustered by utterance either way.
+    """
+    data = {
+        "y": np.array([0, 0, 1, 1]),
+        "u": np.array(["b1", "b2", "s1", "s2"]),
+        "attack": np.array(["-", "-", "A07", "A08"]),
+        "bonafide_label": 0,
+    }
+
+    assert list(cluster_groups(data, "utterance")) == ["b1", "b2", "s1", "s2"]
+    assert list(cluster_groups(data, "system")) == ["b1", "b2", "A07", "A08"]
+
+
+def test_system_clustering_widens_the_interval():
+    """
+    Fewer clusters on the spoof side must mean a wider interval. If it does not,
+    the option is not doing anything.
+    """
+    rng = np.random.default_rng(3)
+    n_utt, per = 160, 6
+    # The dependence must sit at the SYSTEM level, so every utterance from one
+    # system shares its offset. That is the real structure: a vocoder leaves the
+    # same signature on everything it produces.
+    system_shock = {f"A{k:02d}": rng.normal(0, 1.2) for k in range(4)}
+    y, u, attack, cell, x = [], [], [], [], []
+    for i in range(n_utt):
+        label = i % 2
+        system = f"A{i % 4:02d}" if label == 1 else "-"
+        shock = system_shock[system] if label == 1 else 0.0
+        for _ in range(per):
+            y.append(label); u.append(f"U{i:04d}"); attack.append(system)
+            cell.append(SON_VOI)
+            x.append(shock + rng.normal(0, 1) + (0.8 if label == 0 else 0.0))
+    data = {"y": np.asarray(y), "u": np.asarray(u), "attack": np.asarray(attack),
+            "cell": np.asarray(cell, dtype=object), "x": np.asarray(x),
+            "phone": np.asarray(["a"] * len(y)), "bonafide_label": 0}
+
+    narrow = analyse(data, n_boot=BOOT, seed=0, cluster="utterance")["cells"][SON_VOI]
+    wide = analyse(data, n_boot=BOOT, seed=0, cluster="system")["cells"][SON_VOI]
+
+    assert (wide["ci_high"] - wide["ci_low"]) > (narrow["ci_high"] - narrow["ci_low"]), (
+        "clustering the spoof side by system must widen the interval, because "
+        "four systems carry less information than eighty utterances"
+    )
+
+
+# --------------------------------------------------------------------------
+# defects found by the external audit, 2026-09-19
+# --------------------------------------------------------------------------
+
+def test_subsetting_keeps_every_array_aligned_including_ones_added_later():
+    """
+    The CLI used to subset a hand written list of seven array names. `energy`
+    was added to load() afterwards and not to that list, so combining
+    --drop-phone with --drop-quietest compared a full length mask against short
+    labels and crashed. A hand written list drifts from the loader; deriving the
+    list from the data cannot.
+    """
+    data = {
+        "y": np.array([0, 1, 0, 1]),
+        "u": np.array(["A", "B", "C", "D"]),
+        "phone": np.array(["a", "b", "c", "d"]),
+        "x": np.array([1.0, 2.0, 3.0, 4.0]),
+        "energy": np.array([5.0, 6.0, 7.0, 8.0]),
+        "cell": np.array([SON_VOI] * 4, dtype=object),
+        "bonafide_label": 0,
+        "dropped": {"??": 3},
+    }
+    keep = np.array([True, False, True, False])
+    out = subset_rows(data, keep)
+
+    for key in ("y", "u", "phone", "x", "energy", "cell"):
+        assert out[key].size == 2, f"{key} was not subset"
+    assert list(out["energy"]) == [5.0, 7.0]
+    # Non-array entries must survive untouched.
+    assert out["bonafide_label"] == 0
+    assert out["dropped"] == {"??": 3}
+
+
+def test_an_interval_excluding_zero_is_never_labelled_as_spanning_it():
+    """
+    `clear` requires the interval AND the q. The printed column showed only the
+    interval, so a contrast with an interval of [+0.0011, +0.0400] and q = 0.06
+    printed as "spans zero", which contradicts itself on the page.
+    """
+    survives = {"ci_low": 0.01, "ci_high": 0.04, "q": 0.001, "clear": True}
+    fails_fdr = {"ci_low": 0.0011, "ci_high": 0.0400, "q": 0.06, "clear": False}
+    spans = {"ci_low": -0.01, "ci_high": 0.04, "q": 0.5, "clear": False}
+
+    assert contrast_label(survives) == "clear of zero"
+    assert contrast_label(fails_fdr) == "not clear after correction"
+    assert contrast_label(spans) == "spans zero"
+    assert "spans zero" not in contrast_label(fails_fdr)
+
+
+def test_the_correction_family_holds_only_independent_contrasts():
+    """
+    A-C is A-B plus B-C exactly, so three contrasts carry two degrees of
+    freedom. Correcting across all three treats a derived quantity as an
+    independent test.
+    """
+    data = _dataset({SON_VOI: 1.6, OBS_VOI: 0.8, OBS_UNVOI: 0.0}, n_utt=120, seed=31)
+    contrasts = analyse(data, n_boot=BOOT, seed=0)["contrasts"]
+
+    assert abs((contrasts["A-B"]["delta"] + contrasts["B-C"]["delta"])
+               - contrasts["A-C"]["delta"]) < 1e-9, "A-C must be the sum, by construction"
+    assert contrasts["A-C"]["q"] is None, "a derived contrast carries no q of its own"
+    assert contrasts["A-B"]["q"] is not None and contrasts["B-C"]["q"] is not None
+
+
+# --------------------------------------------------------------------------
 # folding
 # --------------------------------------------------------------------------
 
@@ -357,13 +482,17 @@ def test_voiced_obstruents_leading_is_reported_as_the_surprise_it_would_be():
     assert r["surprise"] is True
 
 
-def _result(ab, bc, ac, usable=True):
+def _result(ab, bc, ac, usable=True, steps=None):
     """
     A result dict with the contrasts set by hand.
 
     The decision rule is tested directly here rather than through a sampled
     dataset, so a rule change is caught by a deterministic test instead of by
     an effect size that happens to land on one side of a threshold.
+
+    `steps` is the interval on (A-B) minus (B-C), the quantity that says whether
+    the two ladder steps differ from each other at all. None means the analysis
+    did not produce it, which is what a table with an unusable ladder gives.
     """
     def contrast(lo, hi):
         return {"delta": (lo + hi) / 2, "ci_low": lo, "ci_high": hi,
@@ -372,10 +501,97 @@ def _result(ab, bc, ac, usable=True):
 
     cell = {"usable": usable, "n_utterances_bonafide": 100, "n_utterances_spoof": 100,
             "n_slices": 400, "why_unusable": None}
-    return {
+    out = {
         "cells": {SON_VOI: dict(cell), OBS_VOI: dict(cell), OBS_UNVOI: dict(cell)},
         "contrasts": {"A-B": contrast(*ab), "B-C": contrast(*bc), "A-C": contrast(*ac)},
+        "step_difference": None,
     }
+    if steps is not None:
+        lo, hi = steps
+        out["step_difference"] = {
+            "delta": (lo + hi) / 2, "ci_low": lo, "ci_high": hi,
+            "p": 0.001 if (lo > 0 or hi < 0) else 0.9,
+            "clear": lo > 0 or hi < 0,
+        }
+    return out
+
+
+# --------------------------------------------------------------------------
+# naming a factor requires the two steps to differ, not one of them to fail
+# --------------------------------------------------------------------------
+
+def test_one_step_clearing_alone_does_not_name_a_factor():
+    """
+    The pattern the eval table actually shows under system clustering. B-C
+    clears, A-B does not, and the two steps are not distinguishable from each
+    other.
+
+    The steps were +0.0282 and +0.0319, a ratio of 0.88, while their standard
+    errors differed by a factor of 1.85 and their difference was -0.0037 with p
+    about 0.9. Under utterance clustering both cleared and the reading was
+    graded; under system clustering only one cleared and the reading became
+    voicing, on identical point estimates. So the label was decided by power
+    alone, which is a failure to reject dressed as acceptance of a null.
+    """
+    r = verdict(_result(ab=(-0.014, 0.065), bc=(0.010, 0.053), ac=(0.020, 0.090),
+                        steps=(-0.050, 0.045)))
+
+    assert r["reading"] != "voicing", (
+        "one step failing to clear is not evidence that the other is the factor"
+    )
+    assert r["reading"] == "steps-indistinguishable"
+    assert "power" in r["why"].lower()
+
+
+def test_a_factor_is_named_when_the_two_steps_genuinely_differ():
+    """
+    The rule must still be able to name voicing. A real voicing pattern has A
+    level with B and both far above C, so the step difference is clearly
+    negative rather than merely unproven.
+    """
+    r = verdict(_result(ab=(-0.010, 0.012), bc=(0.030, 0.070), ac=(0.030, 0.080),
+                        steps=(-0.070, -0.020)))
+
+    assert r["reading"] == "voicing"
+
+
+def test_sonority_is_named_on_the_mirror_image_and_not_otherwise():
+    named = verdict(_result(ab=(0.030, 0.070), bc=(-0.010, 0.012), ac=(0.030, 0.080),
+                            steps=(0.020, 0.070)))
+    assert named["reading"] == "sonority"
+
+    unnamed = verdict(_result(ab=(0.010, 0.053), bc=(-0.014, 0.065), ac=(0.020, 0.090),
+                              steps=(-0.045, 0.050)))
+    assert unnamed["reading"] == "steps-indistinguishable"
+
+
+def test_a_missing_step_difference_cannot_license_a_label():
+    """
+    If the analysis did not produce the step difference, no factor is named. The
+    absence of a check is not the check passing.
+    """
+    r = verdict(_result(ab=(-0.014, 0.065), bc=(0.010, 0.053), ac=(0.020, 0.090)))
+    assert r["reading"] == "steps-indistinguishable"
+
+
+def test_the_step_difference_comes_out_of_the_same_draws_as_the_steps():
+    """
+    (A-B) minus (B-C) has to be computed inside the shared draw, or its interval
+    would not carry the correlation between the two steps, which is the whole
+    reason a paired bootstrap is used here.
+    """
+    data = _dataset({SON_VOI: 2.2, OBS_VOI: 1.1, OBS_UNVOI: 0.0}, n_utt=200, seed=7)
+    result = analyse(data, n_boot=BOOT, seed=0)
+
+    step = result["step_difference"]
+    ab = result["contrasts"]["A-B"]["delta"]
+    bc = result["contrasts"]["B-C"]["delta"]
+
+    assert step is not None
+    assert abs(step["delta"] - (ab - bc)) < 1e-12, (
+        "the point estimate must be the difference of the two step estimates"
+    )
+    assert step["ci_low"] < step["delta"] < step["ci_high"]
 
 
 def test_an_ordered_ladder_whose_steps_are_individually_undetermined_is_not_called_flat():

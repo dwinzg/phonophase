@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "phonophase"
 version = "0.1.0"
-description = "Mapping where speech synthesis phase artefacts live in articulatory feature space, and testing whether that map is language universal."
+description = "Measuring where a group delay statistic separates genuine from synthetic speech across classes of sound, with cluster robust statistics and pre-registered tests."
 readme = "README.md"
 requires-python = ">=3.10"
 license = { file = "LICENSE" }
@@ -35,12 +35,16 @@ dependencies = [
     "PyYAML>=6.0",
     "tqdm>=4.65",
     "panphon>=0.20",
+    # Imported directly by scripts/band_edge.py. librosa pulls it in as well.
+    "soxr>=0.3",
 ]
 
 [project.optional-dependencies]
 dev = ["pytest>=8.0", "ipython>=8.0"]
 # Only the alignment pass needs these, so they are not a runtime dependency.
 align = ["transformers>=4.40", "datasets>=2.18"]
+# Only scripts/make_report_figures.py needs this.
+report = ["matplotlib>=3.8"]
 
 [project.urls]
 Repository = "https://github.com/dwinzg/phonophase"

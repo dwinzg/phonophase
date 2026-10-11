@@ -98,6 +98,9 @@ else:
                         TARGET], capture_output=True, text=True)
     # Never echo the output, it carries the token in the remote URL.
     print("clone ok" if r.returncode == 0 else "clone failed, check the token")
+    # The clone stored the token in .git/config. Take it back out.
+    subprocess.run(["git", "-C", TARGET, "remote", "set-url", "origin",
+                    "https://github.com/dwinzg/phonophase.git"])
     del token
 
 os.chdir(TARGET)

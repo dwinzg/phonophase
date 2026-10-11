@@ -1,0 +1,200 @@
+contrast,draw,seed,level,level_low,level_high,asymmetry,asymmetry_low,asymmetry_high
+r1 soxr_hq,joint,0,+0.0825,+0.0801,+0.0848,+0.0079,+0.0033,+0.0127
+r1 soxr_hq,joint,1,+0.0825,+0.0801,+0.0846,+0.0079,+0.0034,+0.0125
+r1 soxr_hq,joint,2,+0.0825,+0.0802,+0.0848,+0.0079,+0.0035,+0.0129
+r1 soxr_hq,unpaired,0,+0.0825,+0.0607,+0.0973,+0.0079,-0.0167,+0.0395
+r1 soxr_hq,unpaired,1,+0.0825,+0.0625,+0.0974,+0.0079,-0.0158,+0.0369
+r1 soxr_hq,unpaired,2,+0.0825,+0.0613,+0.0977,+0.0079,-0.0155,+0.0364
+r2 pub_none,registered,0,+0.0479,+0.0347,+0.0609,+0.0630,+0.0451,+0.0795
+r2 pub_none,registered,1,+0.0479,+0.0349,+0.0623,+0.0630,+0.0446,+0.0797
+r2 pub_none,registered,2,+0.0479,+0.0346,+0.0604,+0.0630,+0.0441,+0.0809
+r2 all_none_pcm16,registered,0,+0.0479,+0.0347,+0.0609,+0.0630,+0.0451,+0.0795
+r2 all_none_pcm16,registered,1,+0.0479,+0.0349,+0.0623,+0.0630,+0.0446,+0.0797
+r2 all_none_pcm16,registered,2,+0.0479,+0.0346,+0.0604,+0.0630,+0.0441,+0.0809
+r2 all_rt_soxr_hq_22050,registered,0,+0.0488,+0.0355,+0.0621,+0.0471,+0.0286,+0.0645
+r2 all_rt_soxr_hq_22050,registered,1,+0.0488,+0.0356,+0.0628,+0.0471,+0.0284,+0.0650
+r2 all_rt_soxr_hq_22050,registered,2,+0.0488,+0.0353,+0.0611,+0.0471,+0.0278,+0.0658
+r2 all_rt_poly_22050,registered,0,+0.0478,+0.0345,+0.0610,+0.0624,+0.0444,+0.0794
+r2 all_rt_poly_22050,registered,1,+0.0478,+0.0345,+0.0622,+0.0624,+0.0442,+0.0793
+r2 all_rt_poly_22050,registered,2,+0.0478,+0.0343,+0.0601,+0.0624,+0.0441,+0.0807
+r2 all_rt_soxr_hq_22050_pcm16,registered,0,+0.0466,+0.0336,+0.0596,+0.0496,+0.0315,+0.0671
+r2 all_rt_soxr_hq_22050_pcm16,registered,1,+0.0466,+0.0334,+0.0607,+0.0496,+0.0308,+0.0669
+r2 all_rt_soxr_hq_22050_pcm16,registered,2,+0.0466,+0.0332,+0.0589,+0.0496,+0.0311,+0.0684
+r2 all_rt_poly_22050_pcm16,registered,0,+0.0482,+0.0349,+0.0614,+0.0616,+0.0435,+0.0784
+r2 all_rt_poly_22050_pcm16,registered,1,+0.0482,+0.0349,+0.0626,+0.0616,+0.0433,+0.0791
+r2 all_rt_poly_22050_pcm16,registered,2,+0.0482,+0.0348,+0.0607,+0.0616,+0.0429,+0.0799
+r2 all_lp_6900,registered,0,+0.0456,+0.0325,+0.0578,+0.0578,+0.0382,+0.0759
+r2 all_lp_6900,registered,1,+0.0456,+0.0327,+0.0591,+0.0578,+0.0381,+0.0753
+r2 all_lp_6900,registered,2,+0.0456,+0.0323,+0.0575,+0.0578,+0.0377,+0.0771
+r2 all_lp_6900_pcm16,registered,0,+0.0484,+0.0360,+0.0600,+0.0608,+0.0417,+0.0782
+r2 all_lp_6900_pcm16,registered,1,+0.0484,+0.0362,+0.0610,+0.0608,+0.0418,+0.0777
+r2 all_lp_6900_pcm16,registered,2,+0.0484,+0.0355,+0.0601,+0.0608,+0.0419,+0.0794
+r1 poly,joint,0,+0.0089,+0.0080,+0.0096,-0.0001,-0.0016,+0.0015
+r1 poly,joint,1,+0.0089,+0.0080,+0.0096,-0.0001,-0.0015,+0.0015
+r1 poly,joint,2,+0.0089,+0.0080,+0.0096,-0.0001,-0.0015,+0.0015
+r1 poly,unpaired,0,+0.0089,-0.0039,+0.0184,-0.0001,-0.0157,+0.0180
+r1 poly,unpaired,1,+0.0089,-0.0040,+0.0185,-0.0001,-0.0160,+0.0180
+r1 poly,unpaired,2,+0.0089,-0.0036,+0.0183,-0.0001,-0.0155,+0.0178
+r1 soxr_hq pcm16,joint,0,-0.0029,-0.0038,-0.0021,-0.0277,-0.0309,-0.0243
+r1 soxr_hq pcm16,joint,1,-0.0029,-0.0038,-0.0021,-0.0277,-0.0309,-0.0245
+r1 soxr_hq pcm16,joint,2,-0.0029,-0.0039,-0.0021,-0.0277,-0.0308,-0.0244
+r1 soxr_hq pcm16,unpaired,0,-0.0029,-0.0128,+0.0120,-0.0277,-0.0452,+0.0055
+r1 soxr_hq pcm16,unpaired,1,-0.0029,-0.0125,+0.0117,-0.0277,-0.0455,+0.0032
+r1 soxr_hq pcm16,unpaired,2,-0.0029,-0.0126,+0.0121,-0.0277,-0.0450,+0.0030
+r1 poly pcm16,joint,0,+0.0089,+0.0079,+0.0096,+0.0001,-0.0015,+0.0018
+r1 poly pcm16,joint,1,+0.0089,+0.0080,+0.0096,+0.0001,-0.0014,+0.0017
+r1 poly pcm16,joint,2,+0.0089,+0.0080,+0.0096,+0.0001,-0.0015,+0.0017
+r1 poly pcm16,unpaired,0,+0.0089,-0.0039,+0.0184,+0.0001,-0.0155,+0.0186
+r1 poly pcm16,unpaired,1,+0.0089,-0.0038,+0.0186,+0.0001,-0.0159,+0.0187
+r1 poly pcm16,unpaired,2,+0.0089,-0.0037,+0.0183,+0.0001,-0.0152,+0.0183
+"r1 resampler choice: arm0 soxr_hq, arm1 poly",joint,0,+0.1018,+0.0993,+0.1043,+0.0087,+0.0040,+0.0138
+"r1 resampler choice: arm0 soxr_hq, arm1 poly",joint,1,+0.1018,+0.0993,+0.1043,+0.0087,+0.0039,+0.0137
+"r1 resampler choice: arm0 soxr_hq, arm1 poly",joint,2,+0.1018,+0.0995,+0.1045,+0.0087,+0.0041,+0.0139
+"r1 resampler choice: arm0 soxr_hq, arm1 poly",unpaired,0,+0.1018,+0.0812,+0.1122,+0.0087,-0.0130,+0.0355
+"r1 resampler choice: arm0 soxr_hq, arm1 poly",unpaired,1,+0.1018,+0.0813,+0.1120,+0.0087,-0.0127,+0.0356
+"r1 resampler choice: arm0 soxr_hq, arm1 poly",unpaired,2,+0.1018,+0.0813,+0.1126,+0.0087,-0.0120,+0.0341
+r2 band 4000-6500 REDEFINITION,registered,0,+0.0445,+0.0299,+0.0583,+0.0461,+0.0275,+0.0641
+r2 band 4000-6500 REDEFINITION,registered,1,+0.0445,+0.0310,+0.0594,+0.0461,+0.0274,+0.0643
+r2 band 4000-6500 REDEFINITION,registered,2,+0.0445,+0.0304,+0.0580,+0.0461,+0.0275,+0.0655
+r2 band 6500-8000 REDEFINITION,registered,0,+0.0271,+0.0137,+0.0396,+0.0610,+0.0326,+0.0761
+r2 band 6500-8000 REDEFINITION,registered,1,+0.0271,+0.0134,+0.0405,+0.0610,+0.0339,+0.0767
+r2 band 6500-8000 REDEFINITION,registered,2,+0.0271,+0.0139,+0.0406,+0.0610,+0.0332,+0.0760
+r2 cliff attacks,registered,0,-0.0181,-0.0366,+0.0068,+0.0541,+0.0280,+0.0806
+r2 cliff attacks,registered,1,-0.0181,-0.0355,+0.0095,+0.0541,+0.0289,+0.0811
+r2 cliff attacks,registered,2,-0.0181,-0.0365,+0.0081,+0.0541,+0.0293,+0.0816
+r2 no-cliff attacks,registered,0,+0.0776,+0.0652,+0.0900,+0.0672,+0.0521,+0.0864
+r2 no-cliff attacks,registered,1,+0.0776,+0.0649,+0.0901,+0.0672,+0.0513,+0.0872
+r2 no-cliff attacks,registered,2,+0.0776,+0.0654,+0.0901,+0.0672,+0.0514,+0.0876
+r2 no-cliff attacks after b1 soxr,registered,0,+0.0791,+0.0664,+0.0917,+0.0682,+0.0530,+0.0880
+r2 no-cliff attacks after b1 soxr,registered,1,+0.0791,+0.0661,+0.0913,+0.0682,+0.0529,+0.0892
+r2 no-cliff attacks after b1 soxr,registered,2,+0.0791,+0.0667,+0.0914,+0.0682,+0.0527,+0.0887
+r2 cliff attacks after b1 soxr,registered,0,-0.0187,-0.0341,+0.0062,+0.0004,-0.0229,+0.0308
+r2 cliff attacks after b1 soxr,registered,1,-0.0187,-0.0328,+0.0085,+0.0004,-0.0231,+0.0315
+r2 cliff attacks after b1 soxr,registered,2,-0.0187,-0.0336,+0.0064,+0.0004,-0.0219,+0.0319
+r1 dose soxr_lq_22050,joint,0,+0.0569,+0.0522,+0.0615,+0.0418,+0.0341,+0.0489
+r1 dose soxr_lq_22050,unpaired,0,+0.0569,+0.0362,+0.0763,+0.0418,+0.0112,+0.0726
+r1 dose soxr_mq_22050,joint,0,+0.0624,+0.0604,+0.0643,-0.0121,-0.0164,-0.0075
+r1 dose soxr_mq_22050,unpaired,0,+0.0624,+0.0407,+0.0780,-0.0121,-0.0367,+0.0194
+r1 dose soxr_vhq_22050,joint,0,+0.0903,+0.0877,+0.0927,+0.0150,+0.0103,+0.0198
+r1 dose soxr_vhq_22050,unpaired,0,+0.0903,+0.0687,+0.1052,+0.0150,-0.0100,+0.0461
+r1 dose soxr_hq_18000,joint,0,+0.0835,+0.0811,+0.0859,+0.0089,+0.0043,+0.0136
+r1 dose soxr_hq_18000,unpaired,0,+0.0835,+0.0618,+0.0983,+0.0089,-0.0156,+0.0405
+r1 dose soxr_hq_32000,joint,0,+0.0828,+0.0804,+0.0851,+0.0088,+0.0042,+0.0135
+r1 dose soxr_hq_32000,unpaired,0,+0.0828,+0.0611,+0.0976,+0.0088,-0.0158,+0.0403
+r1 dose soxr_hq_48000,joint,0,+0.0825,+0.0801,+0.0848,+0.0087,+0.0041,+0.0134
+r1 dose soxr_hq_48000,unpaired,0,+0.0825,+0.0609,+0.0973,+0.0087,-0.0159,+0.0402
+r1 dose poly_32000,joint,0,+0.0105,+0.0097,+0.0111,+0.0015,+0.0002,+0.0031
+r1 dose poly_32000,unpaired,0,+0.0105,-0.0024,+0.0201,+0.0015,-0.0141,+0.0196
+PC arm0 all_rt_soxr_hq_22050 arm1 bona_rt_soxr_hq_22050_rt_soxr_hq_22050,joint,0,+0.0174,+0.0163,+0.0185,+0.0181,+0.0154,+0.0193
+PC arm0 all_rt_soxr_hq_22050 arm1 bona_rt_soxr_hq_22050_rt_soxr_hq_22050,unpaired,0,+0.0174,-0.0042,+0.0264,+0.0181,-0.0071,+0.0326
+PC arm0 all_rt_soxr_hq_22050 arm1 bona_rt_poly_22050_rt_soxr_hq_22050,joint,0,+0.0044,+0.0036,+0.0049,-0.0031,-0.0043,-0.0017
+PC arm0 all_rt_soxr_hq_22050 arm1 bona_rt_poly_22050_rt_soxr_hq_22050,unpaired,0,+0.0044,-0.0061,+0.0129,-0.0031,-0.0174,+0.0152
+PC arm0 all_lp_6900 arm1 bona_rt_soxr_hq_22050_lp_6900,joint,0,+0.0001,-0.0001,+0.0000,+0.0001,+0.0001,+0.0007
+PC arm0 all_lp_6900 arm1 bona_rt_soxr_hq_22050_lp_6900,unpaired,0,+0.0001,-0.0070,+0.0087,+0.0001,-0.0135,+0.0177
+PC arm0 all_lp_6900 arm1 bona_rt_poly_22050_lp_6900,joint,0,+0.0007,+0.0002,+0.0011,-0.0005,-0.0010,+0.0005
+PC arm0 all_lp_6900 arm1 bona_rt_poly_22050_lp_6900,unpaired,0,+0.0007,-0.0068,+0.0087,-0.0005,-0.0135,+0.0175
+PC arm0 all_lp_6900_pcm16 arm1 bona_rt_soxr_hq_22050_lp_6900_pcm16,joint,0,+0.0001,-0.0001,+0.0003,-0.0004,-0.0015,+0.0004
+PC arm0 all_lp_6900_pcm16 arm1 bona_rt_soxr_hq_22050_lp_6900_pcm16,unpaired,0,+0.0001,-0.0066,+0.0082,-0.0004,-0.0129,+0.0169
+PC arm0 all_lp_6900_pcm16 arm1 bona_rt_poly_22050_lp_6900_pcm16,joint,0,+0.0009,+0.0002,+0.0016,-0.0014,-0.0027,+0.0006
+PC arm0 all_lp_6900_pcm16 arm1 bona_rt_poly_22050_lp_6900_pcm16,unpaired,0,+0.0009,-0.0068,+0.0085,-0.0014,-0.0134,+0.0171
+PC arm0 all_rt_soxr_hq_22050_pcm16 arm1 bona_rt_soxr_hq_22050_rt_soxr_hq_22050_pcm16,joint,0,+0.0229,+0.0217,+0.0239,+0.0094,+0.0068,+0.0126
+PC arm0 all_rt_soxr_hq_22050_pcm16 arm1 bona_rt_soxr_hq_22050_rt_soxr_hq_22050_pcm16,unpaired,0,+0.0229,+0.0007,+0.0316,+0.0094,-0.0125,+0.0326
+PC arm0 all_rt_soxr_hq_22050_pcm16 arm1 bona_rt_poly_22050_rt_soxr_hq_22050_pcm16,joint,0,+0.0049,+0.0041,+0.0056,-0.0055,-0.0070,-0.0036
+PC arm0 all_rt_soxr_hq_22050_pcm16 arm1 bona_rt_poly_22050_rt_soxr_hq_22050_pcm16,unpaired,0,+0.0049,-0.0058,+0.0134,-0.0055,-0.0203,+0.0136
+r2 cliff all_rt_soxr_hq_22050_pcm16,registered,0,-0.0232,-0.0355,+0.0022,+0.0105,-0.0109,+0.0438
+r2 cliff all_rt_soxr_hq_22050_pcm16,registered,1,-0.0232,-0.0351,+0.0033,+0.0105,-0.0113,+0.0443
+r2 cliff all_rt_soxr_hq_22050_pcm16,registered,2,-0.0232,-0.0352,+0.0029,+0.0105,-0.0104,+0.0441
+r2 flat all_rt_soxr_hq_22050_pcm16,registered,0,+0.0786,+0.0660,+0.0909,+0.0679,+0.0532,+0.0876
+r2 flat all_rt_soxr_hq_22050_pcm16,registered,1,+0.0786,+0.0659,+0.0906,+0.0679,+0.0529,+0.0882
+r2 flat all_rt_soxr_hq_22050_pcm16,registered,2,+0.0786,+0.0664,+0.0912,+0.0679,+0.0523,+0.0884
+r2 cliff all_lp_6900,registered,0,-0.0115,-0.0283,+0.0114,+0.0125,-0.0133,+0.0418
+r2 cliff all_lp_6900,registered,1,-0.0115,-0.0268,+0.0131,+0.0125,-0.0136,+0.0425
+r2 cliff all_lp_6900,registered,2,-0.0115,-0.0279,+0.0116,+0.0125,-0.0135,+0.0421
+r2 flat all_lp_6900,registered,0,+0.0713,+0.0578,+0.0827,+0.0738,+0.0533,+0.0918
+r2 flat all_lp_6900,registered,1,+0.0713,+0.0577,+0.0827,+0.0738,+0.0532,+0.0917
+r2 flat all_lp_6900,registered,2,+0.0713,+0.0578,+0.0827,+0.0738,+0.0525,+0.0911
+r2 cliff all_lp_6900_pcm16,registered,0,-0.0089,-0.0257,+0.0128,+0.0135,-0.0113,+0.0411
+r2 cliff all_lp_6900_pcm16,registered,1,-0.0089,-0.0250,+0.0148,+0.0135,-0.0113,+0.0409
+r2 cliff all_lp_6900_pcm16,registered,2,-0.0089,-0.0258,+0.0135,+0.0135,-0.0111,+0.0412
+r2 flat all_lp_6900_pcm16,registered,0,+0.0741,+0.0608,+0.0852,+0.0780,+0.0580,+0.0961
+r2 flat all_lp_6900_pcm16,registered,1,+0.0741,+0.0605,+0.0856,+0.0780,+0.0581,+0.0955
+r2 flat all_lp_6900_pcm16,registered,2,+0.0741,+0.0608,+0.0853,+0.0780,+0.0566,+0.0955
+r2 cliff all_rt_poly_22050,registered,0,-0.0215,-0.0380,+0.0039,+0.0485,+0.0251,+0.0766
+r2 cliff all_rt_poly_22050,registered,1,-0.0215,-0.0368,+0.0060,+0.0485,+0.0258,+0.0769
+r2 cliff all_rt_poly_22050,registered,2,-0.0215,-0.0373,+0.0045,+0.0485,+0.0253,+0.0780
+r2 flat all_rt_poly_22050,registered,0,+0.0790,+0.0667,+0.0913,+0.0690,+0.0539,+0.0884
+r2 flat all_rt_poly_22050,registered,1,+0.0790,+0.0662,+0.0911,+0.0690,+0.0533,+0.0888
+r2 flat all_rt_poly_22050,registered,2,+0.0790,+0.0667,+0.0918,+0.0690,+0.0530,+0.0896
+r2 cliff all_band_4000_6500 REDEFINITION,registered,0,-0.0244,-0.0400,+0.0018,+0.0032,-0.0200,+0.0345
+r2 flat all_band_4000_6500 REDEFINITION,registered,0,+0.0754,+0.0618,+0.0888,+0.0656,+0.0494,+0.0852
+r2 cliff all_band_6500_8000 REDEFINITION,registered,0,+0.0112,-0.0099,+0.0314,+0.0827,+0.0299,+0.1271
+r2 flat all_band_6500_8000 REDEFINITION,registered,0,+0.0343,+0.0207,+0.0477,+0.0235,+0.0056,+0.0466
+change A07 lp_6900_pcm16,"same draw, after minus before",0,-0.0032,-0.0129,+0.0063,-0.0550,-0.0705,-0.0083
+change A07 lp_6900_pcm16,"same draw, after minus before",1,-0.0032,-0.0143,+0.0064,-0.0550,-0.0700,-0.0103
+change A07 lp_6900_pcm16,"same draw, after minus before",2,-0.0032,-0.0137,+0.0067,-0.0550,-0.0697,-0.0125
+change A08 lp_6900_pcm16,"same draw, after minus before",0,+0.0233,-0.0106,+0.0353,-0.0117,-0.0467,+0.0057
+change A08 lp_6900_pcm16,"same draw, after minus before",1,+0.0233,-0.0104,+0.0356,-0.0117,-0.0473,+0.0078
+change A08 lp_6900_pcm16,"same draw, after minus before",2,+0.0233,-0.0117,+0.0353,-0.0117,-0.0467,+0.0064
+change A16 lp_6900_pcm16,"same draw, after minus before",0,-0.0017,-0.0104,+0.0087,-0.0386,-0.0665,+0.0376
+change A16 lp_6900_pcm16,"same draw, after minus before",1,-0.0017,-0.0100,+0.0089,-0.0386,-0.0653,+0.0384
+change A16 lp_6900_pcm16,"same draw, after minus before",2,-0.0017,-0.0108,+0.0083,-0.0386,-0.0674,+0.0372
+change A19 lp_6900_pcm16,"same draw, after minus before",0,-0.0021,-0.0098,+0.0091,+0.0550,+0.0295,+0.0808
+change A19 lp_6900_pcm16,"same draw, after minus before",1,-0.0021,-0.0093,+0.0087,+0.0550,+0.0312,+0.0807
+change A19 lp_6900_pcm16,"same draw, after minus before",2,-0.0021,-0.0089,+0.0088,+0.0550,+0.0288,+0.0807
+change all all_lp_6900_pcm16,"same draw, after minus before",0,+0.0005,-0.0046,+0.0045,-0.0021,-0.0112,+0.0064
+change all all_lp_6900_pcm16,"same draw, after minus before",1,+0.0005,-0.0050,+0.0046,-0.0021,-0.0108,+0.0058
+change all all_lp_6900_pcm16,"same draw, after minus before",2,+0.0005,-0.0052,+0.0047,-0.0021,-0.0111,+0.0056
+change cliff all_lp_6900_pcm16,"same draw, after minus before",0,+0.0092,+0.0019,+0.0151,-0.0406,-0.0522,-0.0215
+change cliff all_lp_6900_pcm16,"same draw, after minus before",1,+0.0092,+0.0019,+0.0150,-0.0406,-0.0522,-0.0227
+change cliff all_lp_6900_pcm16,"same draw, after minus before",2,+0.0092,+0.0021,+0.0147,-0.0406,-0.0518,-0.0235
+change flat all_lp_6900_pcm16,"same draw, after minus before",0,-0.0035,-0.0100,+0.0013,+0.0108,-0.0110,+0.0202
+change flat all_lp_6900_pcm16,"same draw, after minus before",1,-0.0035,-0.0100,+0.0010,+0.0108,-0.0104,+0.0198
+change flat all_lp_6900_pcm16,"same draw, after minus before",2,-0.0035,-0.0105,+0.0008,+0.0108,-0.0107,+0.0202
+change all all_lp_6900,"same draw, after minus before",0,-0.0023,-0.0069,+0.0012,-0.0051,-0.0141,+0.0030
+change all all_lp_6900,"same draw, after minus before",1,-0.0023,-0.0071,+0.0011,-0.0051,-0.0138,+0.0032
+change all all_lp_6900,"same draw, after minus before",2,-0.0023,-0.0071,+0.0011,-0.0051,-0.0140,+0.0029
+change cliff all_lp_6900,"same draw, after minus before",0,+0.0066,+0.0009,+0.0119,-0.0417,-0.0534,-0.0222
+change cliff all_lp_6900,"same draw, after minus before",1,+0.0066,+0.0008,+0.0117,-0.0417,-0.0528,-0.0234
+change cliff all_lp_6900,"same draw, after minus before",2,+0.0066,+0.0010,+0.0116,-0.0417,-0.0531,-0.0248
+change flat all_lp_6900,"same draw, after minus before",0,-0.0063,-0.0123,-0.0025,+0.0066,-0.0148,+0.0160
+change flat all_lp_6900,"same draw, after minus before",1,-0.0063,-0.0123,-0.0026,+0.0066,-0.0150,+0.0160
+change flat all_lp_6900,"same draw, after minus before",2,-0.0063,-0.0124,-0.0027,+0.0066,-0.0143,+0.0156
+change all all_rt_soxr_hq_22050,"same draw, after minus before",0,+0.0008,-0.0011,+0.0025,-0.0159,-0.0205,-0.0109
+change all all_rt_soxr_hq_22050,"same draw, after minus before",1,+0.0008,-0.0011,+0.0025,-0.0159,-0.0206,-0.0104
+change all all_rt_soxr_hq_22050,"same draw, after minus before",2,+0.0008,-0.0010,+0.0025,-0.0159,-0.0204,-0.0105
+change cliff all_rt_soxr_hq_22050,"same draw, after minus before",0,-0.0006,-0.0028,+0.0090,-0.0537,-0.0596,-0.0346
+change cliff all_rt_soxr_hq_22050,"same draw, after minus before",1,-0.0006,-0.0029,+0.0086,-0.0537,-0.0602,-0.0353
+change cliff all_rt_soxr_hq_22050,"same draw, after minus before",2,-0.0006,-0.0027,+0.0090,-0.0537,-0.0599,-0.0343
+change flat all_rt_soxr_hq_22050,"same draw, after minus before",0,+0.0015,-0.0005,+0.0033,+0.0010,-0.0036,+0.0055
+change flat all_rt_soxr_hq_22050,"same draw, after minus before",1,+0.0015,-0.0006,+0.0032,+0.0010,-0.0031,+0.0055
+change flat all_rt_soxr_hq_22050,"same draw, after minus before",2,+0.0015,-0.0004,+0.0033,+0.0010,-0.0032,+0.0057
+change all all_rt_soxr_hq_22050_pcm16,"same draw, after minus before",0,-0.0014,-0.0029,+0.0000,-0.0134,-0.0174,-0.0088
+change all all_rt_soxr_hq_22050_pcm16,"same draw, after minus before",1,-0.0014,-0.0031,-0.0000,-0.0134,-0.0174,-0.0086
+change all all_rt_soxr_hq_22050_pcm16,"same draw, after minus before",2,-0.0014,-0.0030,+0.0000,-0.0134,-0.0173,-0.0088
+change cliff all_rt_soxr_hq_22050_pcm16,"same draw, after minus before",0,-0.0051,-0.0084,+0.0149,-0.0436,-0.0502,-0.0175
+change cliff all_rt_soxr_hq_22050_pcm16,"same draw, after minus before",1,-0.0051,-0.0086,+0.0141,-0.0436,-0.0505,-0.0195
+change cliff all_rt_soxr_hq_22050_pcm16,"same draw, after minus before",2,-0.0051,-0.0086,+0.0146,-0.0436,-0.0503,-0.0183
+change flat all_rt_soxr_hq_22050_pcm16,"same draw, after minus before",0,+0.0010,-0.0006,+0.0025,+0.0008,-0.0031,+0.0049
+change flat all_rt_soxr_hq_22050_pcm16,"same draw, after minus before",1,+0.0010,-0.0007,+0.0024,+0.0008,-0.0031,+0.0048
+change flat all_rt_soxr_hq_22050_pcm16,"same draw, after minus before",2,+0.0010,-0.0007,+0.0024,+0.0008,-0.0028,+0.0049
+change all all_rt_poly_22050,"same draw, after minus before",0,-0.0001,-0.0012,+0.0009,-0.0005,-0.0023,+0.0014
+change all all_rt_poly_22050,"same draw, after minus before",1,-0.0001,-0.0012,+0.0009,-0.0005,-0.0024,+0.0013
+change all all_rt_poly_22050,"same draw, after minus before",2,-0.0001,-0.0012,+0.0009,-0.0005,-0.0023,+0.0014
+change cliff all_rt_poly_22050,"same draw, after minus before",0,-0.0034,-0.0047,+0.0055,-0.0057,-0.0075,+0.0036
+change cliff all_rt_poly_22050,"same draw, after minus before",1,-0.0034,-0.0047,+0.0053,-0.0057,-0.0076,+0.0033
+change cliff all_rt_poly_22050,"same draw, after minus before",2,-0.0034,-0.0047,+0.0056,-0.0057,-0.0077,+0.0041
+change flat all_rt_poly_22050,"same draw, after minus before",0,+0.0014,+0.0002,+0.0025,+0.0018,-0.0002,+0.0039
+change flat all_rt_poly_22050,"same draw, after minus before",1,+0.0014,+0.0002,+0.0026,+0.0018,-0.0004,+0.0039
+change flat all_rt_poly_22050,"same draw, after minus before",2,+0.0014,+0.0001,+0.0026,+0.0018,-0.0004,+0.0039
+r1 soxr_lq pcm16,joint,0,+0.0551,+0.0517,+0.0583,+0.0594,+0.0536,+0.0654
+r1 soxr_lq pcm16,joint,1,+0.0551,+0.0520,+0.0583,+0.0594,+0.0534,+0.0658
+r1 soxr_lq pcm16,joint,2,+0.0551,+0.0520,+0.0583,+0.0594,+0.0534,+0.0654
+r1 soxr_lq pcm16,unpaired,0,+0.0551,+0.0429,+0.0672,+0.0594,+0.0404,+0.0773
+r1 soxr_lq pcm16,unpaired,1,+0.0551,+0.0429,+0.0671,+0.0594,+0.0401,+0.0782
+r1 soxr_lq pcm16,unpaired,2,+0.0551,+0.0434,+0.0676,+0.0594,+0.0401,+0.0786
+PC arm0 all_lp_6900_pcm16 arm1 bona_rt_soxr_lq_22050_pcm16_lp_6900_pcm16,joint,0,+0.1302,+0.1262,+0.1341,+0.0005,-0.0059,+0.0070
+PC arm0 all_lp_6900_pcm16 arm1 bona_rt_soxr_lq_22050_pcm16_lp_6900_pcm16,joint,1,+0.1302,+0.1263,+0.1342,+0.0005,-0.0059,+0.0070
+PC arm0 all_lp_6900_pcm16 arm1 bona_rt_soxr_lq_22050_pcm16_lp_6900_pcm16,joint,2,+0.1302,+0.1261,+0.1344,+0.0005,-0.0059,+0.0074
+PC arm0 all_lp_6900_pcm16 arm1 bona_rt_soxr_lq_22050_pcm16_lp_6900_pcm16,unpaired,0,+0.1302,+0.1184,+0.1411,+0.0005,-0.0169,+0.0184
+PC arm0 all_lp_6900_pcm16 arm1 bona_rt_soxr_lq_22050_pcm16_lp_6900_pcm16,unpaired,1,+0.1302,+0.1184,+0.1412,+0.0005,-0.0168,+0.0188
+PC arm0 all_lp_6900_pcm16 arm1 bona_rt_soxr_lq_22050_pcm16_lp_6900_pcm16,unpaired,2,+0.1302,+0.1188,+0.1413,+0.0005,-0.0165,+0.0189

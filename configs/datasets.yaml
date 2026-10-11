@@ -11,6 +11,13 @@
 #   licence_verified   true means the licence was read from the source page.
 #                      false means it still needs checking before use or
 #                      redistribution. Do not assume permissive.
+#   licence_source     the specific URL, and where the URL alone would not
+#                      show it, the exact location within that source (a
+#                      README section, an API field, a bundled LICENSE
+#                      file) that licence_verified is based on. A licence
+#                      claim with no licence_source is exactly the defect
+#                      this field exists to catch.
+#   licence_checked    the date licence_source was actually read.
 #   direct_url         present only where a stable direct link was confirmed.
 #                      Opaque bitstream ids can change if a record is
 #                      re-uploaded, so landing_page stays canonical.
@@ -22,7 +29,11 @@
 #                      H1 resolves, because adding corpora before then is how a
 #                      project ends up with nine half answered questions.
 #
-# All URLs below were fetched and confirmed on 2026-09-18.
+# All URLs below were fetched and confirmed on 2026-09-18, except the licence
+# fields (licence, licence_verified, licence_source, licence_checked, and any
+# licence_note), which were independently re-audited against each corpus's
+# own primary source on 2026-09-19. See licence_source on each entry for
+# exactly what was read and where.
 # ==========================================================================
 
 asvspoof2019_la:
@@ -35,9 +46,33 @@ asvspoof2019_la:
   direct_url: "https://datashare.ed.ac.uk/bitstreams/a9f87c35-f055-4015-80e2-2fdff0d46269/download"
   filename: LA.zip
   size_gb: 7.12
-  licence: "Open Data Commons Attribution License"
+  licence: "Open Data Commons Attribution License (ODC-BY) v1.0"
   licence_verified: true
-  licence_note: "Free for academic and commercial use with attribution."
+  licence_source: >-
+    https://datashare.ed.ac.uk/handle/10283/3336, and the bundled
+    LICENSE_text.txt itself (served at
+    https://datashare.ed.ac.uk/server/api/core/bitstreams/60c7de6d-37d3-45c1-b52e-9f18b0338e47/content),
+    fetched directly. It is the ODC-BY 1.0 template verbatim.
+  licence_checked: "2026-09-19"
+  licence_note: >-
+    ODC-BY grants extraction, re-utilisation, derivative databases and
+    commercial use (Section 3.1), with no share-alike. It draws a
+    distinction that matters directly here: a "Produced Work" (Section
+    4.3) is a work resulting from using the Contents, as opposed to a
+    republished copy of the Contents itself, and does not need the full
+    licence-and-notices pass-through that Section 4.2 requires for
+    Derivative Databases. A Produced Work only needs a notice "reasonably
+    calculated to make any Person ... aware that Content was obtained from
+    the Database", naming the database and linking to the ODC-BY text.
+    results/eval_slices.csv.gz, a table of per-phoneme acoustic statistics
+    computed from this corpus, is a Produced Work in that sense, and this
+    licence does not block publishing it. It does require that notice to
+    exist somewhere the table is published, and as of this audit it does
+    not: there is no NOTICE or ATTRIBUTION file in this repository and no
+    such notice in docs/RESOURCES.md. Suggested text: "Contains information
+    from the ASVspoof 2019 database
+    (https://datashare.ed.ac.uk/handle/10283/3336), available under the ODC
+    Attribution License (https://opendatacommons.org/licenses/by/1-0/)."
   citation: "Todisco et al. 2019, arXiv:1904.05441"
   partitions:
     train: {utterances: 25380, bonafide: 2580, spoof: 22800, attacks: "A01-A06"}
@@ -59,8 +94,19 @@ asvspoof2021_la:
   size_gb: 7.8
   md5: "2abee34d8b0b91159555fc4f016e4562"
   keys_url: "https://www.asvspoof.org/asvspoof2021/LA-keys-full.tar.gz"
-  licence: "Open Data Commons Attribution License v1.0"
+  licence: "Open Data Commons Attribution License (ODC-BY) v1.0"
   licence_verified: true
+  licence_source: >-
+    https://zenodo.org/api/records/4837263, structured record metadata,
+    metadata.license.id == "odc-by". Matches the licence badge rendered at
+    https://zenodo.org/records/4837263.
+  licence_checked: "2026-09-19"
+  licence_note: >-
+    Same terms as the 2019 entry above: commercial use and derivative
+    databases permitted, no share-alike, a Produced Work needs only an
+    attribution notice back to this record. Do not assume this extends to
+    the DF evaluation set below: it does not. Zenodo records the licence
+    per record, and the DF record states a different one.
   citation: "ASVspoof 2021 evaluation plan, arXiv:2109.00535"
   note: >-
     Adds telephony and VoIP codec effects on top of 2019. Already the stated
@@ -73,8 +119,32 @@ asvspoof2021_df:
   serves: "replication of H1 on compressed audio"
   languages: [english]
   landing_page: "https://zenodo.org/records/4835108"
-  licence: "Open Data Commons Attribution License v1.0"
+  licence: "ODC Open Database License (ODbL) v1.0"
   licence_verified: true
+  licence_source: >-
+    https://zenodo.org/api/records/4835108, structured record metadata,
+    metadata.license.id == "odc-odbl". The rendered page at
+    https://zenodo.org/records/4835108 states the same thing: "ODC Open
+    Database License v1.0", linking to
+    http://www.opendatacommons.org/licenses/odbl/1.0/. This is a different
+    licence from the other three ASVspoof entries in this file, all of
+    which are ODC-BY.
+  licence_checked: "2026-09-19"
+  licence_note: >-
+    CORRECTED. This entry previously said "Open Data Commons Attribution
+    License v1.0", apparently copied from its 2019 and 2021-LA neighbours
+    without checking this record specifically. The Zenodo record for this
+    dataset actually specifies ODbL, not ODC-BY. ODbL still permits
+    extraction, commercial use, and Produced Works under a Section
+    4.3-style notice requirement much like ODC-BY's (ODbL Sections
+    4.6-4.8), so it would not have blocked a Produced Work such as a slice
+    table either. The real difference is share-alike: under ODbL Section
+    4.4, a Derivative Database that is publicly used must itself be
+    released under ODbL, a later similar licence, or one ODbL's own terms
+    treat as compatible. ODC-BY carries no such requirement. This corpus is
+    "planned", not in use, so nothing downstream is affected by the
+    correction yet, but the ODC-BY licence text should not be reused for
+    this entry again.
   note: "Compressed and re-encoded audio, closer to real distribution conditions."
 
 mlaad:
@@ -106,9 +176,21 @@ mlaad:
   paper: "https://arxiv.org/abs/2401.09512"
   licence: "CC-BY-NC 4.0"
   licence_verified: true
+  licence_source: >-
+    https://huggingface.co/datasets/mueller91/MLAAD, dataset card, read
+    2026-09-19. States: "MLAAD is published strictly for non-commercial
+    academic research use, under the CC-BY-NC 4.0 license. Commercial use
+    is not permitted." The raw README could not be fetched unauthenticated
+    (the underlying files are gated), but the rendered card carries the
+    licence statement in full and is visible before login.
+  licence_checked: "2026-09-19"
   licence_note: >-
-    Non commercial academic research only. Stricter than this repository's MIT
-    code licence, so it constrains anything trained on it.
+    Non commercial academic research only, with attribution. Stricter than
+    this repository's MIT code licence, so it constrains anything trained
+    on it: a slice table derived from MLAAD could not be redistributed for
+    commercial use, only research use, and would need an attribution
+    notice back to MLAAD. Access is also gated behind a click-through
+    agreement on HuggingFace, a separate question from the licence itself.
   citation: "Müller et al. 2024, IJCNN, arXiv:2401.09512"
   requires: "M-AILABS for the bonafide side. MLAAD ships only the synthetic audio."
   real_side: "mailabs, see the entry below"
@@ -127,9 +209,23 @@ indicsynth:
   hours_synthetic: 4000
   landing_page: "https://huggingface.co/datasets/vdivyasharma/IndicSynth"
   code: "https://github.com/vdivyas/IndicSynth"
-  licence: "unknown"
-  licence_verified: false
-  licence_note: "Check the HuggingFace dataset card before use."
+  licence: "CC BY-NC 4.0"
+  licence_verified: true
+  licence_source: >-
+    https://huggingface.co/datasets/vdivyasharma/IndicSynth, dataset card
+    YAML metadata (license: cc-by-nc-4.0) and its own "## License" prose
+    section: "IndicSynth is released under the CC BY-NC 4.0 License. It is
+    intended for non-commercial, academic research only."
+  licence_checked: "2026-09-19"
+  licence_note: >-
+    CORRECTED from "unknown". Non-commercial academic research only, the
+    same restriction family as MLAAD above: a derived artifact could be
+    shared for research but not commercial use, with attribution. The
+    companion code repository (https://github.com/vdivyas/IndicSynth) ships
+    a LICENSE file GitHub cannot classify as any standard licence, but the
+    dataset itself, which is what this project would actually use, states
+    its terms plainly and twice (tag and prose) on its own card, and that
+    is what governs the data.
   note: >-
     Bengali is Indic, and this covers 12 low resource Indian languages
     including Bengali. It is the obvious source for the data efficiency curve,
@@ -145,8 +241,25 @@ in_the_wild:
   composition: "19,963 bonafide and 11,816 spoof, 58 public figures"
   landing_page: "https://huggingface.co/datasets/mueller91/In-The-Wild"
   paper: "https://arxiv.org/abs/2203.16263"
-  licence: "unknown"
-  licence_verified: false
+  licence: "CC BY-SA 4.0"
+  licence_verified: true
+  licence_source: >-
+    https://huggingface.co/datasets/mueller91/In-The-Wild, dataset card
+    YAML metadata, license: cc-by-sa-4.0. There is no separate prose
+    licence section, but the tag is on the dataset's own primary page and
+    is the only licence signal it carries.
+  licence_checked: "2026-09-19"
+  licence_note: >-
+    CORRECTED from "unknown". CC BY-SA 4.0 permits commercial use and
+    derivative works with attribution, but is share-alike: material that
+    counts as Adapted Material under the CC BY-SA terms, if publicly
+    shared, must carry the same licence forward (or one Creative Commons
+    treats as compatible). Unlike the ODC-BY entries above, Creative
+    Commons has no separate "Produced Work" carve-out for aggregate
+    outputs, so a slice table built substantially from this corpus would
+    need that question settled before release under different terms. Not
+    currently in_use, so this does not affect results/eval_slices.csv.gz,
+    which is drawn from ASVspoof 2019 LA only.
   citation: "Müller et al. 2022, Interspeech"
   note: >-
     Real world audio rather than studio recordings, with background noise,
@@ -158,14 +271,57 @@ bengali_candidates:
   status: candidate
   serves: "H2 for Bengali, if an Indic language is added to the set"
   languages: [bengali]
+  licence: "varies by candidate, see below. Not both candidates are verified."
   licence_verified: false
+  licence_note: >-
+    Left false at this level deliberately even though one candidate below
+    is now fully verified: this key covers both candidates, only one of
+    them has a stated licence, and fetch_data.py's guard should stay closed
+    for this entry until a single candidate is actually chosen and used.
   candidates:
     - name: "Bengali Real and Deepfake Audio Dataset"
       landing_page: "https://ieee-dataport.org/documents/bengali-real-and-deepfake-audio-dataset-deepfake-detection"
-      note: "A purpose built Bengali deepfake corpus. Licence not yet verified."
+      doi: "10.21227/eyg4-v467"
+      licence: "CC BY 4.0"
+      licence_verified: true
+      licence_source: >-
+        https://api.datacite.org/dois/10.21227/eyg4-v467, the DOI's own
+        DataCite metadata, deposited by the publisher (IEEE DataPort):
+        rightsList: [{rights: "Creative Commons Attribution 4.0
+        International", rightsIdentifier: "cc-by-4.0", rightsIdentifierScheme:
+        "SPDX"}]. The IEEE DataPort page itself renders its licence
+        client-side behind a login wall, so this record was read instead:
+        it is the publisher's own structured rights statement for this
+        exact DOI, not a third party's summary of it.
+      licence_checked: "2026-09-19"
+      note: >-
+        A purpose built Bengali deepfake corpus, 4000 authentic and 4000
+        FreeVC-generated clips from 10 subjects. Attribution only:
+        commercial use and redistribution of derivatives are permitted.
     - name: "BanglaFake"
       paper: "https://arxiv.org/abs/2505.10885"
-      note: "Purpose built Bengali deepfake audio dataset."
+      code: "https://github.com/KamruzzamanAsif/BanglaFake"
+      landing_page: "https://huggingface.co/datasets/sifat1221/banglaFake"
+      licence: "unverified: no licence stated anywhere its authors publish"
+      licence_verified: false
+      licence_source: >-
+        Checked all three surfaces its authors control. GitHub
+        (https://github.com/KamruzzamanAsif/BanglaFake): no LICENSE file,
+        full README read, and GitHub's own API reports license: null.
+        HuggingFace (https://huggingface.co/datasets/sifat1221/banglaFake):
+        API tags are ["region:us"] only, no license tag, no LICENSE prose.
+        arXiv (https://arxiv.org/abs/2505.10885): abstract and metadata
+        state no licence for the dataset; the only licence marking on that
+        page is arXiv's own default distribution rights for the manuscript,
+        chosen by the authors at submission, which is not a statement about
+        the dataset.
+      licence_checked: "2026-09-19"
+      note: >-
+        Purpose built Bengali deepfake audio dataset. No licence has been
+        granted by its authors on any surface checked, so under default
+        copyright no reuse or redistribution is currently authorised. Do
+        not adopt this candidate without an explicit licence grant from the
+        authors.
   note: >-
     The corpus behind the 93.6 percent Bengali result is recorded nowhere. Until
     it is identified the number is unverifiable. Check these against whatever
@@ -177,8 +333,28 @@ speechfake:
   serves: "H2 at scale, 46 languages"
   languages_count: 46
   paper: "https://arxiv.org/abs/2507.21463"
-  licence: "unknown"
-  licence_verified: false
+  code: "https://github.com/YMLLG/SpeechFake"
+  licence: "CC BY 4.0"
+  licence_verified: true
+  licence_source: >-
+    https://github.com/YMLLG/SpeechFake/blob/main/LICENSE: "This work,
+    SpeechFake, is licensed under the Creative Commons Attribution 4.0
+    International License (CC BY 4.0). Copyright (c) 2025 Ant Group."
+    Matches the licence badge in the repository README.
+  licence_checked: "2026-09-19"
+  licence_note: >-
+    CORRECTED from "unknown". Attribution only: commercial use and
+    derivative works are permitted. One real caveat straight from the same
+    LICENSE file: four of the generation tools used to produce part of the
+    synthetic subset carry copyleft licences of their own (ChatTTS, EdgeTTS
+    and Seed-VC are GPL-3.0, FireRedTTS is MPL-2.0), and the LICENSE file
+    itself warns these "may require the resulting outputs or workflows to
+    comply with the original terms" for whatever was generated with them.
+    A derived artifact built from SpeechFake should either exclude samples
+    generated by those four tools or check GPL-3.0/MPL-2.0 compatibility
+    before redistribution; the rest of the corpus, including its real-side
+    sources (VCTK, LibriTTS, AISHELL-1/3, CommonVoice, all separately
+    permissively licensed per the same README), is plain CC BY 4.0.
   citation: "ACL 2025"
   note: "Large scale multilingual, 46 languages, recent generation methods."
 
@@ -187,8 +363,39 @@ xmad_bench:
   status: planned
   serves: "an established evaluation protocol, so H2 is comparable to other work"
   paper: "https://arxiv.org/abs/2506.00462"
-  licence: "unknown"
+  code: "https://github.com/ristea/xmad-bench"
+  licence: "disputed, see licence_note. Do not use until resolved."
   licence_verified: false
+  licence_source: >-
+    Three sources, three different answers. (1) The repository's own
+    LICENSE file
+    (https://github.com/ristea/xmad-bench/blob/main/LICENSE) is stock
+    Apache License 2.0, and GitHub's own licence detector agrees. (2) The
+    repository's README, in its own "## License" section
+    (https://github.com/ristea/xmad-bench/blob/main/README.md), states:
+    "The source code and models are released under the Creative Common
+    Attribution-NonCommercial-ShareAlike 4.0 International (CC BY-NC-SA
+    4.0) license," and its Reference section calls this "this dataset or
+    code." (3) The arXiv page's own article-rights badge
+    (https://arxiv.org/abs/2506.00462, div class="abs-license") is CC BY-SA
+    4.0: a third value again, and in any case that badge is arXiv's licence
+    for the manuscript rather than a statement about the benchmark data.
+  licence_checked: "2026-09-19"
+  licence_note: >-
+    Unresolved, reported rather than resolved. (1) and (2) contradict each
+    other inside the same repository: a permissive OSI licence file against
+    a non-commercial, share-alike README statement that explicitly claims
+    to cover the dataset. This is not the same shape as the LRLspoof
+    situation below, where the apparent conflict dissolved on inspection
+    because the paper's body text made no licensing claim at all. Here the
+    repository's own README makes an explicit, on-topic claim that flatly
+    contradicts its own LICENSE file, and nothing checked resolves which
+    one the authors actually intend. Picking Apache-2.0 because it is more
+    convenient would be exactly the error this audit exists to avoid, so
+    this is left unverified: treat it as CC BY-NC-SA 4.0, the stricter of
+    the two, until the authors clarify, and do not publish anything derived
+    from it before then. Still "planned" status, so nothing downstream
+    currently depends on this.
   note: >-
     A benchmark rather than a corpus. Useful as an evaluation protocol for the
     cross lingual claim, so results are comparable to other work rather than
@@ -209,6 +416,20 @@ mailabs:
   format: "mono wav, 16 kHz, no resampling needed"
   licence: "modified BSD three clause, permits research use and redistribution"
   licence_verified: true
+  licence_source: >-
+    https://github.com/imdatceleste/m-ailabs-dataset, README "## License"
+    section, read 2026-09-19: "Redistribution and use in any form,
+    including any commercial use, with or without modification are
+    permitted", conditioned on retaining the copyright notice and not using
+    contributors' names to endorse derived products without permission.
+    The repository is maintained by I. Celeste Aurora (GitHub
+    "imdatceleste", formerly "imdatsolak"), the dataset's original
+    co-creator per its own citation ("Solak, I. Celeste Aurora and Naumov,
+    Dima, 2017"), not a third party relicensing someone else's work. The
+    README states this licence supersedes any restriction found in
+    previously downloaded copies of the data, and the direct_url_pattern
+    mirror above (ics.tau-ceti.space) is run by the same person.
+  licence_checked: "2026-09-19"
   # The reason the language set gained Spanish. M-AILABS publishes no speaker
   # counts, these were reconstructed from papers that used the corpus.
   speakers:
@@ -239,11 +460,46 @@ lrl_spoof:
   access: "public, not gated, tarball download"
   landing_page: "https://huggingface.co/datasets/lab260/LRLspoof"
   paper: "https://arxiv.org/abs/2603.02364"
-  licence: "MIT on the card. The paper text says CC-BY-SA 4.0."
-  licence_verified: false
+  licence: >-
+    MIT (the dataset). The arXiv manuscript is separately CC BY-SA 4.0;
+    that governs the paper text, not the corpus.
+  licence_verified: true
+  licence_source: >-
+    Dataset: https://huggingface.co/datasets/lab260/LRLspoof, three
+    independent signals agreeing: the card's YAML frontmatter (license:
+    mit), the HuggingFace API's own repo tags (license:mit), and an inline
+    "License: MIT" badge in the card body linking to
+    opensource.org/licenses/MIT. Manuscript:
+    https://arxiv.org/abs/2603.02364, raw page HTML contains
+    `<div class="abs-license"><a href="http://creativecommons.org/licenses/by-sa/4.0/"
+    title="Rights to this article" ...>`, which is arXiv's own
+    author-selected licence for the submission. The full paper body text
+    (all versions through v4, 471 KB of rendered HTML) was checked directly
+    for any in-text licensing statement: there is none. No occurrence of
+    "licence", "license", "MIT" or "CC BY" anywhere in the prose.
+  licence_checked: "2026-09-19"
   licence_note: >-
-    The card and the paper disagree, MIT against CC-BY-SA 4.0. Resolve with the
-    authors before use. Either is more permissive than MLAAD's CC-BY-NC 4.0.
+    RESOLVED, and the resolution is not the conflict this entry used to
+    describe. "MIT on the card, CC-BY-SA in the paper" conflated two
+    different things: the dataset's own stated licence (MIT, stated on its
+    primary hosting page in three independent places) and arXiv's
+    per-submission "Rights to this article" metadata (CC BY-SA 4.0), which
+    is arXiv's licence for hosting and redistributing the manuscript
+    PDF/HTML, chosen by the authors at submission time, and is not a
+    statement about the corpus. The paper's actual body text makes no
+    data-licensing claim at all, checked directly rather than assumed. Per
+    the brief that sent this audit: this is genuinely a per-component
+    situation, just not the "code vs data" split that pattern usually
+    takes. Component 1, the dataset (audio and labels, what this project
+    would actually use): MIT, fully permissive, redistribution and
+    commercial use allowed, only the copyright notice needs keeping.
+    Component 2, the paper as a document: CC BY-SA 4.0, which would matter
+    only if this project were redistributing the paper's own text or
+    figures, which it is not. MIT is reported here because it is what the
+    dataset's own page states on three independent surfaces, not because it
+    is the more convenient answer: the CC-BY-SA statement this entry
+    previously attributed to "the paper text" does not exist anywhere in
+    the paper's text.
   system_metadata: >-
     The synthesis system is identifiable per sample from the path,
     language/tts_model/file.wav, and data/labels.parquet carries utterance_id

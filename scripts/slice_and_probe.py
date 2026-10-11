@@ -22,6 +22,20 @@ Resumable
     already processed utterance ids are skipped on restart. A reclaimed Colab
     session costs you the last few utterances, not the run.
 
+Speaker column
+    Every row carries a speaker id, so that bootstrap resampling can
+    eventually be done per speaker rather than per utterance, and so an
+    auditor can check speaker level clustering at all. For --subset and
+    --hf-dataset, it is read from column 0 of the ASVspoof 2019 LA protocol
+    file, keyed on the utterance id in column 1. An utterance id absent from
+    the protocol writes UNKNOWN rather than a blank cell, which would
+    otherwise be silently indistinguishable from a genuinely empty field.
+    --manifest corpora carry no ASVspoof protocol, so their rows write "-",
+    the same not-applicable sentinel already used for attack, language and
+    corpus when a manifest does not supply them. This column is not yet
+    consumed by any analysis script; wiring it into clustering is separate
+    work.
+
 Two input modes
     --subset reads the ASVspoof 2019 LA protocols directly. Use this for the
     pre-registered test.
@@ -67,16 +81,19 @@ import time
 os.environ.setdefault("HF_HUB_DISABLE_PROGRESS_BARS", "1")
 os.environ.setdefault("TRANSFORMERS_VERBOSITY", "error")
 
+import gzip
+
 import numpy as np
 import librosa
 import soundfile as sf
-import torch
 from tqdm import tqdm
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "src"))
 
 from phonophase.config import load_config  # noqa: E402
-from phonophase.corpus import partition_paths, read_protocol, select_balanced  # noqa: E402
+from phonophase.corpus import (  # noqa: E402
+    partition_paths, read_protocol, read_speaker_map, select_balanced,
+)
 from phonophase.probe import STATISTIC_NAMES, slice_statistics  # noqa: E402
 
 MODEL_ID = "facebook/wav2vec2-lv-60-espeak-cv-ft"
@@ -97,18 +114,65 @@ PHONEME_MAP = {
 }
 CHAR_TO_CATEGORY = {c: cat for cat, chars in PHONEME_MAP.items() for c in chars}
 
-FIELDS = ["utterance_id", "label", "attack", "language", "corpus", "category",
-          "phoneme", "seg", "start_frame", "n_frames", "duration_s"] + STATISTIC_NAMES
+UNKNOWN_SPEAKER = "UNKNOWN"
+
+FIELDS = ["utterance_id", "speaker", "label", "attack", "language", "corpus",
+          "category", "phoneme", "seg", "start_frame", "n_frames",
+          "duration_s"] + STATISTIC_NAMES
+
+
+def speaker_for(utt, speaker_map):
+    """
+    Resolve one utterance id to its speaker id.
+
+    A miss means the protocol file does not agree with the utterance ids
+    actually being processed. That is a data problem worth seeing, so it
+    surfaces as an explicit sentinel that can never collide with a real
+    ASVspoof speaker id (all of which look like LA_####), rather than "",
+    which would be indistinguishable from a genuinely empty field once it is
+    sitting in a CSV cell.
+    """
+    return speaker_map.get(utt, UNKNOWN_SPEAKER)
+
+
+def check_header_compatible(out_path, fields):
+    """
+    Refuse to resume into a file whose header predates this column layout.
+
+    Resuming appends rows shaped like `fields` under whatever header line is
+    already on disk. Adding a column, such as this one adding speaker, is
+    exactly the change that would silently misalign every row appended after
+    the old header. Caught here, before the GPU model loads, rather than
+    discovered later by a reader that gets the wrong values in the wrong
+    columns.
+    """
+    if not os.path.exists(out_path):
+        return
+    with open(out_path, newline="") as fh:
+        header = next(csv.reader(fh), [])
+    if header and header != fields:
+        raise SystemExit(
+            f"{out_path} already exists with a header that does not match "
+            "the current columns (this version adds 'speaker'). Appending "
+            "would misalign every row written after it. Start a new --out "
+            "file, or migrate the existing file to the new column layout "
+            "before resuming."
+        )
 
 
 def read_manifest(path):
     """
     Load an arbitrary corpus. Returns (audio_path, utterance_id, attack,
-    language, corpus, label_str) per row.
+    language, corpus, label_str, speaker) per row.
 
     A relative path is resolved against the manifest's own directory first, so
     an exported subset works wherever it is unzipped without anyone having to
     match the working directory to the archive layout.
+
+    speaker is always "-". A manifest describes an arbitrary corpus with no
+    ASVspoof protocol to source a speaker id from, so there is nothing
+    truthful to fill in here; "-" is the same not-applicable sentinel already
+    used above for attack, language and corpus when a manifest omits them.
     """
     manifest_dir = os.path.dirname(os.path.abspath(path))
     rows = []
@@ -136,6 +200,7 @@ def read_manifest(path):
                 r.get("language") or "-",
                 r.get("corpus") or "-",
                 label,
+                "-",
             ))
     return rows
 
@@ -160,13 +225,106 @@ def group_runs(chars):
     return runs
 
 
+def load_aligner(device):
+    """
+    Load the alignment model once and return speech -> one phone per 20ms frame.
+
+    Loaded as feature extractor plus tokenizer rather than through
+    Wav2Vec2Processor, and with do_phonemize disabled.
+
+    Wav2Vec2Processor builds the phoneme tokenizer with phonemization on,
+    which initialises an espeak backend at load time and raises
+    "espeak not installed on your system" on any machine without it,
+    including a stock Colab runtime. We never phonemize text. We only decode
+    the model's CTC output into IPA symbols, which needs the vocabulary and
+    nothing else. Disabling it removes a system dependency outright.
+    """
+    from transformers import (Wav2Vec2FeatureExtractor, Wav2Vec2ForCTC,
+                              Wav2Vec2PhonemeCTCTokenizer)
+    from transformers.utils import logging as hf_logging
+    import torch
+    hf_logging.set_verbosity_error()
+
+    feature_extractor = Wav2Vec2FeatureExtractor.from_pretrained(MODEL_ID)
+    tokenizer = Wav2Vec2PhonemeCTCTokenizer.from_pretrained(MODEL_ID, do_phonemize=False)
+    model = Wav2Vec2ForCTC.from_pretrained(MODEL_ID).to(device).eval()
+    inv_vocab = {v: k for k, v in tokenizer.get_vocab().items()}
+
+    def chars_for(speech):
+        inputs = feature_extractor(speech, sampling_rate=SR,
+                                   return_tensors="pt").input_values.to(device)
+        with torch.no_grad():
+            logits = model(inputs).logits
+        return [inv_vocab[t.item()].lower() for t in torch.argmax(logits, dim=-1)[0]]
+
+    return chars_for
+
+
+def iter_slices(n_samples, runs, segs):
+    """
+    Yield (category, char, seg, first, last, a, b) for every slice long enough
+    to keep, where a and b are sample bounds into a signal of n_samples.
+
+    Split out of run() so a second pass can cut different audio at exactly the
+    boundaries a first pass found, without a second copy of this arithmetic.
+    """
+    for char, first, last in runs:
+        category = CHAR_TO_CATEGORY.get(char)
+        if not category:
+            continue
+
+        spans = {}
+        if "run" in segs:
+            spans["run"] = (first * FRAME_SEC - MARGIN_SEC,
+                            last * FRAME_SEC + MARGIN_SEC)
+        if "window" in segs:
+            # The legacy fixed window, centred on the run's first frame.
+            centre = (first + 0.5) * FRAME_SEC
+            spans["window"] = (centre - WINDOW_SEC / 2, centre + WINDOW_SEC / 2)
+
+        for seg, (s0, s1) in spans.items():
+            a = max(0, int(s0 * SR))
+            b = min(n_samples, int(s1 * SR))
+            if (b - a) <= MIN_SLICE_SEC * SR:
+                continue
+            yield category, char, seg, first, last, a, b
+
+
 def already_done(path):
+    """
+    Utterances a table already holds, so a rerun can skip them.
+
+    A run killed mid write leaves the last utterance short of rows and often
+    the last line short of a newline. On a plain file that utterance is cut
+    off the end and reported as not done, so the rerun writes it whole. A
+    gzip table is read only.
+    """
     if not os.path.exists(path):
         return set()
-    seen = set()
-    with open(path, newline="") as fh:
-        for row in csv.DictReader(fh):
-            seen.add(row["utterance_id"])
+    with open(path, "rb") as fh:
+        gz = fh.read(2) == b"\x1f\x8b"
+    if gz:
+        with gzip.open(path, "rt", newline="") as fh:
+            return {row["utterance_id"] for row in csv.DictReader(fh)}
+    seen, last, last_start = set(), None, None
+    with open(path, "rb+") as fh:
+        header = fh.readline()
+        if not header.endswith(b"\n"):
+            fh.truncate(0)
+            return set()
+        col = next(csv.reader([header.decode()])).index("utterance_id")
+        pos = fh.tell()
+        for line in iter(fh.readline, b""):
+            if not line.endswith(b"\n"):
+                break
+            uid = next(csv.reader([line.decode()]))[col]
+            if uid != last:
+                last, last_start = uid, pos
+            seen.add(uid)
+            pos = fh.tell()
+        if last is not None:
+            fh.truncate(last_start)
+            seen.discard(last)
     return seen
 
 
@@ -234,6 +392,7 @@ def main():
                 "rather than 7.12 GB."
             )
 
+    speaker_map = read_speaker_map(protocol)
     selected = select_balanced(read_protocol(protocol), args.limit_bonafide,
                                args.limit_spoof, args.seed)
     done = already_done(args.out)
@@ -246,7 +405,8 @@ def main():
           f"{len(selected) - n_bona} spoof")
 
     items = [(os.path.join(audio_dir, f"{utt}.flac"), utt, attack, "en",
-              "asvspoof2019_la", label) for utt, attack, label in selected]
+              "asvspoof2019_la", label, speaker_for(utt, speaker_map))
+             for utt, attack, label in selected]
     run(items, args, segs)
 
 
@@ -275,6 +435,7 @@ def run_from_hf(args, segs):
     if not os.path.exists(protocol):
         raise SystemExit(f"protocol not found: {protocol}")
 
+    speaker_map = read_speaker_map(protocol)
     selected = select_balanced(read_protocol(protocol), args.limit_bonafide,
                                args.limit_spoof, args.seed)
     wanted = {utt: (attack, label) for utt, attack, label in selected}
@@ -298,38 +459,24 @@ def run_from_hf(args, segs):
                 continue
             attack, label = remaining[utt]
             # Audio arrives decoded, so nothing is written to disk at any point.
-            yield (row["audio"], utt, attack, "en", args.hf_dataset, label)
+            yield (row["audio"], utt, attack, "en", args.hf_dataset, label,
+                   speaker_for(utt, speaker_map))
 
     run(items(), args, segs, total=len(remaining), audio_is_array=True)
 
 
 def run(items, args, segs, total=None, audio_is_array=False):
     """Align, slice and reduce. Shared by both input modes."""
+    check_header_compatible(args.out, FIELDS)
     print(f"segmentations: {', '.join(segs)}")
 
-    from transformers import (Wav2Vec2FeatureExtractor, Wav2Vec2ForCTC,
-                              Wav2Vec2PhonemeCTCTokenizer)
-    from transformers.utils import logging as hf_logging
-    hf_logging.set_verbosity_error()
-
+    import torch
     device = "cuda" if torch.cuda.is_available() else "cpu"
     print(f"device: {device}")
     if device == "cpu":
         print("WARNING: this is a GPU job. On CPU it will take many hours.")
 
-    # Loaded as feature extractor plus tokenizer rather than through
-    # Wav2Vec2Processor, and with do_phonemize disabled.
-    #
-    # Wav2Vec2Processor builds the phoneme tokenizer with phonemization on,
-    # which initialises an espeak backend at load time and raises
-    # "espeak not installed on your system" on any machine without it,
-    # including a stock Colab runtime. We never phonemize text. We only decode
-    # the model's CTC output into IPA symbols, which needs the vocabulary and
-    # nothing else. Disabling it removes a system dependency outright.
-    feature_extractor = Wav2Vec2FeatureExtractor.from_pretrained(MODEL_ID)
-    tokenizer = Wav2Vec2PhonemeCTCTokenizer.from_pretrained(MODEL_ID, do_phonemize=False)
-    model = Wav2Vec2ForCTC.from_pretrained(MODEL_ID).to(device).eval()
-    inv_vocab = {v: k for k, v in tokenizer.get_vocab().items()}
+    chars_for = load_aligner(device)
 
     os.makedirs(os.path.dirname(os.path.abspath(args.out)) or ".", exist_ok=True)
     new_file = not os.path.exists(args.out)
@@ -340,7 +487,7 @@ def run(items, args, segs, total=None, audio_is_array=False):
 
     started = time.time()
     written = 0
-    for n, (audio_src, utt, attack, language, corpus, label_str) in enumerate(
+    for n, (audio_src, utt, attack, language, corpus, label_str, speaker) in enumerate(
             tqdm(items, desc="utterances", total=total), 1):
         try:
             if audio_is_array:
@@ -356,44 +503,25 @@ def run(items, args, segs, total=None, audio_is_array=False):
                                           orig_sr=sr, target_sr=SR)
             speech = speech.astype(np.float64)
 
-            inputs = feature_extractor(speech, sampling_rate=SR,
-                                       return_tensors="pt").input_values.to(device)
-            with torch.no_grad():
-                logits = model(inputs).logits
-            chars = [inv_vocab[t.item()].lower() for t in torch.argmax(logits, dim=-1)[0]]
+            chars = chars_for(speech)
 
             label = 0 if label_str == "bonafide" else 1
+            if speaker == UNKNOWN_SPEAKER:
+                print(f"  no speaker id for {utt} (not in the protocol file)")
 
-            for char, first, last in group_runs(chars):
-                category = CHAR_TO_CATEGORY.get(char)
-                if not category:
+            for category, char, seg, first, last, a, b in iter_slices(
+                    len(speech), group_runs(chars), segs):
+                stats = slice_statistics(speech[a:b])
+                if stats is None:
                     continue
-
-                spans = {}
-                if "run" in segs:
-                    spans["run"] = (first * FRAME_SEC - MARGIN_SEC,
-                                    last * FRAME_SEC + MARGIN_SEC)
-                if "window" in segs:
-                    # The legacy fixed window, centred on the run's first frame.
-                    centre = (first + 0.5) * FRAME_SEC
-                    spans["window"] = (centre - WINDOW_SEC / 2, centre + WINDOW_SEC / 2)
-
-                for seg, (s0, s1) in spans.items():
-                    a = max(0, int(s0 * SR))
-                    b = min(len(speech), int(s1 * SR))
-                    if (b - a) <= MIN_SLICE_SEC * SR:
-                        continue
-                    stats = slice_statistics(speech[a:b])
-                    if stats is None:
-                        continue
-                    writer.writerow({
-                        "utterance_id": utt, "label": label, "attack": attack,
-                        "language": language, "corpus": corpus,
-                        "category": category, "phoneme": char, "seg": seg,
-                        "start_frame": first, "n_frames": last - first,
-                        "duration_s": round((b - a) / SR, 4), **stats,
-                    })
-                    written += 1
+                writer.writerow({
+                    "utterance_id": utt, "speaker": speaker, "label": label,
+                    "attack": attack, "language": language, "corpus": corpus,
+                    "category": category, "phoneme": char, "seg": seg,
+                    "start_frame": first, "n_frames": last - first,
+                    "duration_s": round((b - a) / SR, 4), **stats,
+                })
+                written += 1
         except Exception as exc:
             print(f"  skipped {utt}: {exc}")
 

@@ -34,6 +34,7 @@ from __future__ import annotations
 
 import functools
 import re
+import unicodedata
 
 import numpy as np
 
@@ -84,6 +85,11 @@ def _feature_table():
     return panphon.FeatureTable()
 
 
+def _nfd(text: str) -> str:
+    """PanPhon returns decomposed text, so a precomposed `ã` must not look partly consumed."""
+    return unicodedata.normalize("NFD", text)
+
+
 @functools.lru_cache(maxsize=8192)
 def features(phone: str) -> tuple | None:
     """
@@ -102,7 +108,13 @@ def features(phone: str) -> tuple | None:
     if base is None or base in _NON_IPA:
         return None
     try:
-        vectors = _feature_table().word_to_vector_list(base, numeric=True)
+        table = _feature_table()
+        # PanPhon drops characters it does not recognise without failing, so
+        # `dZ` would come back as a plain /d/. A symbol it only partly consumed
+        # is rejected rather than given the features of its prefix.
+        if _nfd("".join(table.ipa_segs(base))) != _nfd(base):
+            return None
+        vectors = table.word_to_vector_list(base, numeric=True)
     except Exception:
         return None
     if not vectors:
@@ -146,17 +158,16 @@ def coverage(vocabulary) -> dict:
     X-SAMPA for the affricate, decodes to a plain /d/. `aɪɚ` loses its rhotic.
     Each entry is (symbol, what PanPhon actually consumed).
 
-    They are still counted as parsed, because deciding what to do with them
-    changes the contract of this module and affects results already published
-    from it. Making them visible is separate from deciding their fate, and only
-    the first is done here.
+    `features` rejects these, so they are counted as unparsed. They are listed
+    separately because a symbol PanPhon half understood usually means the
+    corpus uses a different transcription, which is worth knowing.
     """
     phones = [p for p in vocabulary if p not in _NON_IPA and not p.startswith("<")]
     parsed = [p for p in phones if is_parseable(p)]
 
     partial = []
     table = _feature_table()
-    for phone in parsed:
+    for phone in sorted(set(phones) - set(parsed)):
         base, _ = parse_tone(phone)
         if base is None:
             continue
@@ -164,7 +175,7 @@ def coverage(vocabulary) -> dict:
             consumed = "".join(table.ipa_segs(base))
         except Exception:
             continue
-        if consumed != base:
+        if consumed and _nfd(consumed) != _nfd(base):
             partial.append((phone, consumed))
 
     return {
