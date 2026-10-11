@@ -127,6 +127,22 @@ def percentile_interval(draws, alpha: float = 0.05, null: float = 0.0,
     }
 
 
+def settled_nonzero(draws, alpha: float = 0.05) -> bool:
+    """
+    True only when the interval excludes zero and the draw count settles it.
+
+    The conservative reading of percentile_interval for code that wants one
+    yes or no: a bound whose Monte Carlo band reaches zero, or too few draws
+    for a band to exist, is a no.
+    """
+    x = np.asarray(draws, dtype=np.float64)
+    x = x[np.isfinite(x)]
+    if x.size == 0:
+        return False
+    r = percentile_interval(x, alpha)
+    return r["above_null"] is True or r["below_null"] is True
+
+
 def _stratified_resample(rng, pos_idx, neg_idx):
     """
     Resample within each class.
@@ -349,8 +365,9 @@ def paired_bootstrap_delta(
         "ci_low": float(lo),
         "ci_high": float(hi),
         # The only claim worth making. An interval excluding zero means one
-        # statistic beat the other on these samples.
-        "significant": bool(lo > 0 or hi < 0),
+        # statistic beat the other on these samples. A bound the draw count
+        # cannot place on one side of zero does not count.
+        "significant": settled_nonzero(draws, alpha),
     }
 
 

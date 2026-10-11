@@ -107,7 +107,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from analyse_slices import open_table  # noqa: E402
 
 from phonophase.stats import (  # noqa: E402
-    _cluster_draw, _prepare_clusters, benjamini_hochberg, fast_auc,
+    _cluster_draw, _prepare_clusters, benjamini_hochberg, fast_auc, settled_nonzero,
 )
 
 # The pre-registered grouping, copied from scripts/analyse_slices.py so the two
@@ -473,7 +473,7 @@ def apply_fdr(results, alpha=0.05, n_boot=1000):
         r = results[name]
         r["asymmetry_q"] = float(q)
         r["asymmetry_clear"] = bool(
-            (r["asymmetry_ci_low"] > 0 or r["asymmetry_ci_high"] < 0) and q <= alpha
+            settled_nonzero(r["draws"]["asymmetry"], alpha) and q <= alpha
         )
         r["asymmetry_boundary"] = bool(
             abs(float(q) - alpha) < 2.0 * monte_carlo_se(float(q), n_boot)
@@ -577,7 +577,7 @@ def bootstrap_group_difference(results, members_true, members_false, alpha=0.05)
         "difference": float(np.mean(finite)),
         "ci_low": float(low),
         "ci_high": float(high),
-        "excludes_zero": bool(low > 0 or high < 0),
+        "excludes_zero": settled_nonzero(finite, alpha),
     }
 
 
