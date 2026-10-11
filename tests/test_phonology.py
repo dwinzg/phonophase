@@ -203,14 +203,15 @@ def test_coverage_reports_symbols_panphon_only_partly_consumed():
     symbol appears in the English eval data, but it would bite the moment a
     corpus transcribed in X-SAMPA arrives.
 
-    So coverage makes it visible. What to DO about partials is a separate
-    decision and is deliberately not taken here.
+    So `features` rejects it and coverage says what was consumed.
     """
     c = coverage(["m", "a", "dZ", "aɪɚ"])
 
     assert "dZ" in dict(c["partial"]), c["partial"]
     assert dict(c["partial"])["dZ"] == "d", "the symbol decoded to its prefix"
     assert "m" not in dict(c["partial"])
+    assert features("dZ") is None and "dZ" in c["unparsed"]
+    assert features("aɪ") is not None, "a fully consumed diphthong still parses"
 
 
 def test_a_fully_consumed_inventory_reports_no_partials():

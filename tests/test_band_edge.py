@@ -188,6 +188,11 @@ def test_the_alignment_cache_round_trips_and_keeps_empty_utterances():
             w.writerow({"utterance_id": "u2", "n_samples": 9, "phoneme": "",
                         "first": "", "last": ""})
         assert B.read_alignment(path) == {"u1": [("m", 3, 5)], "u2": []}
+        with open(path, "a", newline="") as fh:
+            csv.DictWriter(fh, fieldnames=B.ALIGN_FIELDS).writerow(
+                {"utterance_id": "u3", "n_samples": 9, "phoneme": "m",
+                 "first": 1, "last": 2})
+        # The last utterance in a file is never trusted, see test_cli_robustness.
         assert S.already_done(path) == {"u1", "u2"}
 
 

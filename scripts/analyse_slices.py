@@ -24,6 +24,7 @@ from __future__ import annotations
 import argparse
 import csv
 import gzip
+import math
 import os
 import sys
 from collections import defaultdict
@@ -104,6 +105,9 @@ def load(path, seg, language=None, speakers=None):
                 r["utterance_id"], UNKNOWN_SPEAKER))
             d[PHASE].append(float(r[PHASE]))
             d[MAGNITUDE].append(float(r[MAGNITUDE]))
+            if not (math.isfinite(d[PHASE][-1]) and math.isfinite(d[MAGNITUDE][-1])):
+                raise SystemExit(f"{path}: non finite {PHASE} or {MAGNITUDE} "
+                                 f"in utterance {r['utterance_id']}")
     data = {k: {n: np.asarray(v) for n, v in d.items()} for k, d in rows.items()}
     return with_bonafide_label(data)
 
@@ -213,7 +217,7 @@ def overall(states):
 def check_columns(path, phase, magnitude):
     """Refuse a statistic the table does not have, or one compared with itself."""
     with open_table(path) as fh:
-        header = next(csv.reader(fh))
+        header = next(csv.reader(fh), [])
     missing = [c for c in (phase, magnitude) if c not in header]
     if missing:
         raise SystemExit(f"{path} has no column {', '.join(missing)}")
@@ -454,18 +458,18 @@ def run_by_language(args, speakers):
 
         son = advantage_ci(data, SONORANTS, args.n_boot, args.seed, cluster=args.cluster)
         obs = advantage_ci(data, OBSTRUENTS, args.n_boot, args.seed + 1, cluster=args.cluster)
-        if son is None:
+        if son is None or obs is None:
             print(f"{lang:<12} {'too few':>14}")
             continue
-        ordered = bool(obs is None or (np.isfinite(obs["advantage"])
-                                       and son["advantage"] > obs["advantage"]))
+        ordered = bool(np.isfinite(obs["advantage"])
+                       and son["advantage"] > obs["advantage"])
         level = condition_1(son)
         verdict = ("does not hold" if level is False or not ordered
                    else "undecided at this draw count" if level is UNDECIDED
                    else "holds")
         print(f"{lang:<12} {son['advantage']:>+14.3f} "
               f"{'[%+.3f, %+.3f]' % (son['ci_low'], son['ci_high']):>20} "
-              f"{(obs['advantage'] if obs else float('nan')):>+15.3f}  "
+              f"{obs['advantage']:>+15.3f}  "
               f"{verdict}")
 
     print("\nH2 is supported only if the effect holds in a language absent from")
@@ -504,6 +508,8 @@ def main():
                          "the H2 cross lingual test. If the effect is "
                          "articulatory it should hold in every language")
     args = ap.parse_args()
+    if args.n_boot < 1:
+        ap.error("--n-boot must be at least 1")
 
     check_columns(args.table, args.phase, args.magnitude)
     PHASE, MAGNITUDE = args.phase, args.magnitude

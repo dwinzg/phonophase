@@ -90,7 +90,6 @@ from __future__ import annotations
 
 import argparse
 import csv
-import gzip
 import os
 import sys
 from collections import Counter
@@ -98,6 +97,9 @@ from collections import Counter
 import numpy as np
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "src"))
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+
+from analyse_slices import open_table  # noqa: E402
 
 from phonophase.phonology import FEATURE_NAMES, features  # noqa: E402
 from phonophase.stats import (  # noqa: E402
@@ -283,9 +285,8 @@ def folded_from_auc(auc: float) -> float:
 
 def load(path, seg, stat=PHASE):
     """Read one segmentation out of a slice table into aligned arrays."""
-    opener = gzip.open if str(path).endswith(".gz") else open
     y, utt, phone, value, attack, duration, energy = [], [], [], [], [], [], []
-    with opener(path, "rt", newline="") as fh:
+    with open_table(path) as fh:
         for row in csv.DictReader(fh):
             if row["seg"] != seg:
                 continue

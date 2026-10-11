@@ -24,7 +24,13 @@ def run(namespace, name):
         try:
             fn()
             print(f"  pass  {test_name}")
-        except Exception:
+        except BaseException as exc:
+            # pytest.skip raises outside the Exception tree.
+            if type(exc).__name__ == "Skipped":
+                print(f"  skip  {test_name}: {exc}")
+                continue
+            if not isinstance(exc, Exception):
+                raise
             failures.append(test_name)
             print(f"  FAIL  {test_name}")
             traceback.print_exc()

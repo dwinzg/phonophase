@@ -13,6 +13,7 @@ Usage
 
 from __future__ import annotations
 
+import argparse
 import csv
 import os
 import sys
@@ -99,7 +100,8 @@ def forest(rows, series, colours, xlabel, path, legend=True):
 
 def _save(fig, path):
     """PDF for the report, and a PNG beside it for the README."""
-    fig.savefig(path, bbox_inches="tight")
+    # No creation date, so a rerun leaves the tracked file byte identical.
+    fig.savefig(path, bbox_inches="tight", metadata={"CreationDate": None})
     fig.savefig(path[:-4] + ".png", bbox_inches="tight", dpi=200)
     plt.close(fig)
 
@@ -138,6 +140,7 @@ def separation_by_category(path):
 
 
 def main():
+    argparse.ArgumentParser(description=__doc__).parse_args()
     os.makedirs(OUT, exist_ok=True)
     separation_by_category(os.path.join(OUT, "separation.pdf"))
     forest(read_numbers("clustering"), ["asymmetry", "level"], [BLUE, ORANGE],

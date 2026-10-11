@@ -543,6 +543,8 @@ def fmt(r):
 def print_level_asymmetry(data, n_boot, seeds, joint):
     for seed in seeds:
         r = level_asymmetry(data, n_boot, seed, joint=joint)
+        if r is None:
+            raise SystemExit("too few sonorant or obstruent slices on one side to compare")
         print(f"  seed {seed}  LEVEL {fmt(r['level'])}  OBSTRUENT {fmt(r['obstruent'])}  "
               f"ASYMMETRY {fmt(r['asymmetry'])}")
 
@@ -616,6 +618,8 @@ def cmd_r2(args):
     for seed in args.seeds:
         son = A.advantage_ci(data, A.SONORANTS, args.n_boot, seed)
         asym = A.asymmetry_ci(data, args.n_boot, seed)
+        if son is None or asym is None:
+            raise SystemExit("too few sonorant or obstruent slices on one side to compare")
         print(f"  seed {seed}  LEVEL {son['advantage']:+.4f} "
               f"[{son['ci_low']:+.4f}, {son['ci_high']:+.4f}]  "
               f"ASYMMETRY {asym['asymmetry']:+.4f} "

@@ -224,6 +224,25 @@ def test_pooling_and_averaging_categories_are_different_definitions():
 # correction across attacks, because thirteen intervals is thirteen chances
 # --------------------------------------------------------------------------
 
+def _with_draws(results):
+    """Draws spread evenly over each stated interval, which apply_fdr reads."""
+    for r in results.values():
+        r["draws"] = {"asymmetry": np.linspace(
+            r["asymmetry_ci_low"], r["asymmetry_ci_high"], 2000)}
+    return results
+
+
+def test_a_bound_the_draw_count_cannot_place_is_not_clear():
+    results = {"A07": {"asymmetry": 0.05, "asymmetry_p": 0.0001,
+                       "asymmetry_ci_low": 0.01, "asymmetry_ci_high": 0.09}}
+    results["A07"]["draws"] = {"asymmetry": np.linspace(0.01, 0.09, 60)}
+    apply_fdr(results)
+    assert results["A07"]["asymmetry_clear"] is False, "60 draws settle nothing"
+
+    apply_fdr(_with_draws(results))
+    assert results["A07"]["asymmetry_clear"] is True
+
+
 def test_fdr_is_applied_across_attacks_rather_than_each_one_alone():
     """
     One attack at raw p = 0.04 among twelve at 0.9 does not survive correction
@@ -238,7 +257,7 @@ def test_fdr_is_applied_across_attacks_rather_than_each_one_alone():
             "asymmetry_ci_low": 0.001, "asymmetry_ci_high": 0.06,
         }
 
-    apply_fdr(results)
+    apply_fdr(_with_draws(results))
 
     assert results["A07"]["asymmetry_q"] > 0.05
     assert results["A07"]["asymmetry_clear"] is False, (
@@ -264,7 +283,7 @@ def test_an_attack_whose_q_sits_on_the_threshold_is_flagged_as_a_boundary_case()
         "A08": {"asymmetry": 0.20, "asymmetry_p": 0.0001,
                 "asymmetry_ci_low": 0.15, "asymmetry_ci_high": 0.25},
     }
-    apply_fdr(results, alpha=0.05, n_boot=1000)
+    apply_fdr(_with_draws(results), alpha=0.05, n_boot=1000)
 
     assert results["A07"]["asymmetry_boundary"] is True
     assert results["A08"]["asymmetry_boundary"] is False, (
@@ -281,7 +300,7 @@ def test_more_draws_shrink_the_boundary_band():
 def test_an_interval_spanning_zero_is_never_clear_however_small_its_p():
     results = {"A07": {"asymmetry": 0.0, "asymmetry_p": 0.0001,
                        "asymmetry_ci_low": -0.02, "asymmetry_ci_high": 0.02}}
-    apply_fdr(results)
+    apply_fdr(_with_draws(results))
     assert results["A07"]["asymmetry_clear"] is False
 
 
@@ -294,7 +313,7 @@ def test_a_clearly_negative_attack_survives_correction_and_keeps_its_sign():
             "asymmetry_ci_high": -0.02 if i == 0 else 0.09,
         }
 
-    apply_fdr(results)
+    apply_fdr(_with_draws(results))
 
     assert results["A07"]["asymmetry_clear"] is True
     assert results["A07"]["asymmetry"] < 0
