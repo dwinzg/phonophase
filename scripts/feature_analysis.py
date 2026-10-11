@@ -595,15 +595,16 @@ def report(results, collin, data, parsed, seg, table, n_boot):
                      f"{'PHONES +/-':>11}")
     print(counts_header)
     print("-" * len(counts_header))
+    def pair(counts, unit):
+        return f"{counts[unit + '_bonafide']}/{counts[unit + '_spoof']}"
+
     for r in tested:
         p_, m_ = r["counts_plus"], r["counts_minus"]
         n_phones = (f"{len(r['phones_plus'])}/{len(r['phones_minus'])}"
                     if "phones_plus" in r else "-")
         print(f"{r['feature']:<9} "
-              f"{f'{p_["slices_bonafide"]}/{p_["slices_spoof"]}':>18} "
-              f"{f'{p_["utterances_bonafide"]}/{p_["utterances_spoof"]}':>15} "
-              f"{f'{m_["slices_bonafide"]}/{m_["slices_spoof"]}':>18} "
-              f"{f'{m_["utterances_bonafide"]}/{m_["utterances_spoof"]}':>15} "
+              f"{pair(p_, 'slices'):>18} {pair(p_, 'utterances'):>15} "
+              f"{pair(m_, 'slices'):>18} {pair(m_, 'utterances'):>15} "
               f"{r['n_zero']:>8} {n_phones:>11}")
 
     narrow = [r for r in tested if len(r.get("phones_plus", [0] * 99)) <= 3]
