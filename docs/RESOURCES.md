@@ -316,7 +316,7 @@ without knowing it.
 
 ### `phonophase.phonology`
 
-IPA to PanPhon's 24 articulatory features, 380 of 388 phone symbols. Replaces a
+IPA to PanPhon's 24 articulatory features, 335 of 387 phone symbols once the 45 that PanPhon only partly reads are rejected. Replaces a
 seven category English shaped map that covered 41. **Known limitation:** symbols
 containing digits are rejected, which drops 91 tone marked phones and excludes
 Mandarin, Vietnamese and Thai entirely. Fix before any tonal language work, task
