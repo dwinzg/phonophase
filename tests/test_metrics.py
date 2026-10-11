@@ -200,9 +200,20 @@ def test_cost_model_priors_sum_correctly():
     assert abs(total - 1.0) < 1e-12, f"priors must sum to 1, got {total}"
 
 
+def _need_corpus():
+    """Skip, visibly, when the ASV scores are not on this machine."""
+    if os.path.exists(ASV_EVAL):
+        return True
+    try:
+        import pytest
+    except ImportError:
+        return False
+    pytest.skip("ASVspoof ASV scores not on this machine")
+
+
 def test_real_asv_scores_load_when_present():
-    if not os.path.exists(ASV_EVAL):
-        return  # corpus not on this machine, nothing to check
+    if not _need_corpus():
+        return
     asv = load_asv_scores(ASV_EVAL)
 
     assert set(asv) == {"target", "nontarget", "spoof"}
@@ -217,7 +228,7 @@ def test_real_asv_scores_load_when_present():
 
 
 def test_tdcf_against_real_asv_scores():
-    if not os.path.exists(ASV_EVAL):
+    if not _need_corpus():
         return
     asv = load_asv_scores(ASV_EVAL)
 
