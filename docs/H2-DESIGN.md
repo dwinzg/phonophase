@@ -1,5 +1,10 @@
 # H2 design, the cross linguistic test
 
+> **Draft of 2026-09-19, not a registration.** Superseded on griffin_lim by
+> `docs/PREREGISTRATION-GRIFFINLIM.md`; no mechanism may be stated
+> (`docs/BAND-EDGE.md`, rule R1). Notes dated 2026-10-14 below correct
+> statements that later work overturned.
+
 Draft 2026-09-18, revised 2026-09-19. Not yet a pre-registration. That gets
 written once the design is settled and before the run.
 
@@ -15,8 +20,9 @@ rather than before it.
 
 ## What H2 asks
 
-H1 established that in English, phase dispersion separates real from synthetic
-more in sonorants than obstruents. H2 asks whether that is a fact about
+H1 established that in English, upper band group delay dispersion
+(`mgd_hf_std`) gains more over cepstral dispersion (`mfcc_frame_spread`) in
+sonorants than in obstruents. Its cause is undecided. H2 asks whether that is a fact about
 **articulation** or a fact about **English**.
 
 ## The confound that shapes everything
@@ -25,9 +31,10 @@ The obvious design, measure language A and language B and compare, does not
 work. Different languages are synthesised by different systems, so a language
 difference and a vocoder difference are inseparable.
 
-This is not hypothetical. Within English the sonorant advantage already holds in
-only 8 of 13 attacks and reverses on four of them. Vocoder variation is large
-and it would swamp any language effect in a naive comparison.
+This is not hypothetical. Within English the asymmetry varies by attack: after
+correction it is clearly positive on 4 of 13 eval attacks (A08, A09, A14, A17),
+clearly negative only on A19, and undecided on the other 8. Variation across
+systems of that size would swamp any language effect in a naive comparison.
 
 ## The design that does work
 
@@ -42,9 +49,11 @@ across languages**, which holds the vocoder fixed and lets language vary.
             real versus S-synthetic separation
         ask whether the profile is the same across L
 
-Same model, same architecture, same training recipe. If the profile holds, the
-artifact is articulatory. If it changes with language under a fixed synthesiser,
-it is not.
+Same model, same architecture, same training recipe. If the profile holds
+across languages, that is consistent with an articulatory reading but does not
+establish one, since H1's cause is undecided and a resampling artifact alone
+reproduces its signature (`docs/BAND-EDGE.md`). If it changes with language
+under a fixed synthesiser, the articulatory reading is contradicted.
 
 That is a genuinely controlled comparison and it is the whole reason MLAAD is
 the right corpus rather than a collection of per language datasets.
@@ -98,6 +107,13 @@ xtts_v2 at 7.30. Settle it by comparing magnitude spectrograms of one
 griffin_lim file against the M-AILABS file its `original_file` names, and do not
 rely on it as a control until then.
 
+*Note added 2026-10-14: settled, by the re-derivation recorded in
+`docs/PREREGISTRATION-GRIFFINLIM.md`. MLAAD `griffin_lim` reconstructs a
+waveform from the magnitude of the M-AILABS recording its `original_file`
+names (log-mel correlation 0.996 to 0.998 with its own source, waveform not
+inherited). Its test is registered there and has not been run; it needs the
+MLAAD audio.*
+
 ### The prediction this section used to make is already in trouble
 
 **Updated 2026-09-19, and this is the most important change to the design.**
@@ -131,8 +147,8 @@ parametric systems, not the assumption that it leads.
 
 ### Access, resolved
 
-MLAAD is gated and the account is now authorized. Reading gated `meta.csv`
-returns http 200. One schema correction came out of it: the final field is
+MLAAD is gated, access has been granted, and the gated `meta.csv` is readable.
+One schema correction came out of it: the final field is
 `speaker_similarity`, not `reference_speaker` as the paper and card state, and
 it is empty in every row checked.
 
@@ -227,6 +243,14 @@ sonority from voicing needs a language with voiceless sonorants, such as Welsh,
 Icelandic or Burmese, and none is reachable through MLAAD paired with M-AILABS.
 That is a separate corpus problem and should not hold up H2.
 
+*Note added 2026-10-14: the ladder computed by `scripts/sonority_voicing.py` is
+the bare separation of `mgd_hf_std` in each cell. It contains no magnitude
+statistic and is therefore not H1's quantity, the phase minus magnitude
+asymmetry. Testing the ladder in another language tests a different quantity
+from H1, and the two steps of the ladder are not distinguishable from each
+other, so the decomposition into sonority and voicing above is not robust
+(`docs/RESOURCES.md`).*
+
 ## Measurement
 
 Per language and per system, the articulatory feature profile is the vector of
@@ -272,5 +296,8 @@ covariate is therefore not usable. Voice cloning reference does affect phase
 directly, so this is a real uncontrolled variable and belongs in the writeup as
 one.
 
-Fix the tone digit handling in `phonophase.phonology` if any tonal language
-enters later. It is not needed for English, French and Polish.
+~~Fix the tone digit handling in `phonophase.phonology` if any tonal language
+enters later.~~ **Done.** A trailing tone digit is stripped before parsing and
+read separately by `phonology.parse_tone`. Tone is not yet a feature, so a
+tonal language would be measured on segments only. Not needed for English,
+French and Polish.
