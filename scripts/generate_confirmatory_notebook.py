@@ -88,7 +88,10 @@ elif ROUTE == "U":
     uploaded = files.upload()
     name = next(iter(uploaded))
     os.makedirs(TARGET, exist_ok=True)
-    !unzip -q -o "{name}" -d "{TARGET}"
+    # zipfile rather than a shell command, so the file name is never parsed
+    # by a shell. It also refuses entries that would land outside TARGET.
+    import zipfile
+    zipfile.ZipFile(name).extractall(TARGET)
     print(f"unpacked {name}")
 else:
     r = subprocess.run(["git", "clone", "https://github.com/dwinzg/phonophase.git",
@@ -110,10 +113,9 @@ else:
 print("\\ncwd", os.getcwd())
 """),
 code("""
-# transformers is needed for wav2vec2 and is not a package dependency, since
-# only the slicer uses it. torch is left alone so Colab's CUDA build survives.
-!pip install -q -e .
-!pip install -q transformers
+# The align extra brings transformers and datasets at versions without known
+# advisories. torch is left alone so Colab's CUDA build survives.
+!pip install -q -e ".[align]"
 !PYTHON=python bash scripts/run_tests.sh 2>&1 | grep -E "passed|failed"
 """),
 md("""
@@ -149,7 +151,6 @@ HF_DATASET = "SpeechAntiSpoofingBenchmarks/ASVspoof2019_LA"
 MANIFEST = None
 
 if ROUTE_AUDIO == "H":
-    !pip install -q datasets
     assert os.path.exists("configs/protocols/ASVspoof2019.LA.cm.eval.trl.txt"), \\
         "protocol missing from the bundle, rebuild phonophase-colab.zip"
     print("streaming from", HF_DATASET)
@@ -164,7 +165,8 @@ elif ROUTE_AUDIO == "S":
         "upload the result to Drive at MyDrive/phonophase/. Or switch to ROUTE_AUDIO = 'H'."
     )
     if not os.path.exists("/content/eval_subset/manifest.csv"):
-        !unzip -q "{ARCHIVE}" -d /content/eval_subset
+        import zipfile
+        zipfile.ZipFile(ARCHIVE).extractall("/content/eval_subset")
     MANIFEST = "/content/eval_subset/manifest.csv"
     print(open("/content/eval_subset/SUBSET_INFO").read().strip())
 
