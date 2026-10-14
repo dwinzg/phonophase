@@ -90,7 +90,7 @@ about one of them is not a statement about either other.
 
 ## Hypotheses
 
-Three predictions follow from the construction, and a fourth from T7. They are
+Three predictions follow from the construction, and a fourth from the sonority and voicing analysis (`scripts/sonority_voicing.py`). They are
 four different claims about four different quantities and they can come apart.
 
 **G1, the magnitude prediction. About `SEP(mfcc_frame_spread, ·)`.** Because the
@@ -114,7 +114,7 @@ system, where every phone's phase is reconstructed from scratch. Registered as:
 
 **G4, the ladder, registered as secondary. About `LADDER`.** `docs/RESOURCES.md`
 records that "it concentrates in sonorants specifically" is **superseded
-wording** and that the robust form of the T7 result is the ladder:
+wording** and that the robust form of the sonority and voicing result is the ladder:
 `SEP(mgd_hf_std, ·)` runs 0.576, 0.547, 0.515 across `[+son,+voi]`,
 `[-son,+voi]` and `[-son,-voi]` on ASVspoof eval, both steps clear of zero.
 Registered as: within `griffin_lim`, `LADDER` is monotone decreasing across

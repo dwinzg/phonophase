@@ -67,9 +67,8 @@ asvspoof2019_la:
     results/eval_slices.csv.gz, a table of per-phoneme acoustic statistics
     computed from this corpus, is a Produced Work in that sense, and this
     licence does not block publishing it. It does require that notice to
-    exist somewhere the table is published, and as of this audit it does
-    not: there is no NOTICE or ATTRIBUTION file in this repository and no
-    such notice in docs/RESOURCES.md. Suggested text: "Contains information
+    exist somewhere the table is published. NOTICE.md at the repository
+    root carries it, in substance: "Contains information
     from the ASVspoof 2019 database
     (https://datashare.ed.ac.uk/handle/10283/3336), available under the ODC
     Attribution License (https://opendatacommons.org/licenses/by/1-0/)."

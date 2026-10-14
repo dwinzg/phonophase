@@ -6,14 +6,14 @@ If the test comes back negative, the negative gets written up.
 
 Binding in the same way as `docs/PREREGISTRATION.md`. That document registered
 H1 and its outcome is recorded there. This one registers a separate hypothesis
-that came out of T6.
+that came out of the per attack analysis (`scripts/attack_analysis.py`).
 
 ## Where H3 comes from
 
-T6 asked why the sonorant effect varies so much across ASVspoof eval attacks.
+The per attack analysis asked why the sonorant effect varies so much across ASVspoof eval attacks.
 Two things came out of it.
 
-**The variation is smaller than the record claimed.** The research log recorded
+**The variation is smaller than the record claimed.** An earlier summary recorded
 the effect as reversing on four of thirteen attacks, which was treated as a
 serious threat to the articulatory reading. Recomputed with intervals, the
 quantity H1 is about, the sonorant advantage minus the obstruent advantage,
@@ -29,7 +29,7 @@ against +0.069 for the nine that generate it.
 That grouping was written from the ASVspoof 2019 database paper and recorded in
 `configs/asvspoof2019_attacks.yaml` before the per attack numbers were computed
 with `scripts/attack_analysis.py`. But the reversal set was already known from
-the research log, so the partition was chosen by people who knew part of the
+that earlier summary, so the partition was chosen by people who knew part of the
 answer. It is a hypothesis, and it is underpowered where it stands: three
 attacks on one side, an exact permutation p of 0.24, and a smallest attainable p
 of 0.009.
@@ -53,7 +53,7 @@ The ASVspoof 2019 LA **development** partition, attacks A01 to A06.
 
 It has never been sliced. H1 was registered and confirmed on eval, A07 to A19,
 and every analysis in this repository since has run on that eval table. The
-development attacks played no part in forming H1, in forming the T6 grouping, or
+development attacks played no part in forming H1, in forming the per attack grouping, or
 in any number anyone here has seen.
 
 The grouping is fixed in advance by `configs/asvspoof2019_attacks.yaml`, which

@@ -211,7 +211,7 @@ written down afterwards, which is the entire reason registrations exist.
 
 1. Compute the ASYMMETRY interval under registered utterance clustering and add
    it to the outcome record, so the primary test as worded has a result. Done in
-   `task/T15-preregistered-clustering`: **+0.063 [+0.045, +0.081]**, which
+   `scripts/analyse_slices.py`: **+0.063 [+0.045, +0.081]**, which
    satisfies the primary test as written.
 2. Reconcile the two bootstrap draw designs, and re-issue every published
    interval on a multi-category advantage. The conclusions survive; the widths

@@ -52,13 +52,7 @@ Estimator
     disagree with the published eval numbers by construction.
 
 Usage
-    results/dev_slices.csv.gz is a data artifact this branch does not track.
-    Retrieve it first:
-
-        git show task/T6-attack-reversals:results/dev_slices.csv.gz \\
-            > results/dev_slices.csv.gz
-
-    then
+    Both tables are tracked in results/:
 
         python scripts/falsification_4.py \\
             --train-table results/dev_slices.csv.gz \\

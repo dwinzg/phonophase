@@ -52,20 +52,18 @@ else:
 md("""
 ## 2. Code
 
-Two routes. **Upload is the default**, because it needs nothing pushed.
+Two routes. **Clone is the default.**
 
 **Route U, upload a bundle.** Run `./scripts/bundle_for_colab.sh` locally, which
 writes a 160 KB `phonophase-colab.zip` of code only, no corpus and no virtualenv. Run
-the cell below and pick that file. Use this while the repository is being held
-local until a result verifies.
+the cell below and pick that file. Use this to run local changes that are not
+on GitHub.
 
-**Route G, clone from GitHub.** Only works once the tooling commits are pushed,
-and needs a token with `repo` scope from https://github.com/settings/tokens
-because the repository is private. Read with `getpass` so it never lands in
-saved notebook output.
+**Route G, clone from GitHub.** Clones the public repository, no token
+needed.
 """),
 code("""
-ROUTE = "U"     # U uploads a bundle, G clones from GitHub
+ROUTE = "G"     # G clones from GitHub, U uploads a bundle
 REFRESH = False # True replaces code already in the runtime with a fresh upload
 
 import os, shutil, subprocess
@@ -91,21 +89,13 @@ elif ROUTE == "U":
     !unzip -q -o "{name}" -d "{TARGET}"
     print(f"unpacked {name}")
 else:
-    import getpass
-    token = getpass.getpass("GitHub token (hidden): ").strip()
-    r = subprocess.run(["git", "clone",
-                        f"https://{token}@github.com/dwinzg/phonophase.git",
+    r = subprocess.run(["git", "clone", "https://github.com/dwinzg/phonophase.git",
                         TARGET], capture_output=True, text=True)
-    # Never echo the output, it carries the token in the remote URL.
-    print("clone ok" if r.returncode == 0 else "clone failed, check the token")
-    # The clone stored the token in .git/config. Take it back out.
-    subprocess.run(["git", "-C", TARGET, "remote", "set-url", "origin",
-                    "https://github.com/dwinzg/phonophase.git"])
-    del token
+    print("clone ok" if r.returncode == 0 else f"clone failed: {r.stderr.strip()}")
 
 os.chdir(TARGET)
 assert os.path.exists("scripts/slice_and_probe.py"), \\
-    "slice_and_probe.py is missing. If you cloned, the tooling commits are not pushed yet. Use ROUTE = 'U'."
+    "slice_and_probe.py is missing. Use ROUTE = 'U' with a bundle instead."
 
 # Show exactly which build is in the runtime, so a stale bundle is obvious
 # rather than silent.

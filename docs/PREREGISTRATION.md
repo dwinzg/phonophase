@@ -220,8 +220,6 @@ does not falsify H1, because H1 predicts the effect there too.
 
 Reproduce with
 
-    git show task/T6-attack-reversals:results/dev_slices.csv.gz \
-        > results/dev_slices.csv.gz
     python scripts/falsification_4.py \
         --train-table results/dev_slices.csv.gz \
         --eval-table results/eval_slices.csv.gz
