@@ -631,18 +631,27 @@ def verdict(result):
     # A bound within Monte Carlo error of zero decides nothing, and every
     # reading below is a decision about which side of zero bounds fall on.
     # "indistinguishable" would say the cells were told apart and found equal,
-    # so this needs its own label.
-    unsettled = [k for k, c in (("A-B", ab), ("B-C", bc), ("A-C", ac),
-                                ("step difference", result.get("step_difference") or {}))
-                 if c.get("unsettled")]
-    if unsettled:
+    # so this needs its own label. Each reading checks only the quantities it
+    # reads, and a quantity that does not say it is settled is taken as not.
+    def unsettled(**quantities):
+        # Absent is not unsettled: an analysis that did not produce a quantity
+        # names no factor from it anyway, and more draws would not help.
+        names = [k.replace("_", "-") for k, c in quantities.items()
+                 if c is not None and c.get("unsettled", True)]
+        if not names:
+            return None
         return {
             "reading": "unsettled",
             "surprise": False,
-            "why": (f"{', '.join(unsettled)}: a bound is within Monte Carlo error of "
+            "why": (f"{', '.join(names)}: a bound is within Monte Carlo error of "
                     f"zero at {result.get('n_boot')} draws. Rerun with more draws "
                     "before reading anything off the ladder."),
         }
+
+    # A-B and B-C decide every branch, if only by failing to be negative.
+    blocked = unsettled(A_B=ab, B_C=bc)
+    if blocked:
+        return blocked
 
     def positive(c):
         return bool(c["clear"] and c["ci_low"] > 0)
@@ -688,6 +697,11 @@ def verdict(result):
                     f"so neither sonority nor voicing is named."),
         }
 
+    if positive(ab) != positive(bc):
+        # Naming either factor reads the step difference.
+        blocked = unsettled(step_difference=steps)
+        if blocked:
+            return blocked
     if positive(ab) and not positive(bc):
         if steps_differ(+1):
             return {
@@ -715,6 +729,9 @@ def verdict(result):
             "why": ("A-B and B-C both clear. Neither label is right. Separation tracks "
                     "how much of the slice carries periodic excitation."),
         }
+    blocked = unsettled(A_C=ac)
+    if blocked:
+        return blocked
     if positive(ac):
         return {
             "reading": "graded-weak",

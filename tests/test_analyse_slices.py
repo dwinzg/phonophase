@@ -536,18 +536,26 @@ def test_system_jackknife_is_the_delete_one_system_formula():
     jk = analyse_slices.system_jackknife(data)
     assert jk["systems"] == 5
 
-    def asym(d):
-        return (analyse_slices.observed_mean(d, SONORANTS)
-                - analyse_slices.observed_mean(d, analyse_slices.OBSTRUENTS))
+    # Recomputed from the raw arrays with sklearn, so a wrong advantage or
+    # category set in the script cannot agree with itself here.
+    from sklearn.metrics import roc_auc_score
 
-    reps = []
-    for a in ["A07", "A08", "A09", "A10", "A11"]:
-        reps.append(asym({c: {k: (v[d["attack"] != a] if np.ndim(v) else v)
-                              for k, v in d.items()} for c, d in data.items()}))
-    reps = np.array(reps)
+    def adv(d, keep):
+        y = d["y"][keep]
+        fold = [max(a, 1 - a) for a in (roc_auc_score(y, d[k][keep])
+                                        for k in ("mgd_hf_std", "mfcc_frame_spread"))]
+        return fold[0] - fold[1]
+
+    def asym(drop=None):
+        means = []
+        for group in (SONORANTS, analyse_slices.OBSTRUENTS):
+            means.append(np.mean([adv(data[c], data[c]["attack"] != drop) for c in group]))
+        return means[0] - means[1]
+
+    reps = np.array([asym(a) for a in ["A07", "A08", "A09", "A10", "A11"]])
     se = np.sqrt(4 / 5 * ((reps - reps.mean()) ** 2).sum())
     est, lo, hi = jk["asymmetry"]
-    assert abs(est - asym(data)) < 1e-12
+    assert abs(est - asym()) < 1e-12
     assert abs((hi - lo) / 2 - sps.t.ppf(0.975, 4) * se) < 1e-12
     assert se > 0, "one system is shifted, so the replicates must differ"
 

@@ -499,7 +499,7 @@ def _result(ab, bc, ac, usable=True, steps=None):
     def contrast(lo, hi):
         return {"delta": (lo + hi) / 2, "ci_low": lo, "ci_high": hi,
                 "q": 0.001 if (lo > 0 or hi < 0) else 0.9,
-                "clear": lo > 0 or hi < 0}
+                "clear": lo > 0 or hi < 0, "unsettled": False}
 
     cell = {"usable": usable, "n_utterances_bonafide": 100, "n_utterances_spoof": 100,
             "n_slices": 400, "why_unusable": None}
@@ -513,7 +513,7 @@ def _result(ab, bc, ac, usable=True, steps=None):
         out["step_difference"] = {
             "delta": (lo + hi) / 2, "ci_low": lo, "ci_high": hi,
             "p": 0.001 if (lo > 0 or hi < 0) else 0.9,
-            "clear": lo > 0 or hi < 0,
+            "clear": lo > 0 or hi < 0, "unsettled": False,
         }
     return out
 
@@ -530,6 +530,19 @@ def test_a_bound_on_zero_is_unsettled_rather_than_indistinguishable():
     v = verdict(r)
     assert v["reading"] == "unsettled", v
     assert "B-C" in v["why"] and "300" in v["why"]
+
+
+def test_an_unsettled_quantity_a_reading_does_not_use_does_not_block_it():
+    """Graded reads A-B and B-C only, so an unsettled step difference is irrelevant."""
+    r = _result((0.02, 0.06), (0.02, 0.05), (0.05, 0.10), steps=(-0.03, 0.02))
+    r["step_difference"]["unsettled"] = True
+    assert verdict(r)["reading"] == "graded"
+
+
+def test_a_contrast_that_does_not_say_it_is_settled_is_taken_as_unsettled():
+    r = _result((0.02, 0.06), (0.02, 0.05), (0.05, 0.10))
+    del r["contrasts"]["B-C"]["unsettled"]
+    assert verdict(r)["reading"] == "unsettled"
 
 
 # --------------------------------------------------------------------------

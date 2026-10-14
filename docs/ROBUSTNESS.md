@@ -98,14 +98,25 @@ speaker rows above show they are not. The reading this
 supports is that under system clustering the LEVEL is not distinguishable from
 zero, and the ASYMMETRY is.
 
-A second interval built differently gives the same reading. Under
+A second interval, built differently, points the same way. Under
 `--cluster system` the script also prints a delete one system jackknife with a
-t interval on 12 degrees of freedom. On `seg=run` it gives LEVEL +0.048
-[+0.001, +0.095] and ASYMMETRY +0.063 [+0.021, +0.105], against the percentile
-[+0.003, +0.082] and [+0.021, +0.100]. It holds the bonafide side fixed, so it
-is slightly too narrow, and the coverage of neither interval has been measured
-on this statistic. The ASYMMETRY clears zero by 0.02 under both; the LEVEL by
-0.001 under one and 0.003 under the other, which is no margin at all.
+t interval on 12 degrees of freedom:
+
+| `seg` | LEVEL | ASYMMETRY |
+|---|---|---|
+| run | +0.048 [+0.001, +0.095] | +0.063 [+0.021, +0.105] |
+| window | +0.046 [-0.000, +0.093] | +0.063 [+0.018, +0.107] |
+
+It holds the bonafide side fixed, so it is too narrow by however much the
+bonafide side varies. If bonafide utterances are independent that is a few
+percent. Clustered by the 67 speakers it is about 17 percent, by a bonafide
+only bootstrap added in quadrature, which is approximate because 48 speakers
+are on both sides; the run intervals then become about [-0.01, +0.10] and
+[+0.01, +0.11]. The coverage of neither this nor the percentile interval has
+been measured on this statistic. So the ASYMMETRY clears zero under every
+variant tried, by at least 0.01. The LEVEL clears it by about 0.002 at best
+(the settled 40,000 draw bound above) and not at all under the other variants,
+which is no margin.
 
 ## Pooled against per system
 
