@@ -107,7 +107,12 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from analyse_slices import open_table  # noqa: E402
 
 from phonophase.stats import (  # noqa: E402
-    _cluster_draw, _prepare_clusters, benjamini_hochberg, fast_auc, settled_nonzero,
+    _cluster_draw,
+    _prepare_clusters,
+    benjamini_hochberg,
+    fast_auc,
+    require_bonafide_label,
+    settled_nonzero,
 )
 
 # The pre-registered grouping, copied from scripts/analyse_slices.py so the two
@@ -120,8 +125,6 @@ MAGNITUDE = "mfcc_frame_spread"
 
 MIN_SLICES = 30
 MIN_UTTERANCES = 10
-
-BONAFIDE_MARKERS = {"-", "", "bonafide", "none", "nan", "real"}
 
 # Above this many assignments the permutation null is sampled rather than
 # enumerated. Thirteen attacks never reach it. A larger corpus might.
@@ -175,7 +178,7 @@ def check_coverage(attacks, taxonomy):
 def group_means(statistics, taxonomy, key):
     """Split a per attack statistic on a taxonomy field, holding out unknowns."""
     groups = {True: [], False: [], None: []}
-    for attack, value in statistics.items():
+    for attack in statistics:
         groups[taxonomy[attack][key]].append(attack)
 
     def mean(names):
@@ -198,7 +201,8 @@ def group_means(statistics, taxonomy, key):
 def load(path, seg):
     """Read one segmentation of a slice table into aligned arrays."""
     columns = {k: [] for k in ("y", "u", "attack", "category", "phase", "magnitude")}
-    with open_table(path) as fh:
+    with open_table(path, ("seg", "label", "utterance_id", "attack", "category",
+                           PHASE, MAGNITUDE)) as fh:
         for row in csv.DictReader(fh):
             if row["seg"] != seg:
                 continue
@@ -214,14 +218,7 @@ def load(path, seg):
     data["phase"] = data["phase"].astype(np.float64)
     data["magnitude"] = data["magnitude"].astype(np.float64)
 
-    marked = np.isin(np.char.lower(data["attack"].astype(str)), sorted(BONAFIDE_MARKERS))
-    labels = np.unique(data["y"][marked])
-    if labels.size != 1:
-        raise ValueError(
-            f"rows with no attack carry labels {labels.tolist()}, so which label "
-            f"means bonafide cannot be read from the table"
-        )
-    data["bonafide_label"] = int(labels[0])
+    data["bonafide_label"] = require_bonafide_label(data["y"], data["attack"])
     return data
 
 
@@ -422,7 +419,7 @@ def pooled_asymmetries(data):
         cat = categories[rows]
 
         def group(names):
-            selected = rows[np.isin(cat, names)]
+            selected = rows[np.isin(cat, names)]  # noqa: B023, called inside this iteration
             ys = is_bona[selected]
             if selected.size == 0 or np.unique(ys).size < 2:
                 return float("nan")
@@ -568,13 +565,17 @@ def bootstrap_group_difference(results, members_true, members_false, alpha=0.05)
     if not members_true or not members_false:
         return None
     stack = lambda names: np.vstack([results[n]["draws"]["asymmetry"] for n in names])
+    observed = (np.mean([results[n]["asymmetry"] for n in members_true])
+                - np.mean([results[n]["asymmetry"] for n in members_false]))
     difference = stack(members_true).mean(axis=0) - stack(members_false).mean(axis=0)
     finite = difference[np.isfinite(difference)]
     if finite.size < 2:
         return None
     low, high = np.percentile(finite, [100 * alpha / 2, 100 * (1 - alpha / 2)])
     return {
-        "difference": float(np.mean(finite)),
+        # The observed difference, not the mean of the draws, which carries the
+        # bootstrap's own bias and printed -0.0690 beside an observed -0.0631.
+        "difference": float(observed),
         "ci_low": float(low),
         "ci_high": float(high),
         "excludes_zero": settled_nonzero(finite, alpha),
@@ -662,6 +663,17 @@ def print_report(results, taxonomy, seg, n_boot, data):
           f"{', '.join(sorted(a for a, v in levels.items() if v < 0)) or 'none'}")
     print("An attack with a negative level and a positive asymmetry is one where phase")
     print("loses to magnitude everywhere and loses LESS in sonorants. H1 holds there.")
+
+    # Each system weighted once, the per system view in docs/ROBUSTNESS.md.
+    from scipy import stats as sps
+    print("\nMean over systems, each scored alone, t interval on n - 1 df")
+    for name, statistics in (("level", levels), ("asymmetry", asymmetries)):
+        v = np.array([x for x in statistics.values() if np.isfinite(x)])
+        if v.size < 3:
+            continue
+        half = sps.t.ppf(0.975, v.size - 1) * v.std(ddof=1) / np.sqrt(v.size)
+        print(f"  {name:<10} {v.mean():+.3f} [{v.mean() - half:+.3f}, {v.mean() + half:+.3f}] "
+              f"over {v.size} systems")
 
     for label, statistics in (("asymmetry", asymmetries), ("level", levels)):
         split = group_means(statistics, taxonomy, "natural_phase_origin")

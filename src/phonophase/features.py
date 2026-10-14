@@ -40,8 +40,8 @@ Reference for the MGD formulation
 
 from __future__ import annotations
 
-import numpy as np
 import librosa
+import numpy as np
 from scipy.fft import dct, idct
 
 # Defaults chosen to match config.yaml so that behaviour is predictable when a
@@ -316,7 +316,7 @@ class FusedFeatureExtractor:
         return np.stack([mfcc, mgd], axis=0).astype(np.float32)
 
 
-def compute_global_stats(extractor: "FusedFeatureExtractor", signals) -> dict:
+def compute_global_stats(extractor: FusedFeatureExtractor, signals) -> dict:
     """
     Accumulate corpus level mean and standard deviation for each channel.
 

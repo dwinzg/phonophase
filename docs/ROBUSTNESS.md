@@ -121,13 +121,13 @@ which is no margin.
 ## Pooled against per system
 
 Every figure above pools the 13 systems into one spoofed class. Scoring each
-system alone against all bonafide speech, which `scripts/attack_analysis.py`
-prints, and taking the mean of the 13 values with a t interval on 12 degrees of
-freedom:
+system alone against all bonafide speech and taking the mean of the 13 values
+with a t interval on 12 degrees of freedom, both of which
+`scripts/attack_analysis.py` prints:
 
 | quantity | pooled | mean of 13 per system values | negative on |
 |---|---|---|---|
-| LEVEL | +0.048 | +0.030 [-0.012, +0.071] | A08, A13, A19 |
+| LEVEL | +0.048 | +0.029 [-0.012, +0.071] | A08, A13, A19 |
 | ASYMMETRY | +0.063 | +0.052 [+0.012, +0.093] | A19 |
 
 The pooled LEVEL is larger than the typical per system one. The magnitude

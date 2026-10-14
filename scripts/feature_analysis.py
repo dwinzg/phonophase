@@ -71,7 +71,6 @@ from __future__ import annotations
 
 import argparse
 import csv
-import gzip
 import os
 import sys
 
@@ -79,9 +78,14 @@ import numpy as np
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "src"))
 
+from analyse_slices import open_table  # noqa: E402
+
 from phonophase.phonology import FEATURE_NAMES, features  # noqa: E402
 from phonophase.stats import (  # noqa: E402
-    _cluster_draw, _cluster_index, benjamini_hochberg, fast_auc,
+    _cluster_draw,
+    _cluster_index,
+    benjamini_hochberg,
+    fast_auc,
 )
 
 PHASE = "mgd_hf_std"
@@ -99,9 +103,8 @@ MIN_UTTERANCES = 10
 
 def load(path, seg, stat=PHASE):
     """Read one segmentation out of the slice table into aligned arrays."""
-    opener = gzip.open if path.endswith(".gz") else open
     y, utt, phone, value = [], [], [], []
-    with opener(path, "rt", newline="") as fh:
+    with open_table(path, ("seg", "label", "utterance_id", "phoneme", stat)) as fh:
         for r in csv.DictReader(fh):
             if r["seg"] != seg:
                 continue
@@ -282,8 +285,6 @@ def analyse(data, matrix, parsed, n_boot=2000, seed=0, alpha=0.05, verbose=True)
     check_clusters_are_single_class(y, utterances)
 
     bins, n_bins = dense_bins(x)
-    positives = np.flatnonzero(y == 1)
-    negatives = np.flatnonzero(y == 0)
 
     # Per feature row sets, fixed before any resampling.
     plans, results = [], []
@@ -631,7 +632,7 @@ def report(results, collin, data, parsed, seg, table, n_boot):
         print("it did in the full sample, so max(auc, 1-auc) is a uniform sign change")
         print("here and its upward bias near chance is not in play.")
     else:
-        print(f"WARNING. A group crossed chance relative to the full sample in")
+        print("WARNING. A group crossed chance relative to the full sample in")
         print(f"{flipped} feature-draws. max(auc, 1-auc) is biased upward near chance")
         print("and two unequally sized groups inherit unequal amounts of it, so the")
         print("difference for those features is not trustworthy. Check which.")

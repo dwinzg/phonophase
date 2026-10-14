@@ -29,16 +29,19 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "scripts"))
 sys.path.insert(0, os.path.dirname(__file__))
 
 from sonority_voicing import (  # noqa: E402
-    SON_VOI, OBS_VOI, OBS_UNVOI, SON_UNVOI,
+    OBS_UNVOI,
+    OBS_VOI,
+    SON_UNVOI,
+    SON_VOI,
     analyse,
     assign_cells,
     bonafide_label,
+    cell_of,
     cluster_groups,
     contrast_label,
     drop_quietest,
-    subset_rows,
-    cell_of,
     folded_from_auc,
+    subset_rows,
     verdict,
 )
 

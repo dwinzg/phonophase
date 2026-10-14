@@ -1,0 +1,24 @@
+# Versions known to reproduce every published number, Python 3.12.10, checked
+# 2026-10-14 by regenerating the headline intervals and the eval table from
+# audio. pyproject.toml keeps lower bounds so the package installs anywhere;
+# use this file when you need the published numbers exactly:
+#     pip install -e ".[dev]" -c constraints.txt
+numpy==2.5.3
+scipy==1.18.1
+librosa==1.0.0
+numba==0.67.0
+llvmlite==0.49.0
+soundfile==0.14.0
+soxr==1.1.0
+scikit-learn==1.9.1
+panphon==0.22.2
+PyYAML==6.0.3
+tqdm==4.70.1
+matplotlib==3.11.2
+pytest==9.1.1
+ipython==9.17.1
+# Alignment pass only (pip install -e ".[align]"), with the model revision
+# pinned in scripts/slice_and_probe.py.
+torch==2.14.0
+transformers==5.17.0
+datasets==5.0.1

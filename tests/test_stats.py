@@ -76,6 +76,29 @@ def test_bootstrap_needs_both_classes():
     raise AssertionError("expected ValueError when one class is missing")
 
 
+def test_a_clustered_permutation_moves_whole_groups():
+    """
+    Ten slices per utterance, copied: rows look independent and are not. The
+    row shuffle gives a p far too small; the cluster shuffle sees 40 utterances.
+    """
+    rng = np.random.default_rng(0)
+    utt_label = np.repeat([0, 1], 20)
+    utt_score = rng.normal(size=40) + 0.4 * utt_label
+    y, s, g = (np.repeat(a, 10) for a in (utt_label, utt_score, np.arange(40)))
+    rows = permutation_test_auc(y, s, n_perm=PERM, seed=0)["p_value"]
+    clustered = permutation_test_auc(y, s, n_perm=PERM, seed=0, groups=g)["p_value"]
+    assert clustered > 5 * rows, (rows, clustered)
+
+
+def test_a_group_carrying_both_labels_is_refused():
+    try:
+        permutation_test_auc([0, 1, 0, 1], [0.1, 0.2, 0.3, 0.4], n_perm=10,
+                             groups=["a", "a", "b", "b"])
+    except ValueError:
+        return
+    raise AssertionError("a mixed group must be refused")
+
+
 def test_permutation_detects_real_separation():
     y, s = _separable(n=150, gap=2.0, seed=3)
     r = permutation_test_auc(y, s, n_perm=PERM, seed=0)

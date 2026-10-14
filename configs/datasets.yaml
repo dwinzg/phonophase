@@ -3,9 +3,8 @@
 # ==========================================================================
 #
 # Why this file exists
-#   Nothing in this repository recorded which corpora were used, where they
-#   came from, or under what terms. That made the published Bengali result
-#   unverifiable by anyone, including its author. This is the fix.
+#   Records which corpora are used, where they come from and under what
+#   terms, so every result can be traced to its data and its licence.
 #
 # How to read the fields
 #   licence_verified   true means the licence was read from the source page.

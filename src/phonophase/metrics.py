@@ -29,7 +29,7 @@ from __future__ import annotations
 import warnings
 
 import numpy as np
-from sklearn.metrics import roc_curve, roc_auc_score
+from sklearn.metrics import roc_auc_score, roc_curve
 
 
 def compute_eer(y_true, y_scores, pos_label: int = 1) -> tuple[float, float]:

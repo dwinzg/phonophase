@@ -14,8 +14,8 @@ about high frequency energy.
 
 from __future__ import annotations
 
-import numpy as np
 import librosa
+import numpy as np
 
 from phonophase.features import modified_group_delay
 
@@ -46,7 +46,15 @@ def _spread(plane: np.ndarray) -> tuple[float, float, float]:
 
 
 def slice_statistics(audio: np.ndarray) -> dict | None:
-    """Reduce one audio slice to the scalars in STATISTIC_NAMES, or None."""
+    """
+    Reduce one audio slice to the scalars in STATISTIC_NAMES, or None.
+
+    `audio` must be mono at SR (16 kHz). Stereo would be framed along the
+    channel axis and return finite nonsense, so it is refused.
+    """
+    audio = np.asarray(audio)
+    if audio.ndim != 1:
+        raise ValueError(f"slice_statistics needs mono audio, got shape {audio.shape}")
     if audio.size < MIN_SAMPLES:
         return None
 

@@ -8,8 +8,8 @@ down the defect this module was written to fix.
 import os
 import sys
 
-import numpy as np
 import librosa
+import numpy as np
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 sys.path.insert(0, os.path.dirname(__file__))
@@ -215,6 +215,32 @@ def test_unknown_normalisation_is_rejected():
     except ValueError:
         return
     raise AssertionError("expected ValueError for an unknown normalisation mode")
+
+
+def test_slice_statistics_refuses_stereo():
+    from phonophase.probe import slice_statistics
+
+    try:
+        slice_statistics(np.zeros((4000, 2)))
+    except ValueError:
+        return
+    raise AssertionError("stereo audio must be refused, not framed along the channels")
+
+
+def test_load_config_looks_in_the_working_directory_first():
+    import tempfile
+
+    from phonophase.config import load_config
+
+    here = os.getcwd()
+    with tempfile.TemporaryDirectory() as tmp:
+        with open(os.path.join(tmp, "config.yaml"), "w") as fh:
+            fh.write("marker: from_cwd\n")
+        os.chdir(tmp)
+        try:
+            assert load_config()["marker"] == "from_cwd"
+        finally:
+            os.chdir(here)
 
 
 if __name__ == "__main__":

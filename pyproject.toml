@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "phonophase"
-version = "0.1.0"
+dynamic = ["version"]
 description = "Measuring where a group delay statistic separates genuine from synthetic speech across classes of sound, with cluster robust statistics and pre-registered tests."
 readme = "README.md"
 requires-python = ">=3.10"
@@ -40,7 +40,7 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-dev = ["pytest>=8.0", "ipython>=8.0"]
+dev = ["pytest>=8.0", "ipython>=8.0", "ruff>=0.6"]
 # Only the alignment pass needs these, so they are not a runtime dependency.
 align = ["transformers>=4.40", "datasets>=2.18"]
 # Only scripts/make_report_figures.py needs this.
@@ -52,10 +52,24 @@ Repository = "https://github.com/dwinzg/phonophase"
 [tool.setuptools]
 package-dir = { "" = "src" }
 
+[tool.setuptools.dynamic]
+version = { attr = "phonophase.__version__" }
+
 [tool.setuptools.packages.find]
 where = ["src"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 pythonpath = ["src"]
-addopts = "-v"
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+extend-exclude = ["notebooks"]
+
+[tool.ruff.lint]
+select = ["E", "F", "B", "UP", "I"]
+# Long lines, one-line compound statements and lambdas are house style here;
+# zip(strict=) adds noise where lengths match by construction; %-formatting is used in
+# fixed-width tables where it reads better.
+ignore = ["E501", "E702", "E731", "E741", "B905", "UP031"]

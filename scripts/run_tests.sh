@@ -1,7 +1,7 @@
 #!/bin/bash
 # Run the test suite with no dependencies beyond the runtime ones.
 # Override the interpreter with PYTHON=python3 scripts/run_tests.sh
-# Use pytest instead once requirements-dev.txt is installed.
+# Use pytest instead once the dev extra is installed (pip install -e '.[dev]').
 set -u
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"

@@ -1,5 +1,7 @@
 """Generate notebooks/confirmatory_run.ipynb. Kept as source, not JSON."""
-import json, pathlib
+import json
+import pathlib
+
 
 def _lines(t):
     """

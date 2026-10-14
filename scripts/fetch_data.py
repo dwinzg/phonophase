@@ -25,7 +25,6 @@ import argparse
 import hashlib
 import os
 import subprocess
-import sys
 import zipfile
 
 import yaml
