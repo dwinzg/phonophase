@@ -1,5 +1,18 @@
 # Research design
 
+> **A record, not the current state. Note added 2026-10-14.** This is the design
+> memo of 2026-09-18, kept as written apart from the dated notes marked below.
+> The table in section 2 is a best of many comparison, the best phase statistic
+> against the best magnitude statistic, and `docs/PLAN.md` Phase 0 corrected
+> it: under the pre-registered pair, phase is ahead in zero of six categories.
+> The physical account in section 2 and the mechanism in section 3 were
+> hypotheses on that date and are not findings. No mechanism may be stated for
+> H1, because a low quality resampler on genuine speech alone reproduces its
+> signature (`docs/BAND-EDGE.md`, rule R1). Phoneme conditioned fusion and data
+> efficiency curves, proposed below, are out of scope (`docs/SCOPE.md`). For
+> results read `docs/PREREGISTRATION.md`, `docs/ROBUSTNESS.md` and
+> `docs/BAND-EDGE.md`.
+
 Written 2026-09-18. This document is deliberately unflattering. It exists so
 that a reviewer's objections are met here first rather than in review.
 
@@ -73,9 +86,14 @@ Three things stand out.
 gate. Had phase lost everywhere, the whole thesis would be dead regardless of
 framing. It did not.
 
+*Note added 2026-10-14: this count is an artifact of selection. It compares the
+best of several phase statistics with the best of several magnitude statistics.
+Under the pre-registered pair, `mgd_hf_std` against `mfcc_frame_spread`, phase
+is ahead in zero of six categories (`docs/PLAN.md`, Phase 0).*
+
 **The advantage sits in sonorants, not obstruents.** Nasals, approximants and
-steady vowels are the phase wins. Fricatives, the class the February framing
-named, is one of only two categories where magnitude wins.
+steady vowels are the phase wins. Fricatives, the class the project's February 2026 framing
+named as vulnerable (`configs/literature.yaml`), is one of only two categories where magnitude wins.
 
 There is a physical account for that, and it is the opposite of the project's
 current story. Sonorants are voiced and periodic, so they carry coherent
@@ -85,7 +103,9 @@ close to random in real speech too, so there is little structure for a synthesis
 artifact to disturb. Magnitude, meanwhile, does discriminate on fricatives,
 which is exactly what the published phoneme level work reports.
 
-**The direction is consistent with Spectral Collapse.** Every MGD statistic runs
+**The direction is consistent with Spectral Collapse**, the predecessor
+project's name for its premise that synthetic speech carries smoother, less
+dispersed phase than a real vocal tract produces. Every MGD statistic runs
 `bonafide_higher`, meaning real speech has greater phase dispersion than
 synthetic. That is the claim the project has been making, now measured on a
 feature that is actually phase.
@@ -110,6 +130,15 @@ Treat the table as a direction worth testing, not a result.
 
 **Magnitude and phase carry complementary phoneme level information. Magnitude
 discriminates on obstruents, phase on sonorants.**
+
+*Note added 2026-10-14: not established, and not what was later confirmed. H1
+states a difference between domains: upper band group delay dispersion
+(`mgd_hf_std`) gains more over cepstral dispersion (`mfcc_frame_spread`) in
+sonorants than in obstruents, ASYMMETRY +0.063 [+0.045, +0.080] on eval. That
+does not mean phase discriminates on sonorants and magnitude on obstruents.
+Against the magnitude statistic `hf_lf_tilt` the asymmetry is +0.009 [-0.003,
++0.033], so the phase reading is not supported, and the cause is undecided
+(`docs/ROBUSTNESS.md`, `docs/BAND-EDGE.md`).*
 
 If that survives scale, it is a physically grounded justification for fusing the
 two, which is what the architecture already does but has never justified. It
@@ -152,8 +181,8 @@ unseen attacks, A07 to A19, rather than on training attacks.
 
 **Analysis, with a detector component that follows from it rather than leads.**
 
-Decided 2026-09-18, when the project moved from Master's work to an open ended
-one. Recorded here with the reasoning so it can be revisited rather than
+Decided 2026-09-18, when the project moved from a deadline bound degree
+project to an open ended one. Recorded here with the reasoning so it can be revisited rather than
 re-argued.
 
 ### Why not a detector contribution
@@ -176,7 +205,8 @@ it needs modest compute. The probe runs in minutes on CPU.
 An open ended project is good at exactly this and bad at leaderboard chasing.
 Curiosity into a gap is the comparative advantage here, not throughput.
 
-An analysis contribution also survives a 10% EER. A detector contribution does
+An analysis contribution also survives a 10% EER, which is what the
+predecessor detector reported. A detector contribution does
 not. The bar for analysis is rigour, and rigour is affordable.
 
 ### The part that is not a binary
@@ -219,7 +249,8 @@ Gates first. Each of the first three can end a line of work, so run them before
 investing in anything downstream. They are cheap.
 
 1. **Resolve dev versus eval.** Until this is known there is no baseline. If the
-   10.0% was on dev it is on attacks already seen and means much less.
+   predecessor detector's reported 10.0% EER (April 2026, partition never
+   recorded) was on dev, it is on attacks already seen and means much less.
 2. **Ablation, MFCC against MGD against both.** `--channels` does this from one
    subset build. If phase adds nothing at the model level, sections 2 and 3 are
    void regardless of what the probe shows at the statistic level.
@@ -239,7 +270,7 @@ Then the analysis core. This is the contribution.
    already emits IPA from a multilingual model so the phonetic space is shared
    by construction. Promoted above the detector work because a positive result
    here is the finding, and a negative one closes the line honestly.
-6. **Regenerate the Spectral Collapse artifacts** through corrected features with
+6. **Regenerate the predecessor's Spectral Collapse figures** through corrected features with
    corpus level normalisation. The existing figures came through the ramp.
 
 Then the model, as a consequence rather than a goal.
