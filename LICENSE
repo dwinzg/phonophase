@@ -24,11 +24,8 @@ SOFTWARE.
 
 This license covers the source code in this repository.
 
-It does not cover the speech corpora used for training and evaluation. The
-ASVspoof 2019 database and any Bengali corpus used here are distributed by
-their own authors under their own terms, which are generally more restrictive
-and often prohibit redistribution. Obtain them from their original sources and
-comply with those terms separately.
-
-Model checkpoints trained on those corpora may be subject to the corpus terms
-as well. Check before redistributing weights.
+It does not cover the ASVspoof 2019 database or any other corpus, which are
+distributed by their authors under their own terms. No audio is included here.
+The derived tables in results/ and the protocol file in configs/protocols/ are
+redistributed under the ASVspoof 2019 database's ODC Attribution License; see
+NOTICE.md.

@@ -253,7 +253,7 @@ question for a design that varies attacks while holding speakers fixed.
 **Corrected 2026-10-09.** Two things in this section are superseded and are
 left below as written. First, the per attack figures: they came from an
 earlier estimator and mix the LEVEL with the ASYMMETRY. With the current code
-the LEVEL is positive on 10 of 13 attacks, mean +0.030, from +0.141 on A14 to
+the LEVEL is positive on 10 of 13 attacks, mean +0.029, from +0.141 on A14 to
 -0.092 on A08, and negative on A08, A13 and A19, not on A16. The ASYMMETRY,
 which is what H1 states, has a positive point estimate on 12 of 13, is clear
 after correction on four of them, and is clearly negative only on A19

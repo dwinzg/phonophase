@@ -126,10 +126,11 @@ lingual work (`docs/H2-DESIGN.md`) waits on it.
 ## Reproduce the result
 
 The eval table ships in the repository. No GPU, no corpus, about a minute each.
+Where every table came from, and its checksum, is in `results/PROVENANCE.md`.
 
 ```bash
 python3 -m venv .venv && source .venv/bin/activate
-pip install -e ".[dev]"
+pip install -e ".[dev]" -c constraints.txt   # the versions that produced the numbers
 
 python scripts/analyse_slices.py --table results/eval_slices.csv.gz
 python scripts/analyse_slices.py --table results/eval_slices.csv.gz --cluster system

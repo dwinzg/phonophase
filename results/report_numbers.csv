@@ -8,7 +8,7 @@ clustering,speaker (per class),level,0.048,0.006,0.087,docs/ROBUSTNESS.md
 clustering,system (13 clusters),asymmetry,0.063,0.021,0.100,docs/ROBUSTNESS.md
 clustering,system (13 clusters),level,0.048,0.003,0.082,docs/ROBUSTNESS.md
 clustering,mean of 13 systems,asymmetry,0.052,0.012,0.093,docs/ROBUSTNESS.md
-clustering,mean of 13 systems,level,0.030,-0.012,0.071,docs/ROBUSTNESS.md
+clustering,mean of 13 systems,level,0.029,-0.012,0.071,docs/ROBUSTNESS.md
 pair,MFCC spread (registered),asymmetry,0.063,0.045,0.080,docs/ROBUSTNESS.md
 pair,MFCC std,asymmetry,0.055,0.037,0.071,docs/ROBUSTNESS.md
 pair,MFCC IQR,asymmetry,0.052,0.030,0.076,docs/ROBUSTNESS.md
