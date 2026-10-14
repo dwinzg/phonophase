@@ -119,8 +119,9 @@ is registered and not yet run.
   tested on the development partition, and did not replicate.
 - H3, that the pattern follows whether a system generates or inherits its
   waveform phase, was registered and run on the development partition. Its
-  direction held on all six development systems, but the registered pooled
-  test, with duplicated algorithms removed, gave p = 0.16. Not supported.
+  direction held on all six development systems, and the pooled test gave
+  p = 0.021. The registration counts an algorithm that appears in both
+  partitions only once, and with those removed p = 0.16. Not supported.
 - Per system, the ASYMMETRY is clearly positive on 4 of the 13 eval systems,
   clearly negative on one (A19) and undecided on the other 8.
 
