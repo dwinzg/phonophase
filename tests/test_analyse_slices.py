@@ -501,6 +501,74 @@ def test_the_power_check_is_unchanged_on_the_published_eval_counts():
     assert len(adequately_powered(per_category, SONORANTS)) == 3
 
 
+def _system_table(path, n_systems=5, per_system=12, bump=None):
+    """Six categories, bonafide plus `n_systems` attacks. `bump` shifts one system."""
+    rng = np.random.default_rng(3)
+    lines = [HEADER]
+    cats = analyse_slices.SONORANTS + analyse_slices.OBSTRUENTS
+    for c in cats:
+        for i in range(per_system * 2):
+            lines.append(_row(f"B{i:03d}", 0, "-", c, rng.normal(), rng.normal()))
+        for s in range(n_systems):
+            shift = 0.8 if c in analyse_slices.SONORANTS else 0.2
+            if bump == s:
+                shift += 1.0
+            for i in range(per_system):
+                lines.append(_row(f"S{s}_{i:03d}", 1, f"A{7 + s:02d}", c,
+                                  rng.normal() + shift, rng.normal() + 0.2))
+    with open(path, "w") as fh:
+        fh.write("\n".join(lines) + "\n")
+
+
+def test_system_jackknife_is_the_delete_one_system_formula():
+    """
+    Recomputed here by hand: drop each attack's spoof rows, keep every
+    bonafide row, take the jackknife standard error and a t quantile on
+    g - 1 degrees of freedom.
+    """
+    import tempfile
+    from scipy import stats as sps
+
+    with tempfile.TemporaryDirectory() as tmp:
+        path = os.path.join(tmp, "t.csv")
+        _system_table(path, bump=2)
+        data = analyse_slices.load(path, "run")
+    jk = analyse_slices.system_jackknife(data)
+    assert jk["systems"] == 5
+
+    # Recomputed from the raw arrays with sklearn, so a wrong advantage or
+    # category set in the script cannot agree with itself here.
+    from sklearn.metrics import roc_auc_score
+
+    def adv(d, keep):
+        y = d["y"][keep]
+        fold = [max(a, 1 - a) for a in (roc_auc_score(y, d[k][keep])
+                                        for k in ("mgd_hf_std", "mfcc_frame_spread"))]
+        return fold[0] - fold[1]
+
+    def asym(drop=None):
+        means = []
+        for group in (SONORANTS, analyse_slices.OBSTRUENTS):
+            means.append(np.mean([adv(data[c], data[c]["attack"] != drop) for c in group]))
+        return means[0] - means[1]
+
+    reps = np.array([asym(a) for a in ["A07", "A08", "A09", "A10", "A11"]])
+    se = np.sqrt(4 / 5 * ((reps - reps.mean()) ** 2).sum())
+    est, lo, hi = jk["asymmetry"]
+    assert abs(est - asym()) < 1e-12
+    assert abs((hi - lo) / 2 - sps.t.ppf(0.975, 4) * se) < 1e-12
+    assert se > 0, "one system is shifted, so the replicates must differ"
+
+
+def test_system_jackknife_refuses_fewer_than_three_systems():
+    import tempfile
+
+    with tempfile.TemporaryDirectory() as tmp:
+        path = os.path.join(tmp, "t.csv")
+        _system_table(path, n_systems=2)
+        assert analyse_slices.system_jackknife(analyse_slices.load(path, "run")) is None
+
+
 if __name__ == "__main__":
     from _runner import main
     main(globals(), "test_analyse_slices")

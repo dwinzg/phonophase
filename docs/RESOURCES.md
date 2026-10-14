@@ -153,6 +153,13 @@ it is 7, 1 and 5, because three attacks sit near the boundary and cross it.
 Stable on both: A08, A09, A14, A17 positive, A19 the only reversal, A16 and A18
 undecided.
 
+Rerun at 25,000 draws, seed 0, `scripts/attack_analysis.py --n-boot 25000`:
+the same 4, 1 and 8 on `seg=run` and the same 7, 1 and 5 on `seg=window`, with
+A19 at q = 0.019 and 0.014 and no attack flagged as within Monte Carlo error of
+the threshold. The counts are a property of the data, not of the seed. The
+split between the segmentations is not settled by more draws: A07, A10 and
+A13 clear on one and not the other.
+
 Two earlier claims were built from this cell by counting signs. "Reverses on 4 of
 13" counted the sign of a different quantity. "Positive on 12 of 13" counted
 uncorrected signs of point estimates. Both are recorded here as errors rather

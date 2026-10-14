@@ -43,6 +43,8 @@ from sonority_voicing import (  # noqa: E402
 )
 
 BOOT = 300
+# The verdict needs a settled bound, which 300 draws cannot give.
+VERDICT_BOOT = 1000
 
 
 # --------------------------------------------------------------------------
@@ -456,28 +458,28 @@ def test_clustering_is_by_utterance_not_by_slice():
 def test_sonority_pattern_is_called_sonority():
     """A far above B, B level with C. Voiced obstruents pattern with voiceless."""
     data = _dataset({SON_VOI: 1.6, OBS_VOI: 0.0, OBS_UNVOI: 0.0}, n_utt=200, seed=5)
-    assert verdict(analyse(data, n_boot=BOOT, seed=0))["reading"] == "sonority"
+    assert verdict(analyse(data, n_boot=VERDICT_BOOT, seed=0))["reading"] == "sonority"
 
 
 def test_voicing_pattern_is_called_voicing():
     """A level with B, both far above C. Voiced obstruents pattern with sonorants."""
     data = _dataset({SON_VOI: 1.6, OBS_VOI: 1.6, OBS_UNVOI: 0.0}, n_utt=200, seed=6)
-    assert verdict(analyse(data, n_boot=BOOT, seed=0))["reading"] == "voicing"
+    assert verdict(analyse(data, n_boot=VERDICT_BOOT, seed=0))["reading"] == "voicing"
 
 
 def test_a_monotone_ladder_is_called_graded_rather_than_either_label():
     data = _dataset({SON_VOI: 2.2, OBS_VOI: 1.1, OBS_UNVOI: 0.0}, n_utt=200, seed=7)
-    assert verdict(analyse(data, n_boot=BOOT, seed=0))["reading"] == "graded"
+    assert verdict(analyse(data, n_boot=VERDICT_BOOT, seed=0))["reading"] == "graded"
 
 
 def test_no_structure_is_called_indistinguishable():
     data = _dataset({SON_VOI: 0.0, OBS_VOI: 0.0, OBS_UNVOI: 0.0}, n_utt=200, seed=8)
-    assert verdict(analyse(data, n_boot=BOOT, seed=0))["reading"] == "indistinguishable"
+    assert verdict(analyse(data, n_boot=VERDICT_BOOT, seed=0))["reading"] == "indistinguishable"
 
 
 def test_voiced_obstruents_leading_is_reported_as_the_surprise_it_would_be():
     data = _dataset({SON_VOI: 0.0, OBS_VOI: 1.6, OBS_UNVOI: 0.0}, n_utt=200, seed=9)
-    r = verdict(analyse(data, n_boot=BOOT, seed=0))
+    r = verdict(analyse(data, n_boot=VERDICT_BOOT, seed=0))
     assert r["reading"] == "voicing-not-sonority"
     assert r["surprise"] is True
 
@@ -497,7 +499,7 @@ def _result(ab, bc, ac, usable=True, steps=None):
     def contrast(lo, hi):
         return {"delta": (lo + hi) / 2, "ci_low": lo, "ci_high": hi,
                 "q": 0.001 if (lo > 0 or hi < 0) else 0.9,
-                "clear": lo > 0 or hi < 0}
+                "clear": lo > 0 or hi < 0, "unsettled": False}
 
     cell = {"usable": usable, "n_utterances_bonafide": 100, "n_utterances_spoof": 100,
             "n_slices": 400, "why_unusable": None}
@@ -511,9 +513,36 @@ def _result(ab, bc, ac, usable=True, steps=None):
         out["step_difference"] = {
             "delta": (lo + hi) / 2, "ci_low": lo, "ci_high": hi,
             "p": 0.001 if (lo > 0 or hi < 0) else 0.9,
-            "clear": lo > 0 or hi < 0,
+            "clear": lo > 0 or hi < 0, "unsettled": False,
         }
     return out
+
+
+def test_a_bound_on_zero_is_unsettled_rather_than_indistinguishable():
+    """
+    A clear looking graded ladder whose B-C bound is within Monte Carlo error
+    of zero must not be named, and must not be called indistinguishable
+    either, which would say the cells were told apart and found equal.
+    """
+    r = _result((0.02, 0.06), (0.0001, 0.05), (0.03, 0.10))
+    r["contrasts"]["B-C"]["unsettled"] = True
+    r["n_boot"] = 300
+    v = verdict(r)
+    assert v["reading"] == "unsettled", v
+    assert "B-C" in v["why"] and "300" in v["why"]
+
+
+def test_an_unsettled_quantity_a_reading_does_not_use_does_not_block_it():
+    """Graded reads A-B and B-C only, so an unsettled step difference is irrelevant."""
+    r = _result((0.02, 0.06), (0.02, 0.05), (0.05, 0.10), steps=(-0.03, 0.02))
+    r["step_difference"]["unsettled"] = True
+    assert verdict(r)["reading"] == "graded"
+
+
+def test_a_contrast_that_does_not_say_it_is_settled_is_taken_as_unsettled():
+    r = _result((0.02, 0.06), (0.02, 0.05), (0.05, 0.10))
+    del r["contrasts"]["B-C"]["unsettled"]
+    assert verdict(r)["reading"] == "unsettled"
 
 
 # --------------------------------------------------------------------------
@@ -625,7 +654,7 @@ def test_an_unusable_cell_blocks_the_verdict_even_when_the_contrasts_look_clear(
 
 def test_too_few_utterances_returns_undecided_and_never_a_rejection():
     data = _dataset({SON_VOI: 1.0, OBS_VOI: 0.0, OBS_UNVOI: 0.0}, n_utt=6, per_cell=40, seed=10)
-    r = verdict(analyse(data, n_boot=BOOT, seed=0))
+    r = verdict(analyse(data, n_boot=VERDICT_BOOT, seed=0))
 
     assert r["reading"] == "undecided"
     assert "underpowered" in r["why"].lower()
@@ -635,7 +664,7 @@ def test_a_missing_cell_is_undecided_rather_than_a_crash():
     """Some languages have no voiced obstruents at all. That is not an error."""
     data = _dataset({SON_VOI: 1.0, OBS_UNVOI: 0.0}, n_utt=100,
                     cells=[SON_VOI, OBS_UNVOI], seed=11)
-    r = verdict(analyse(data, n_boot=BOOT, seed=0))
+    r = verdict(analyse(data, n_boot=VERDICT_BOOT, seed=0))
 
     assert r["reading"] == "undecided"
     assert OBS_VOI in r["why"], "the report must name the cell that was missing"
