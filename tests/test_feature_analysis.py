@@ -39,6 +39,7 @@ from feature_analysis import (  # noqa: E402
     usable,
     weighted_auc,
 )
+
 from phonophase.phonology import FEATURE_NAMES  # noqa: E402
 from phonophase.stats import fast_auc  # noqa: E402
 

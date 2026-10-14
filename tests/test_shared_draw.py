@@ -48,7 +48,6 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "scripts"))
 sys.path.insert(0, os.path.dirname(__file__))
 
 import analyse_slices  # noqa: E402
-import phonophase.stats as stats  # noqa: E402
 import sonority_voicing  # noqa: E402
 from analyse_slices import (  # noqa: E402
     MAGNITUDE,
@@ -58,6 +57,8 @@ from analyse_slices import (  # noqa: E402
     folded,
     usable,
 )
+
+import phonophase.stats as stats  # noqa: E402
 from phonophase.stats import _cluster_draw, _cluster_index, cluster_groups  # noqa: E402
 
 BOOT = 400

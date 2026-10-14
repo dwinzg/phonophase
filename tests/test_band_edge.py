@@ -26,6 +26,7 @@ sys.path.insert(0, os.path.join(ROOT, "scripts"))
 import analyse_slices as A  # noqa: E402
 import band_edge as B  # noqa: E402
 import slice_and_probe as S  # noqa: E402
+
 from phonophase.probe import slice_statistics  # noqa: E402
 
 

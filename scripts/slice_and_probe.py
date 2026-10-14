@@ -74,7 +74,6 @@ import os
 import sys
 import time
 
-
 # Quiet the weight loading bar before transformers is imported anywhere. It
 # emits several hundred lines per model load, which makes a Colab log unreadable
 # and buries the per utterance progress that is actually informative.
@@ -83,20 +82,30 @@ os.environ.setdefault("TRANSFORMERS_VERBOSITY", "error")
 
 import gzip
 
-import numpy as np
 import librosa
+import numpy as np
 import soundfile as sf
 from tqdm import tqdm
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "src"))
 
+from make_manifest import BONAFIDE as MANIFEST_BONAFIDE  # noqa: E402
+from make_manifest import SPOOF as MANIFEST_SPOOF
+
 from phonophase.config import load_config  # noqa: E402
 from phonophase.corpus import (  # noqa: E402
-    partition_paths, read_protocol, read_speaker_map, select_balanced,
+    partition_paths,
+    read_protocol,
+    read_speaker_map,
+    select_balanced,
 )
 from phonophase.probe import STATISTIC_NAMES, slice_statistics  # noqa: E402
 
 MODEL_ID = "facebook/wav2vec2-lv-60-espeak-cv-ft"
+# The Hub commit that produced the shipped tables. Pinned so a later push to the
+# model repository cannot change the alignment, and so the weights are the ones
+# reviewed rather than whatever is current.
+MODEL_REVISION = "ae45363bf3413b374fecd9dc8bc1df0e24c3b7f4"
 SR = 16000
 FRAME_SEC = 0.02      # wav2vec2 emits one frame per 20ms
 MARGIN_SEC = 0.02
@@ -175,18 +184,20 @@ def read_manifest(path):
     used above for attack, language and corpus when a manifest omits them.
     """
     manifest_dir = os.path.dirname(os.path.abspath(path))
-    rows = []
+    rows, dropped = [], 0
     with open(path, newline="") as fh:
         for r in csv.DictReader(fh):
             audio = r.get("path", "").strip()
             if not audio:
                 continue
             label = str(r.get("label", "")).strip().lower()
-            if label in ("0", "bonafide", "real", "genuine"):
+            # One vocabulary with make_manifest.py, plus the numeric form.
+            if label == "0" or label in MANIFEST_BONAFIDE:
                 label = "bonafide"
-            elif label in ("1", "spoof", "fake", "synthetic"):
+            elif label == "1" or label in MANIFEST_SPOOF:
                 label = "spoof"
             else:
+                dropped += 1
                 continue
             if not os.path.isabs(audio) and not os.path.exists(audio):
                 candidate = os.path.join(manifest_dir, audio)
@@ -202,6 +213,8 @@ def read_manifest(path):
                 label,
                 "-",
             ))
+    if dropped:
+        print(f"{path}: skipped {dropped} rows whose label is neither bonafide nor spoof")
     return rows
 
 
@@ -239,15 +252,15 @@ def load_aligner(device):
     the model's CTC output into IPA symbols, which needs the vocabulary and
     nothing else. Disabling it removes a system dependency outright.
     """
-    from transformers import (Wav2Vec2FeatureExtractor, Wav2Vec2ForCTC,
-                              Wav2Vec2PhonemeCTCTokenizer)
-    from transformers.utils import logging as hf_logging
     import torch
+    from transformers import Wav2Vec2FeatureExtractor, Wav2Vec2ForCTC, Wav2Vec2PhonemeCTCTokenizer
+    from transformers.utils import logging as hf_logging
     hf_logging.set_verbosity_error()
 
-    feature_extractor = Wav2Vec2FeatureExtractor.from_pretrained(MODEL_ID)
-    tokenizer = Wav2Vec2PhonemeCTCTokenizer.from_pretrained(MODEL_ID, do_phonemize=False)
-    model = Wav2Vec2ForCTC.from_pretrained(MODEL_ID).to(device).eval()
+    feature_extractor = Wav2Vec2FeatureExtractor.from_pretrained(MODEL_ID, revision=MODEL_REVISION)
+    tokenizer = Wav2Vec2PhonemeCTCTokenizer.from_pretrained(
+        MODEL_ID, revision=MODEL_REVISION, do_phonemize=False)
+    model = Wav2Vec2ForCTC.from_pretrained(MODEL_ID, revision=MODEL_REVISION).to(device).eval()
     inv_vocab = {v: k for k, v in tokenizer.get_vocab().items()}
 
     def chars_for(speech):
@@ -472,7 +485,7 @@ def run(items, args, segs, total=None, audio_is_array=False):
 
     import torch
     device = "cuda" if torch.cuda.is_available() else "cpu"
-    print(f"device: {device}")
+    print(f"device: {device}, aligner {MODEL_ID}@{MODEL_REVISION[:12]}")
     if device == "cpu":
         print("WARNING: this is a GPU job. On CPU it will take many hours.")
 
@@ -486,7 +499,7 @@ def run(items, args, segs, total=None, audio_is_array=False):
         writer.writeheader()
 
     started = time.time()
-    written = 0
+    written = n = 0
     for n, (audio_src, utt, attack, language, corpus, label_str, speaker) in enumerate(
             tqdm(items, desc="utterances", total=total), 1):
         try:
@@ -509,19 +522,24 @@ def run(items, args, segs, total=None, audio_is_array=False):
             if speaker == UNKNOWN_SPEAKER:
                 print(f"  no speaker id for {utt} (not in the protocol file)")
 
+            # Buffered, so an error part way through an utterance leaves none of
+            # its rows behind. A partial utterance would otherwise be counted as
+            # done on resume and never revisited.
+            rows = []
             for category, char, seg, first, last, a, b in iter_slices(
                     len(speech), group_runs(chars), segs):
                 stats = slice_statistics(speech[a:b])
                 if stats is None:
                     continue
-                writer.writerow({
+                rows.append({
                     "utterance_id": utt, "speaker": speaker, "label": label,
                     "attack": attack, "language": language, "corpus": corpus,
                     "category": category, "phoneme": char, "seg": seg,
                     "start_frame": first, "n_frames": last - first,
                     "duration_s": round((b - a) / SR, 4), **stats,
                 })
-                written += 1
+            writer.writerows(rows)
+            written += len(rows)
         except Exception as exc:
             print(f"  skipped {utt}: {exc}")
 
@@ -533,6 +551,8 @@ def run(items, args, segs, total=None, audio_is_array=False):
     elapsed = time.time() - started
     print(f"\nwrote {written} rows to {args.out} in {elapsed/60:.1f} min")
     print(f"file size {os.path.getsize(args.out)/1e6:.1f} MB")
+    if written == 0 and n:
+        raise SystemExit("no rows written; every utterance was skipped or empty")
     print("\nDownload that one file. The analysis runs locally in seconds.")
 
 

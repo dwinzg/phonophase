@@ -26,14 +26,14 @@ from attack_analysis import (  # noqa: E402
     OBSTRUENTS,
     SONORANTS,
     apply_fdr,
-    monte_carlo_se,
-    pooled_asymmetries,
     check_coverage,
     exact_permutation_p,
     group_means,
-    pooled_group_test,
     load_taxonomy,
+    monte_carlo_se,
     per_attack,
+    pooled_asymmetries,
+    pooled_group_test,
 )
 
 BOOT = 200

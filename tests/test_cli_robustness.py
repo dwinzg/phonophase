@@ -22,6 +22,7 @@ import analyse_slices  # noqa: E402
 import attack_analysis  # noqa: E402
 import slice_and_probe  # noqa: E402
 import sonority_voicing  # noqa: E402
+
 from phonophase.corpus import select_balanced  # noqa: E402
 
 EVAL = os.path.join(ROOT, "results", "eval_slices.csv.gz")
@@ -140,6 +141,42 @@ def test_bad_input_gets_a_message_not_a_traceback():
         r = _script("band_edge.py", "r2", "--table", son, "--n-boot", "400",
                     "--seeds", "0")
         assert r.returncode != 0 and "Traceback" not in r.stderr, r.stderr
+
+
+def test_every_table_reader_reports_a_missing_file_or_column_without_a_traceback():
+    with tempfile.TemporaryDirectory() as tmp:
+        missing = os.path.join(tmp, "nope.csv")
+        headless = os.path.join(tmp, "headless.csv")
+        with open(headless, "w") as fh:
+            fh.write("utterance_id,label\nu0,0\n")
+        for script, flag in (("attack_analysis.py", "--table"),
+                             ("feature_analysis.py", "--table"),
+                             ("sonority_voicing.py", "--table"),
+                             ("falsification_4.py", "--eval-table")):
+            extra = (["--train-table", EVAL] if script == "falsification_4.py" else [])
+            for path, says in ((missing, "no such file"), (headless, "has no column")):
+                r = _script(script, flag, path, *extra)
+                assert r.returncode != 0, (script, path)
+                assert "Traceback" not in r.stderr and says in r.stderr, (script, r.stderr)
+
+
+def test_a_manifest_shares_the_label_vocabulary_and_reports_what_it_drops():
+    import io
+    from contextlib import redirect_stdout
+
+    import slice_and_probe
+
+    with tempfile.TemporaryDirectory() as tmp:
+        for name in ("a.wav", "b.wav", "c.wav"):
+            open(os.path.join(tmp, name), "w").close()
+        manifest = os.path.join(tmp, "m.csv")
+        with open(manifest, "w") as fh:
+            fh.write("path,label\na.wav,human\nb.wav,tts\nc.wav,maybe\n")
+        out = io.StringIO()
+        with redirect_stdout(out):
+            rows = slice_and_probe.read_manifest(manifest)
+    assert [r[5] for r in rows] == ["bonafide", "spoof"]
+    assert "skipped 1 rows" in out.getvalue()
 
 
 def test_a_spoof_limit_of_zero_selects_no_spoof():

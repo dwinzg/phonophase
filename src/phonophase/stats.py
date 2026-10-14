@@ -211,7 +211,7 @@ def _cluster_index(y_true, groups, stratify: bool = True):
         everything = np.zeros(np.asarray(groups).size, dtype=np.int64)
         return [_prepare_clusters(everything, groups, 0)]
     prepared = [_prepare_clusters(y_true, groups, label) for label in (1, 0)]
-    for idx_sorted, starts, _ in prepared:
+    for _, starts, _ in prepared:
         if starts.size == 0:
             raise ValueError("cluster bootstrap needs both classes present")
     return prepared
@@ -284,11 +284,17 @@ def permutation_test_auc(
     scores,
     n_perm: int = 2000,
     seed: int = 0,
+    groups=None,
 ) -> dict:
     """
     Two sided permutation test against the null that scores carry no class
     information. Labels are shuffled, which preserves the score distribution
     exactly and so needs no distributional assumption.
+
+    With `groups`, labels are shuffled between clusters rather than rows, so
+    slices from one utterance move together. Rows are not exchangeable when
+    they share an utterance, and shuffling them makes p too small. Each group
+    must carry one label.
 
     Deviation is measured as |AUC - 0.5| so a statistic that runs in the
     unexpected direction still counts as separation.
@@ -300,11 +306,18 @@ def permutation_test_auc(
     observed_dev = abs(observed - 0.5)
 
     rng = np.random.default_rng(seed)
-    shuffled = y_true.copy()
+    if groups is None:
+        cluster_of, cluster_label = np.arange(y_true.size), y_true.copy()
+    else:
+        _, first, cluster_of = np.unique(np.asarray(groups), return_index=True,
+                                         return_inverse=True)
+        cluster_label = y_true[first]
+        if not np.array_equal(cluster_label[cluster_of], y_true):
+            raise ValueError("every group must carry a single label")
     at_least_as_extreme = 0
     for _ in range(n_perm):
-        rng.shuffle(shuffled)
-        if abs(roc_auc_score(shuffled, scores) - 0.5) >= observed_dev:
+        shuffled = rng.permutation(cluster_label)[cluster_of]
+        if abs(fast_auc(shuffled, scores) - 0.5) >= observed_dev:
             at_least_as_extreme += 1
 
     # Add one to numerator and denominator. This keeps p strictly positive,
@@ -358,10 +371,13 @@ def paired_bootstrap_delta(
             continue
         draws.append(fast_auc(yt, scores_a[idx]) - fast_auc(yt, scores_b[idx]))
     draws = np.asarray(draws, dtype=np.float64)
+    if draws.size == 0:
+        raise ValueError("paired_bootstrap_delta produced no usable draws; raise n_boot")
 
     lo, hi = np.percentile(draws, [100 * alpha / 2, 100 * (1 - alpha / 2)])
     return {
         "delta": observed,
+        "n_draws": int(draws.size),
         "ci_low": float(lo),
         "ci_high": float(hi),
         # The only claim worth making. An interval excluding zero means one

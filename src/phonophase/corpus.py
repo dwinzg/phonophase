@@ -15,7 +15,7 @@ import os
 
 import numpy as np
 
-from phonophase.config import load_config, resolve_path
+from phonophase.config import resolve_path
 
 # train ships as .trn, dev and eval as .trl. Hardcoding .trn is why the original
 # slicer could never read a held out partition.

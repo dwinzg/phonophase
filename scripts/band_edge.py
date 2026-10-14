@@ -56,10 +56,13 @@ sys.path.insert(0, HERE)
 
 import analyse_slices as A  # noqa: E402
 import slice_and_probe as S  # noqa: E402
+
 from phonophase.features import modified_group_delay  # noqa: E402
 from phonophase.probe import HOP, N_FFT, WIN, slice_statistics  # noqa: E402
 from phonophase.stats import (  # noqa: E402
-    bootstrap_auc_ci, percentile_interval, shared_cluster_draws,
+    bootstrap_auc_ci,
+    percentile_interval,
+    shared_cluster_draws,
 )
 
 SR = S.SR

@@ -37,13 +37,13 @@ from analyse_slices import (  # noqa: E402
     overall,
     require_cluster,
 )
+
 from phonophase.stats import (  # noqa: E402
     bootstrap_auc_ci,
     cluster_groups,
     percentile_interval,
     shared_cluster_draws,
 )
-
 
 # --------------------------------------------------------------------------
 # the Monte Carlo band on a percentile bound

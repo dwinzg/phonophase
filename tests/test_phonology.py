@@ -18,10 +18,10 @@ sys.path.insert(0, os.path.dirname(__file__))
 from phonophase.phonology import (  # noqa: E402
     FEATURE_NAMES,
     coverage,
-    parse_tone,
     feature_matrix,
     features,
     is_parseable,
+    parse_tone,
 )
 
 F = {name: i for i, name in enumerate(FEATURE_NAMES)}
@@ -216,6 +216,27 @@ def test_coverage_reports_symbols_panphon_only_partly_consumed():
 
 def test_a_fully_consumed_inventory_reports_no_partials():
     assert coverage(["m", "n", "a", "i", "s"])["partial"] == []
+
+
+def test_a_broken_panphon_fails_loudly_rather_than_parsing_nothing():
+    import phonophase.phonology as ph
+
+    def broken():
+        raise ImportError("panphon unavailable")
+
+    original = ph._feature_table
+    ph._feature_table = broken
+    ph.features.cache_clear()
+    try:
+        ph.features("a")
+    except ImportError:
+        pass
+    else:
+        raise AssertionError("a missing PanPhon must raise, not return None")
+    finally:
+        ph._feature_table = original
+        ph.features.cache_clear()
+    assert ph.features("a") is not None
 
 
 if __name__ == "__main__":

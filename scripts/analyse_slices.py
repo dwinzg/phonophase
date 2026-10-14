@@ -36,8 +36,13 @@ sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."
 
 from phonophase.corpus import read_speaker_map  # noqa: E402
 from phonophase.stats import (  # noqa: E402
-    BONAFIDE_MARKERS, CLUSTERS, benjamini_hochberg, bonafide_label,
-    bootstrap_auc_ci, cluster_groups, fast_auc, percentile_interval,
+    BONAFIDE_MARKERS,
+    CLUSTERS,
+    bonafide_label,
+    bootstrap_auc_ci,
+    cluster_groups,
+    fast_auc,
+    percentile_interval,
     shared_cluster_draws,
 )
 
@@ -54,7 +59,7 @@ MAGNITUDE = "mfcc_frame_spread"
 REGISTERED_PAIR = (PHASE, MAGNITUDE)
 
 
-def open_table(path):
+def open_table(path, required=()):
     """
     Open the slice table, decompressing gzip transparently.
 
@@ -66,10 +71,21 @@ def open_table(path):
     The format is decided by those magic bytes rather than by the suffix. A
     table is often renamed on the way out of a notebook or a bundle, and the
     bytes are what the reader actually has to cope with.
+
+    A missing file, or a header without one of `required`, is a message and
+    exit status 1 rather than a traceback, for every script that reads tables.
     """
+    if not os.path.isfile(path):
+        raise SystemExit(f"{path}: no such file")
     with open(path, "rb") as fh:
         magic = fh.read(2)
     opener = gzip.open if magic == b"\x1f\x8b" else open
+    if required:
+        with opener(path, "rt", newline="") as fh:
+            header = next(csv.reader(fh), [])
+        missing = [c for c in required if c not in header]
+        if missing:
+            raise SystemExit(f"{path} has no column {', '.join(missing)}")
     return opener(path, "rt", newline="")
 
 
@@ -573,7 +589,7 @@ def main():
     print(f"{'CATEGORY':<16} {'SLICES':>12} {'UTTERANCES':>12} {'PHASE SEP':>10} {'95% CI':>16}")
     print("-" * 70)
 
-    per_category, p_like = {}, []
+    per_category = {}
     for cat in sorted(data):
         d = data[cat]
         n_b, n_s = int((d["y"] == 0).sum()), int((d["y"] == 1).sum())

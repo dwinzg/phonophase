@@ -56,8 +56,9 @@ from analyse_slices import (  # noqa: E402
     require_cluster,
     with_bonafide_label,
 )
-from phonophase.stats import bootstrap_auc_ci  # noqa: E402
+
 import phonophase.stats as stats  # noqa: E402
+from phonophase.stats import bootstrap_auc_ci  # noqa: E402
 
 BOOT = 300
 ROOT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..")
@@ -527,6 +528,7 @@ def test_system_jackknife_is_the_delete_one_system_formula():
     g - 1 degrees of freedom.
     """
     import tempfile
+
     from scipy import stats as sps
 
     with tempfile.TemporaryDirectory() as tmp:

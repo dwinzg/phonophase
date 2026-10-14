@@ -49,6 +49,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "scripts"))
 sys.path.insert(0, os.path.dirname(__file__))
 
 import falsification_4  # noqa: E402
+from analyse_slices import MAGNITUDE, PHASE  # noqa: E402
 from falsification_4 import (  # noqa: E402
     DOES_NOT_FIRE,
     FIRES,
@@ -59,7 +60,6 @@ from falsification_4 import (  # noqa: E402
     measure,
     presence,
 )
-from analyse_slices import MAGNITUDE, PHASE  # noqa: E402
 
 BOOT = 300
 ROOT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..")

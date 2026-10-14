@@ -107,8 +107,10 @@ def features(phone: str) -> tuple | None:
     base, _ = parse_tone(phone)
     if base is None or base in _NON_IPA:
         return None
+    # Outside the try: a missing or broken PanPhon must fail loudly, not turn
+    # every phone into "unparseable" and leave the analyses running on nothing.
+    table = _feature_table()
     try:
-        table = _feature_table()
         # PanPhon drops characters it does not recognise without failing, so
         # `dZ` would come back as a plain /d/. A symbol it only partly consumed
         # is rejected rather than given the features of its prefix.

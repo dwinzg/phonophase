@@ -103,8 +103,13 @@ from analyse_slices import open_table  # noqa: E402
 
 from phonophase.phonology import FEATURE_NAMES, features  # noqa: E402
 from phonophase.stats import (  # noqa: E402
-    BONAFIDE_MARKERS, benjamini_hochberg, cluster_groups, fast_auc,
-    percentile_interval, require_bonafide_label, shared_cluster_draws,
+    BONAFIDE_MARKERS,
+    benjamini_hochberg,
+    cluster_groups,
+    fast_auc,
+    percentile_interval,
+    require_bonafide_label,
+    shared_cluster_draws,
 )
 
 # Re-exported so the tests can assert there is one definition of each rather
@@ -286,7 +291,7 @@ def folded_from_auc(auc: float) -> float:
 def load(path, seg, stat=PHASE):
     """Read one segmentation out of a slice table into aligned arrays."""
     y, utt, phone, value, attack, duration, energy = [], [], [], [], [], [], []
-    with open_table(path) as fh:
+    with open_table(path, ("seg", "label", "utterance_id", "phoneme", stat)) as fh:
         for row in csv.DictReader(fh):
             if row["seg"] != seg:
                 continue
@@ -428,7 +433,7 @@ def analyse(data, n_boot=2000, seed=0, alpha=0.05,
             "carry the answer, rather than letting the direction be assumed"
         )
     y = (np.asarray(data["y"]) == bona).astype(np.int64)
-    u, x = data["u"], data["x"]
+    x = data["x"]
     cell = data["cell"]
     data = {**data, "is_bonafide": y}
 

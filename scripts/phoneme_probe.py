@@ -50,21 +50,18 @@ import sys
 
 import numpy as np
 import soundfile as sf
-from sklearn.metrics import roc_auc_score
-from tqdm import tqdm
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "src"))
 
+import librosa  # noqa: E402
+
 from phonophase.features import modified_group_delay  # noqa: E402
-from phonophase.metrics import compute_eer  # noqa: E402
 from phonophase.stats import (  # noqa: E402
     benjamini_hochberg,
     bootstrap_auc_ci,
     paired_bootstrap_delta,
     permutation_test_auc,
 )
-
-import librosa  # noqa: E402
 
 SR = 16000
 N_FFT = 512
@@ -270,7 +267,8 @@ def main() -> None:
                 continue
             ci = bootstrap_auc_ci(y, values, n_boot=args.n_boot,
                                   alpha=args.alpha, seed=args.seed, groups=clusters)
-            perm = permutation_test_auc(y, values, n_perm=args.n_perm, seed=args.seed)
+            perm = permutation_test_auc(y, values, n_perm=args.n_perm, seed=args.seed,
+                                        groups=clusters)
             entry["statistics"][stat] = {**ci, "p_value": perm["p_value"]}
             exploratory.append((category, stat, perm["p_value"]))
 

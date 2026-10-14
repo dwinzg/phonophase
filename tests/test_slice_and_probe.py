@@ -51,6 +51,7 @@ from slice_and_probe import (  # noqa: E402
     read_speaker_map,
     speaker_for,
 )
+
 from phonophase.probe import STATISTIC_NAMES  # noqa: E402
 
 REPO_ROOT = os.path.join(os.path.dirname(__file__), "..")
