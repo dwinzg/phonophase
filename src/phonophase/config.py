@@ -21,11 +21,8 @@ REPO_ROOT = os.path.abspath(
     os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..")
 )
 
-DEFAULT_CONFIG = os.path.join(REPO_ROOT, "config.yaml")
-
-
 def load_config(path: str | None = None) -> dict:
-    """Load config.yaml, defaulting to the one at the repository root."""
+    """Load config.yaml from the working directory, else from the repository root."""
     # A bare name is looked up in the working directory first, then at the
     # repository root, which only exists when installed from a clone.
     path = path or "config.yaml"

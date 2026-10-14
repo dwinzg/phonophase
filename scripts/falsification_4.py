@@ -129,7 +129,8 @@ def load_attacks(path, seg, attacks=None):
     keep = None if attacks is None else set(attacks)
     rows = defaultdict(lambda: {"y": [], "u": [], "attack": [],
                                 PHASE: [], MAGNITUDE: []})
-    with open_table(path, ("seg", "label", "utterance_id", "attack", "category",
+    # attack is optional here: with_bonafide_label copes without it.
+    with open_table(path, ("seg", "label", "utterance_id", "category",
                            PHASE, MAGNITUDE)) as fh:
         for r in csv.DictReader(fh):
             if r["seg"] != seg:

@@ -239,7 +239,10 @@ def main() -> None:
             os.path.join(args.input_dir, category), args.limit, args.fixed_duration
         )
         y = np.asarray(labels)
-        clusters = np.asarray(utterances) if not args.no_cluster else None
+        # Keyed by label too: a bonafide and a spoof file can share a name, and
+        # a cluster must hold one class for the permutation test.
+        clusters = (np.asarray([f"{lab}:{u}" for lab, u in zip(labels, utterances)])
+                    if not args.no_cluster else None)
         n_bona = int(np.sum(y == 0))
         n_spoof = int(np.sum(y == 1))
 

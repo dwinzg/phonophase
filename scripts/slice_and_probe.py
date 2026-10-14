@@ -102,9 +102,10 @@ from phonophase.corpus import (  # noqa: E402
 from phonophase.probe import STATISTIC_NAMES, slice_statistics  # noqa: E402
 
 MODEL_ID = "facebook/wav2vec2-lv-60-espeak-cv-ft"
-# The Hub commit that produced the shipped tables. Pinned so a later push to the
-# model repository cannot change the alignment, and so the weights are the ones
-# reviewed rather than whatever is current.
+# Pinned so a later push to the model repository cannot change the alignment.
+# The revision the original runs used was not recorded; this is the model's
+# main branch as of 2026-10, which loads and aligns. The shipped tables do not
+# depend on it: results/band_edge_*alignment.csv.gz hold their phone timings.
 MODEL_REVISION = "ae45363bf3413b374fecd9dc8bc1df0e24c3b7f4"
 SR = 16000
 FRAME_SEC = 0.02      # wav2vec2 emits one frame per 20ms

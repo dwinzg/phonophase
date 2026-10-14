@@ -301,8 +301,13 @@ def permutation_test_auc(
     """
     y_true = np.asarray(y_true)
     scores = np.asarray(scores, dtype=np.float64)
+    # fast_auc needs 0/1. The larger label is the positive class, as in sklearn.
+    classes = np.unique(y_true)
+    if classes.size != 2:
+        raise ValueError("permutation_test_auc needs exactly two classes")
+    y_true = (y_true == classes[1]).astype(np.int64)
 
-    observed = float(roc_auc_score(y_true, scores))
+    observed = float(fast_auc(y_true, scores))
     observed_dev = abs(observed - 0.5)
 
     rng = np.random.default_rng(seed)
