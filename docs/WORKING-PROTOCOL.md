@@ -62,7 +62,7 @@ with examples is in `docs/RESOURCES.md`.
 
 ## Working on a branch
 
-Branch from `main` as `task/T<id>-<slug>`, commit, push, open a pull request.
+Branch from `main` with a short descriptive name, commit, push, open a pull request.
 If you use `git worktree`, note that an editable install resolves the package
 to one checkout: set `PYTHONPATH=<worktree>/src` and confirm
 `phonophase.__file__` before trusting a number.

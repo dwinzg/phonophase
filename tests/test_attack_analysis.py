@@ -2,7 +2,7 @@
 Tests for scripts/attack_analysis.py.
 
 The claim this script exists to check is that the sonorant effect reverses on
-four of thirteen attacks, which was recorded in the research log with no command
+four of thirteen attacks, which an earlier summary recorded with no command
 beside it and has been treated as a serious threat to the mechanism ever since.
 
 So the first obligation is that the quantity being called "the sonorant
@@ -156,7 +156,7 @@ def test_the_level_and_the_asymmetry_are_different_quantities():
     asymmetry. Reporting only the level would call that a reversal of the
     sonorant hypothesis when the hypothesis is about the asymmetry and holds.
 
-    This is the shape the research log recorded as four reversals.
+    This is the shape the earlier summary recorded as four reversals.
     """
     data = _table({"A08": {"son_magnitude": 1.0, "obs_magnitude": 1.8}}, n_utt=90, seed=3)
     a08 = per_attack(data, n_boot=BOOT, seed=0)["A08"]

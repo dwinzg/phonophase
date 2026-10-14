@@ -346,19 +346,20 @@ def test_the_bootstrap_resamples_source_utterances_not_slices():
     assert wide > narrow * 1.2, (wide, narrow)
 
 
-def test_the_usage_block_says_how_to_obtain_a_table_it_does_not_track():
+def test_every_table_the_usage_block_names_is_in_the_repository():
     """
-    results/dev_slices.csv.gz is a data artifact this branch does not carry, and
-    a documented command naming a file that is not there is the defect that made
-    the registered analysis uncallable. So the docstring has to name both tables
-    and show how to get the missing one.
+    A documented command naming a file that is not there is the defect that
+    made the registered analysis uncallable once. Both tables are tracked now,
+    so the usage block must name them and they must exist.
     """
+    import re
+
     doc = falsification_4.__doc__
-    assert "results/dev_slices.csv.gz" in doc
-    assert "results/eval_slices.csv.gz" in doc
-    assert "git show" in doc or "git checkout" in doc, (
-        "the usage block names a table that is not tracked here without saying "
-        "how to retrieve it")
+    root = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..")
+    named = set(re.findall(r"results/\S+\.csv\.gz", doc))
+    assert {"results/dev_slices.csv.gz", "results/eval_slices.csv.gz"} <= named
+    for path in named:
+        assert os.path.exists(os.path.join(root, path)), path
 
 
 if __name__ == "__main__":

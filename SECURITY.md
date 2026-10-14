@@ -15,6 +15,5 @@ Two things to know when running it:
 - Tables and manifests are plain CSV and are parsed, never executed. Model
   weights for the alignment pass come from the Hugging Face Hub; pin a revision
   if you need a fixed supply chain.
-- The Colab notebook asks for a GitHub token to clone while the repository is
-  private, and removes it from the clone's remote afterwards. Use a token
-  limited to this repository and revoke it when the session ends.
+- The Colab notebook clones this public repository anonymously and needs no
+  GitHub token.

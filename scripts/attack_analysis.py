@@ -2,8 +2,8 @@
 Why does the sonorant effect vary across attacks, and does it really reverse?
 
 The problem this addresses
-    The research log carries a SERIOUS escalation. The sonorant advantage was
-    recorded as holding in 8 of 13 ASVspoof eval attacks and reversing on A08,
+    An earlier summary of this project raised a serious concern. The sonorant
+    advantage was recorded as holding in 8 of 13 ASVspoof eval attacks and reversing on A08,
     A13, A16 and A19, with the reasoning that a genuine articulatory mechanism
     should differ in degree across vocoders and not in sign. Four reversals
     would mean the mechanism is not articulatory, or is conditional on something

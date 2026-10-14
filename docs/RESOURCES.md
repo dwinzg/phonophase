@@ -82,7 +82,7 @@ confirmed as an observation and not as a phase artifact.
 
 **Status: superseded.** Do not repeat this wording.
 
-T7 crossed sonority against voicing on the same data. The **ladder** is the
+The sonority and voicing analysis (`scripts/sonority_voicing.py`) crossed sonority against voicing on the same data. The **ladder** is the
 robust part: separation runs 0.576, 0.547, 0.515 across [+son,+voi],
 [-son,+voi] and [-son,-voi], both steps clear of zero, on both segmentations and
 under a silence control. Voiced obstruents sit between sonorants and voiceless
@@ -127,7 +127,7 @@ conditioning.
 
 **Status: underpowered, direction as predicted.**
 
-T6 grouped the 13 eval attacks by whether the output's fine phase originates in
+The per attack analysis (`scripts/attack_analysis.py`) grouped the 13 eval attacks by whether the output's fine phase originates in
 a human recording, taken from the ASVspoof 2019 paper and fixed in
 `configs/asvspoof2019_attacks.yaml` before the numbers were computed. Systems
 inheriting natural phase average +0.006 asymmetry, systems generating it +0.069.
@@ -176,7 +176,7 @@ interval spanning zero, and it is beaten by A09 Vocaine at +0.218 and A14
 STRAIGHT at +0.122, both classical parametric source filter vocoders.
 
 `docs/H2-DESIGN.md` names MLAAD's `griffin_lim` a positive control on this
-reasoning. That should not be relied on until T8 settles what the MLAAD system
+reasoning. That should not be relied on until a check of MLAAD's metadata settles what the MLAAD system
 actually is.
 
 **Alternative worth registering rather than asserting:** the operative variable
@@ -324,10 +324,9 @@ without knowing it.
 ### `phonophase.phonology`
 
 IPA to PanPhon's 24 articulatory features, 335 of 387 phone symbols once the 45 that PanPhon only partly reads are rejected. Replaces a
-seven category English shaped map that covered 41. **Known limitation:** symbols
-containing digits are rejected, which drops 91 tone marked phones and excludes
-Mandarin, Vietnamese and Thai entirely. Fix before any tonal language work, task
-T4.
+seven category English shaped map that covered 41. A trailing tone digit is stripped before
+parsing, so `a1` decodes as /a/; read the tone itself with `parse_tone`. Tone
+is not yet a feature, so tonal languages are measured on segments only.
 
 ### `phonophase.features`
 

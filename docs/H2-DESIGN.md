@@ -76,7 +76,7 @@ directories, French 42, Polish 21.
 The 18 span a wide range of eras, from classical Griffin-Lim through GAN era
 bark and xtts to recent LLM based TTS such as MOSS-TTS and Llasa. That spread
 lets us ask whether the effect is architecture dependent, which connects
-directly to the heterogeneity seen in English. Stated correctly, after T6: on
+directly to the heterogeneity seen in English. Stated correctly, after the per attack analysis (`scripts/attack_analysis.py`): on
 the eval attacks the asymmetry is clear and positive on 4, clear and negative on
 1, and undecided on 8 after correction. The variation is real but most of it is
 unresolved rather than contrary, and the classical parametric vocoders lead.
@@ -201,9 +201,9 @@ figure and is withdrawn. It stays only on the weaker ground that the same 18
 systems cover it at no extra cost and it adds a fourth, phonologically simple
 point. If the run needs to be smaller, Spanish is the one to drop.
 
-### What T7 adds, and the limit it runs into
+### What the sonority and voicing analysis adds, and the limit it runs into
 
-T7 found that sonority and voicing both carry the effect, additively and at
+The sonority and voicing analysis (`scripts/sonority_voicing.py`) found that sonority and voicing both carry the effect, additively and at
 similar size, and that English cannot separate them because its only voiceless
 sonorants are the glottals. So the ideal H2 language is one that **breaks the
 sonority and voicing collinearity**.
