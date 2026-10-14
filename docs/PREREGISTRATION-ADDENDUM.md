@@ -91,6 +91,10 @@ The script's own decision logic agrees. `analyse_slices.py:466` reads
 qualifier. The Outcome table nonetheless prints all four under the heading
 "Condition, fixed in advance".
 
+Note, 2026-10-14: the line reference `analyse_slices.py:466` is stale. The
+logic now sits in `main()` of `scripts/analyse_slices.py`, which passes the
+primary test and `verdicts[:3]` to `overall()`.
+
 So the outcome recorded as **H1 SUPPORTED** rests on **three** falsification
 conditions passing, plus a power check. The primary test as worded has not been
 run on eval under the registered clustering, and the fourth registered condition
@@ -104,6 +108,13 @@ cluster bootstrap under the registered clustering and report its interval.**
 Until that number exists, the primary test is untested rather than passed, and
 the correct description of the result is "all four falsification conditions
 passed", which is what the outcome table actually shows.
+
+Note, 2026-10-14: the sentence above contradicts the paragraphs before it,
+which establish that three registered conditions were run and the fourth was
+not. The correct description at the time of writing was "three of the four
+falsification conditions passed, and the fourth had not been run"; "all four"
+is what the outcome table displayed, not what had been tested. Condition 4 was
+run on 2026-09-19 and does not fire (`docs/PREREGISTRATION.md`, "Condition 4").
 
 ## 4. The contradiction under system clustering, and how to read it
 
@@ -213,6 +224,10 @@ written down afterwards, which is the entire reason registrations exist.
    it to the outcome record, so the primary test as worded has a result. Done in
    `scripts/analyse_slices.py`: **+0.063 [+0.045, +0.081]**, which
    satisfies the primary test as written.
+   Note, 2026-10-14: `scripts/analyse_slices.py --table
+   results/eval_slices.csv.gz`, re-run today, prints **+0.063 [+0.045, +0.080]**
+   for seg=run, which is the figure used everywhere else. The upper bound above
+   is not what the current script prints.
 2. Reconcile the two bootstrap draw designs, and re-issue every published
    interval on a multi-category advantage. The conclusions survive; the widths
    do not.
@@ -222,3 +237,17 @@ written down afterwards, which is the entire reason registrations exist.
    reported.
 5. Wherever the system clustered asymmetry is summarised as "H1 still
    stands", put the level beside it.
+
+Status, 2026-10-14, checked against the repository:
+
+1. Done, see the note under item 1.
+2. Done. `shared_cluster_draws` in `src/phonophase/stats.py` serves one
+   utterance resample to every category in a draw, `advantage_ci` and
+   `asymmetry_ci` in `scripts/analyse_slices.py` use it, and the outcome record
+   in `docs/PREREGISTRATION.md` re-issues row 1 as +0.048 [+0.035, +0.061].
+3. Done. `scripts/falsification_4.py` implements it, and
+   `docs/PREREGISTRATION.md` records it as run on 2026-09-19 and not firing.
+4. Done for `docs/ROBUSTNESS.md`, whose clustering table gives the system
+   clustered LEVEL, [+0.003, +0.082], beside the ASYMMETRY, [+0.021, +0.100].
+5. No tracked file contains the phrase "still stands" (`git grep -i`). Whether
+   every paraphrase of it carries the LEVEL was not checked file by file.
