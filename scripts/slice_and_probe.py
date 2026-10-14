@@ -443,7 +443,9 @@ def run_from_hf(args, segs):
     which also keeps the selection identical to every other route since it
     feeds the same select_balanced.
     """
-    from datasets import load_dataset
+    import io
+
+    from datasets import Audio, load_dataset
 
     protocol = args.protocol or DEFAULT_EVAL_PROTOCOL
     if not os.path.exists(protocol):
@@ -465,6 +467,10 @@ def run_from_hf(args, segs):
     print("streaming, so only the shards containing wanted rows are pulled")
 
     ds = load_dataset(args.hf_dataset, split=args.hf_split, streaming=True)
+    # Raw bytes, decoded here with soundfile. From datasets 4 the decoded form
+    # is a torchcodec object rather than a dict, so this works on every version
+    # and needs no extra decoder.
+    ds = ds.cast_column("audio", Audio(decode=False))
 
     def items():
         for row in ds:
@@ -472,8 +478,10 @@ def run_from_hf(args, segs):
             if utt not in remaining:
                 continue
             attack, label = remaining[utt]
-            # Audio arrives decoded, so nothing is written to disk at any point.
-            yield (row["audio"], utt, attack, "en", args.hf_dataset, label,
+            # Decoded in memory, so nothing is written to disk at any point.
+            array, sr = sf.read(io.BytesIO(row["audio"]["bytes"]))
+            yield ({"array": array, "sampling_rate": sr}, utt, attack, "en",
+                   args.hf_dataset, label,
                    speaker_for(utt, speaker_map))
 
     run(items(), args, segs, total=len(remaining), audio_is_array=True)
