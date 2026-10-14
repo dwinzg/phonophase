@@ -8,6 +8,11 @@ Binding in the same way as `docs/PREREGISTRATION.md`. That document registered
 H1 and its outcome is recorded there. This one registers a separate hypothesis
 that came out of the per attack analysis (`scripts/attack_analysis.py`).
 
+*Note, 2026-10-14: before publication, references to internal task codes and
+to a private log were replaced in five places by what they referred to ("the
+per attack analysis", "an earlier summary"). No hypothesis, condition,
+quantity or threshold changed.*
+
 ## Where H3 comes from
 
 The per attack analysis asked why the sonorant effect varies so much across ASVspoof eval attacks.

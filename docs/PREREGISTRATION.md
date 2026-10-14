@@ -1,9 +1,12 @@
 # Pre-registration
 
 > **OUTCOME, 2026-09-18. H1 SUPPORTED.** All four falsification conditions
-> passed (condition 4 decided 2026-09-19) on the held out eval partition, at full power, on both segmentations.
+> passed on the held out eval partition, at full power, on both segmentations.
 > Details at the end of this document, including a heterogeneity caveat that
 > qualifies the result.
+>
+> *Note, 2026-10-14: three conditions were decided on 2026-09-18; condition 4
+> was first evaluated on 2026-09-19.*
 
 
 Written 2026-09-18, **before** any additional data was sliced or examined.

@@ -50,7 +50,7 @@ Verified independently for this document, on files and metadata on disk:
 | log-mel identity against its own source | r 0.9958 to 0.9976, against a null of 0.514 to 0.582 for unrelated real pairs | re-derived on 4 pairs |
 | the waveform is **not** inherited | max abs cross-correlation 0.131 to 0.336 at best lag | re-derived on 4 pairs |
 | `griffin_lim` exists only for M-AILABS languages | de, en, es, fr, it, pl, ru, uk, and no others of the 54 | repository tree |
-| access | gated; access granted and `fake/` readable | `meta.csv` and audio fetched |
+| access | gated; access granted and `fake/` readable (redacted 2026-10-14: an account detail removed, meaning unchanged) | `meta.csv` and audio fetched |
 
 Two things came out of that re-derivation that the design has to carry.
 

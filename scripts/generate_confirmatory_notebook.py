@@ -89,7 +89,8 @@ elif ROUTE == "U":
     name = next(iter(uploaded))
     os.makedirs(TARGET, exist_ok=True)
     # zipfile rather than a shell command, so the file name is never parsed
-    # by a shell. It also refuses entries that would land outside TARGET.
+    # by a shell. It also strips absolute and parent components from entries,
+    # so nothing lands outside TARGET.
     import zipfile
     zipfile.ZipFile(name).extractall(TARGET)
     print(f"unpacked {name}")
@@ -172,7 +173,9 @@ elif ROUTE_AUDIO == "S":
 
 else:
     if not os.path.exists("data/LA"):
-        !python scripts/fetch_data.py --dataset asvspoof2019_la --out data
+        # The host publishes no checksum for LA.zip, so unpacking has to be
+        # asked for. Route H or S avoids the 7 GB download altogether.
+        !python scripts/fetch_data.py --dataset asvspoof2019_la --out data --allow-unverified
 """),
 md("""
 ## 4. The run
