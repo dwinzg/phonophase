@@ -95,15 +95,9 @@ def test_code_cells_parse_after_ipython_transformation():
                 raise AssertionError(
                     f"{name} cell {i} does not parse as written: {exc}\n"
                     f"first 140 chars: {source[:140]!r}"
-                )
+                ) from exc
 
 
-def test_ipython_transformer_is_available():
-    # Not a hard failure, but the fallback is weaker and this is the check that
-    # actually mirrors Colab. requirements-dev.txt carries ipython.
-    if not HAVE_IPYTHON:
-        print("      note: IPython absent, using the weaker fallback transform.")
-        print("      install with pip install -e '.[dev]' for the real check.")
 
 
 def test_invoked_scripts_exist():

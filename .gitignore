@@ -35,3 +35,6 @@ report/*.log
 report/*.out
 report/*.blg
 
+.coverage
+.ruff_cache/
+.mypy_cache/

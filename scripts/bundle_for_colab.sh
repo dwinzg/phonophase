@@ -32,7 +32,7 @@ DIRTY="$(test -n "$(git status --porcelain 2>/dev/null)" && echo yes || echo no)
 
 zip -q -r "$OUT" \
     src scripts tests configs docs notebooks \
-    pyproject.toml config.yaml requirements-dev.txt README.md BUNDLE_INFO \
+    pyproject.toml config.yaml README.md BUNDLE_INFO \
     -x '*__pycache__*' '*.pyc' '*.DS_Store' '*.pth' '*.pt' \
        'scripts/*.zip' 'docs/assets/*'
 

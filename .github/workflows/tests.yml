@@ -22,11 +22,22 @@ jobs:
         with:
           python-version: "3.12"
           cache: pip
-      # torch is deliberately not a package dependency, see pyproject.toml.
-      # The CPU build is enough for the tests that import the alignment script.
-      - run: pip install torch --index-url https://download.pytorch.org/whl/cpu
-      - run: pip install -e ".[dev]"
+      # No torch: the alignment script imports it lazily and no test needs it.
+      # Pinned to the versions that produced the published numbers; the 3.10
+      # job below resolves fresh ones, so both ends are tested.
+      - run: pip install -e ".[dev]" -c constraints.txt
       - run: pytest -q
+
+  lint:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install ruff
+      - run: ruff check .
 
   # pyproject.toml declares 3.10 as the floor, so the floor is tested too.
   oldest-python:
@@ -38,6 +49,5 @@ jobs:
         with:
           python-version: "3.10"
           cache: pip
-      - run: pip install torch --index-url https://download.pytorch.org/whl/cpu
       - run: pip install -e ".[dev]"
       - run: pytest -q
