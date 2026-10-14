@@ -34,6 +34,12 @@ answer. It is a hypothesis, and it is underpowered where it stands: three
 attacks on one side, an exact permutation p of 0.24, and a smallest attainable p
 of 0.009.
 
+Note, 2026-10-14: the floor stated here is wrong by a factor of two. Three
+against nine is 220 assignments, and with uneven groups the most extreme split
+is enumerated once, so the smallest attainable two sided p is 1/220 = 0.0045,
+not 0.009. `exact_permutation_p` in `scripts/attack_analysis.py` now computes
+the floor this way. The observed p, 0.24 (0.2409 printed today), is unaffected.
+
 ## Hypothesis
 
 **H3. The sonorant phase asymmetry is present when a synthesis system has to
@@ -46,6 +52,10 @@ imperfectly. A system that concatenates recorded units, or filters a real
 recording, never attempts that reconstruction. It should therefore show no
 sonorant deficit, and whatever artifact it leaves should not be indexed to
 sonority.
+
+Note, 2026-10-14: rule R1 of `docs/BAND-EDGE.md` has since fired, and its
+registered consequence is that no mechanism is stated for H1. The paragraph
+above is kept as registered and is not a current claim.
 
 ## The data, and why it is clean for this test
 
@@ -97,6 +107,19 @@ reports the dev result alone as significant or as a failure. The dev partition
 is registered as **confirmation of direction**, and the significance test is the
 pooled one over all nineteen attacks, where the smallest attainable p over five
 against thirteen is 0.0008.
+
+Note, 2026-10-14, correction to the two floors above, checked by enumeration.
+The test is two sided on the absolute difference in means, and when the groups
+are of unequal size the complement of an assignment is never itself an
+assignment, so the single most extreme split is counted once. Two against four
+gives C(6,2) = 15 assignments and a floor of 1/15 = 0.0667, not 2/15 = 0.133;
+`exact_permutation_p` returns 0.0667 for the dev asymmetries printed below. Six
+attacks still cannot reach p < 0.05, so the registered role of dev as
+confirmation of direction is unchanged. For the pooled test, A13 is held out
+because its origin is not decidable from the source paper, so it runs over
+eighteen attacks, five against thirteen, C(18,5) = 8568 assignments and a floor
+of 1/8568 = 0.00012, not 0.0008. `scripts/attack_analysis.py` prints exactly
+these counts.
 
 The dev result enters the pooled test whatever it says. It is not looked at,
 then included or excluded.
@@ -175,3 +198,91 @@ positive control.
 **The pooled effect is small.** Asymmetries run from −0.079 to +0.218 with most
 between +0.03 and +0.07, on separations of 0.51 to 0.58. Everything here is a
 small effect measured carefully, not a large one.
+
+---
+
+# Outcome
+
+Run on the ASVspoof 2019 LA development partition, recorded 2026-10-14. Figures
+re-derived on that date with
+
+    python scripts/attack_analysis.py --table results/dev_slices.csv.gz
+    python scripts/attack_analysis.py --table results/eval_slices.csv.gz \
+        --pool-with results/dev_slices.csv.gz
+
+seg=run, 1,000 draws clustered by utterance, seed 0. They agree with the figures
+already recorded in `docs/PREREGISTRATION-GRIFFINLIM.md` to every digit that
+document prints.
+
+## Dev, confirmation of direction
+
+| attack | origin | asymmetry | 95% CI | q |
+|---|---|---|---|---|
+| A01 | generated, WaveNet | +0.354 | [+0.334, +0.378] | 0.002 |
+| A02 | generated, WORLD | +0.092 | [+0.069, +0.113] | 0.002 |
+| A03 | generated, WORLD | +0.075 | [+0.053, +0.095] | 0.002 |
+| A05 | generated, WORLD | +0.094 | [+0.062, +0.122] | 0.002 |
+| A04 | natural, waveform concatenation | -0.059 | [-0.078, -0.031] | 0.002 |
+| A06 | natural, spectral filtering + OLA | -0.084 | [-0.109, -0.058] | 0.002 |
+
+All six intervals exclude zero after correction across the six attacks, and
+the direction is as predicted on all six: the four generated attacks positive,
+the two natural-origin attacks negative. The dev-only exact permutation over
+the fifteen assignments gives a difference of -0.225 at p 0.0667, which is the
+floor, and as registered that is a statement of direction and not of
+significance.
+
+## The registered pooled test
+
+| | natural | generated | difference | exact p | assignments |
+|---|---|---|---|---|---|
+| all attacks | A04, A06, A16, A17, A19, mean -0.0250 | 13 attacks, mean +0.0952 | -0.1203 | 0.0208 | 8568 |
+| duplicated algorithms removed | A16, A17, A19, mean +0.0062 | 13 attacks, mean +0.0952 | -0.0890 | 0.1643 | 560 |
+
+A13 is held out of both, its origin not decidable from the source paper.
+
+## Falsification conditions
+
+1. A04 or A06 clear of zero and positive: does not fire. Both are clear and
+   negative.
+2. Pooled p > 0.05 with a difference in H3's direction smaller than +0.02: does
+   not fire on either row. The difference is -0.1203 or -0.0890 in mean
+   asymmetry, both well beyond 0.02 in H3's direction.
+3. The generated dev attacks fail to show a positive asymmetry: does not fire.
+   All four are clear and positive.
+
+## Verdict
+
+**H3 is not supported.** The pooled test reaches p < 0.05 only while the two
+algorithms that appear in both partitions, A04/A16 and A06/A19, are each counted
+twice. The registration states in advance that a duplicated algorithm is the
+same system measured on different utterances and "is not additional evidence",
+and requires the duplicate-removed result to be reported beside the p value.
+With the duplicates removed the difference is -0.0890 at p 0.1643, and the
+result is treated as not supported on that basis. No falsification condition
+fires, so this is not a refutation either. The direction stands on dev, on all
+six attacks.
+
+Read literally, the registration's support criterion names only the pooled p,
+and on all attacks that is 0.0208. Treating the duplicate-removed row as
+binding is the stricter of the two readings, and it is the one taken here
+because the registration's own reason for reporting that row is that the
+doubled count is not evidence.
+
+The constraint is structural, not a matter of sample size. Across all nineteen
+attacks there are three distinct waveform-inheriting algorithms, two of them
+appearing twice. More utterances from the same systems cannot change that;
+only a new inheriting algorithm from outside ASVspoof can.
+
+## Recorded beside the outcome
+
+The negative dev asymmetries of A04 and A06 move under the identical 6900 Hz
+low pass of the band edge test: A04 from -0.060 to -0.012, A06 from -0.084 to
+-0.014, both intervals then spanning zero (`docs/PREREGISTRATION-BANDEDGE.md`,
+per attack table; those figures are copied from it, not re-derived here, and
+come from that test's recomputed table, so they differ from the ones above in
+the third place). The eval counterpart A19 moved the same way there, A16 did
+not, and no reading of either is registered. No mechanism is stated for the dev
+negativity. Rule R1 of `docs/BAND-EDGE.md` fired, and no
+mechanism is stated for H1 either.
+
