@@ -104,7 +104,7 @@ from analyse_slices import open_table  # noqa: E402
 from phonophase.phonology import FEATURE_NAMES, features  # noqa: E402
 from phonophase.stats import (  # noqa: E402
     BONAFIDE_MARKERS, benjamini_hochberg, cluster_groups, fast_auc,
-    require_bonafide_label, shared_cluster_draws,
+    percentile_interval, require_bonafide_label, shared_cluster_draws,
 )
 
 # Re-exported so the tests can assert there is one definition of each rather
@@ -389,6 +389,12 @@ def _interval(draws, alpha):
     return float(lo), float(hi)
 
 
+def _unsettled(draws, alpha):
+    """Whether this draw count cannot say which side of zero a bound is on."""
+    finite = draws[np.isfinite(draws)]
+    return finite.size < 2 or bool(percentile_interval(finite, alpha)["undecided"])
+
+
 def _bootstrap_p(draws):
     """
     Two sided bootstrap p for a difference, against the null of no difference.
@@ -474,6 +480,7 @@ def analyse(data, n_boot=2000, seed=0, alpha=0.05,
             "delta_folded": cells[left]["auc"] - cells[right]["auc"],
             "ci_low": lo, "ci_high": hi,
             "p": _bootstrap_p(draws), "q": 1.0, "clear": False, "why": None,
+            "unsettled": _unsettled(draws, alpha),
         }
         # A-C is A-B plus B-C exactly, so it carries no degree of freedom of its
         # own and must not enter the correction family as a third test.
@@ -542,6 +549,7 @@ def _step_difference(cells, draws, alpha):
         "delta": float(observed), "ci_low": lo, "ci_high": hi,
         "p": _bootstrap_p(draw),
         "clear": bool(lo > 0 or hi < 0),
+        "unsettled": _unsettled(draw, alpha),
     }
 
 
@@ -619,6 +627,22 @@ def verdict(result):
         }
 
     ab, bc, ac = (result["contrasts"][k] for k in ("A-B", "B-C", "A-C"))
+
+    # A bound within Monte Carlo error of zero decides nothing, and every
+    # reading below is a decision about which side of zero bounds fall on.
+    # "indistinguishable" would say the cells were told apart and found equal,
+    # so this needs its own label.
+    unsettled = [k for k, c in (("A-B", ab), ("B-C", bc), ("A-C", ac),
+                                ("step difference", result.get("step_difference") or {}))
+                 if c.get("unsettled")]
+    if unsettled:
+        return {
+            "reading": "unsettled",
+            "surprise": False,
+            "why": (f"{', '.join(unsettled)}: a bound is within Monte Carlo error of "
+                    f"zero at {result.get('n_boot')} draws. Rerun with more draws "
+                    "before reading anything off the ladder."),
+        }
 
     def positive(c):
         return bool(c["clear"] and c["ci_low"] > 0)

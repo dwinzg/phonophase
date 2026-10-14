@@ -98,6 +98,15 @@ speaker rows above show they are not. The reading this
 supports is that under system clustering the LEVEL is not distinguishable from
 zero, and the ASYMMETRY is.
 
+A second interval built differently gives the same reading. Under
+`--cluster system` the script also prints a delete one system jackknife with a
+t interval on 12 degrees of freedom. On `seg=run` it gives LEVEL +0.048
+[+0.001, +0.095] and ASYMMETRY +0.063 [+0.021, +0.105], against the percentile
+[+0.003, +0.082] and [+0.021, +0.100]. It holds the bonafide side fixed, so it
+is slightly too narrow, and the coverage of neither interval has been measured
+on this statistic. The ASYMMETRY clears zero by 0.02 under both; the LEVEL by
+0.001 under one and 0.003 under the other, which is no margin at all.
+
 ## Pooled against per system
 
 Every figure above pools the 13 systems into one spoofed class. Scoring each

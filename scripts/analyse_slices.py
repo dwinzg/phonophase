@@ -428,6 +428,45 @@ def asymmetry_ci(data, n_boot, seed, alpha=0.05, cluster="utterance"):
             "n_draws": len(draws)}
 
 
+def system_jackknife(data, alpha=0.05):
+    """
+    Delete one system jackknife of the LEVEL and the ASYMMETRY, with a t
+    interval on g - 1 degrees of freedom.
+
+    A percentile bootstrap over 13 clusters is known to cover less than its
+    nominal level, so under --cluster system this is printed beside it as a
+    second, differently built interval. Each replicate drops one attack's spoof
+    rows and keeps every bonafide row, so the bonafide side contributes no
+    variance here, which makes this interval slightly too narrow. Neither
+    interval's coverage has been measured on this statistic. Returns None
+    when fewer than three systems are present.
+    """
+    from scipy import stats as sps
+
+    # Bonafide rows carry attack "-", so the attack column alone says which
+    # rows are spoof, whatever the label convention.
+    attacks = sorted({a for d in data.values() for a in d["attack"].tolist()} - {"-", ""})
+    if len(attacks) < 3:
+        return None
+
+    def both(d):
+        son, obs = observed_mean(d, SONORANTS), observed_mean(d, OBSTRUENTS)
+        return son, son - obs
+
+    level, asym = both(data)
+    reps = []
+    for a in attacks:
+        drop = {c: d["attack"] != a for c, d in data.items()}
+        reps.append(both({c: {k: (v[drop[c]] if np.ndim(v) else v)
+                              for k, v in d.items()} for c, d in data.items()}))
+    reps = np.asarray(reps)
+    g = len(attacks)
+    se = np.sqrt((g - 1) / g * ((reps - reps.mean(axis=0)) ** 2).sum(axis=0))
+    t = float(sps.t.ppf(1 - alpha / 2, g - 1))
+    return {name: (est, est - t * s, est + t * s)
+            for name, est, s in (("level", level, se[0]), ("asymmetry", asym, se[1]))} | {"systems": g}
+
+
 def run_by_language(args, speakers):
     """
     H2. The same pre-registered test, once per language.
@@ -582,6 +621,14 @@ def main():
               f"[{asym['ci_low']:+.3f}, {asym['ci_high']:+.3f}]"
               + ("  not settled at this draw count" if asym["undecided"] else ""))
     print(f"  {'clustered by':<12} {args.cluster}")
+    if args.cluster == "system":
+        jk = system_jackknife(data)
+        if jk is not None:
+            print(f"  {'jackknife':<12} delete one of {jk['systems']} systems, t interval, "
+                  "bonafide side held fixed")
+            for name in ("level", "asymmetry"):
+                est, lo, hi = jk[name]
+                print(f"  {'':<12} {name:<10} {est:+.3f} [{lo:+.3f}, {hi:+.3f}]")
 
     # The primary test as the registration words it: the sonorant mean
     # advantage exceeds the obstruent mean advantage with a 95% interval
