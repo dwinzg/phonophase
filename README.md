@@ -43,16 +43,13 @@ reaches an equal error rate under 1%. What it offers is different:
   real and synthetic speech and it reports, per sound class and per synthesis
   system, where a statistic separates the two, with intervals that respect the
   fact that thousands of phones come from a few hundred utterances.
-- **A check for dataset shortcuts.** The controls here showed that a sample
-  rate conversion on real speech, with no synthesis at all, produces the same
-  signature as the deepfakes do. Anyone training or evaluating a detector on
+- **A check for dataset shortcuts.** The controls here showed that a low
+  quality sample rate conversion on real speech, with no synthesis at all,
+  produces the same signature as the deepfakes do. Anyone training or evaluating a detector on
   ASVspoof-style data can run the same treatments (`scripts/band_edge.py`) to
   see whether a feature is reading the synthesis or the file's processing
   history.
-- **Statistics you can lift out.** `phonophase.stats` is standalone: a cluster
-  bootstrap with one draw shared across categories, intervals that say when the
-  draw count cannot settle a sign, and three-state verdicts. It applies to any
-  per-phone, per-frame or per-window measurement.
+- **Statistics you can lift out.** See [What is worth reusing](#what-is-worth-reusing).
 - **A worked example of a result that was tested until part of it broke.** The
   registrations, the falsifiers and the errors caught are all in `docs/`, for
   anyone setting up a similar study.
@@ -60,13 +57,29 @@ reaches an equal error rate under 1%. What it offers is different:
 The short report, with figures, is [`report/phonophase.pdf`](report/phonophase.pdf).
 Scope and what is deliberately left out: `docs/SCOPE.md`.
 
+## Terms
+
+| term | meaning |
+|---|---|
+| sonorants, obstruents | nasals, approximants and steady vowels; fricatives, plosives and affricates |
+| phase statistic, `mgd_hf_std` | spread of the Modified Group Delay over the upper half of the spectrum (4 to 8 kHz) in a slice |
+| magnitude statistic, `mfcc_frame_spread` | spread of the cepstral (MFCC) frames in a slice; the registered comparison |
+| separation | how well a statistic tells bonafide from spoof in one category, as AUC folded so 0.5 is chance and 1 is perfect |
+| LEVEL | phase separation minus magnitude separation, averaged over the sonorant categories |
+| ASYMMETRY | LEVEL minus the same quantity over the obstruent categories. The registered quantity of H1 |
+| A01 to A19 | the ASVspoof 2019 LA synthesis systems; A01 to A06 in the train and development partitions, A07 to A19 in eval |
+| hard edged | a system whose output stops abruptly near 7.7 kHz rather than rolling off |
+| H1 | the ASYMMETRY is positive on eval. Registered before the data, confirmed |
+| H2 | the same pattern in a language the synthesiser was not trained on. Designed, not run |
+| H3 | the ASYMMETRY tracks whether a system generates or inherits its waveform phase. Registered, run, not supported |
+
 ## Findings
 
-**1. The pattern is confirmed.** Dispersion of Modified Group Delay over the
+**1. The pattern is confirmed (H1).** Dispersion of Modified Group Delay over the
 upper spectrum separates bonafide from spoofed speech more strongly in
 sonorants than in obstruents, relative to a cepstral statistic. The registered
-quantity, sonorant advantage minus obstruent advantage, is **+0.063 [+0.045,
-+0.080]** on the eval partition, attacks A07 to A19.
+quantity, the ASYMMETRY, is **+0.063 [+0.045, +0.080]** on the eval
+partition, attacks A07 to A19, with the interval clustered by utterance.
 
 ![Separation by category](report/figures/separation.png)
 
@@ -96,24 +109,43 @@ against upper band energy, another magnitude statistic, the difference stays
 at +0.054 [+0.040, +0.069]. The control that could tell the two accounts apart
 is registered and not yet run.
 
-**4. What does not hold.**
+**4. What is not established.**
 
-- The sonorant advantage on its own, +0.048, is not distinguishable from zero
-  when the 13 synthesis systems are resampled.
+- The LEVEL on its own, +0.048, is not distinguishable from zero when the 13
+  synthesis systems are resampled.
 - The pattern belongs to upper band group delay dispersion. Whole band group
   delay statistics do not show it.
 - A split by band edge that appeared on eval after the fact was registered and
-  tested on the development partition, and did not replicate. On that
-  partition the three hard edged systems each move under the low pass, in
-  opposite directions; that is three systems and not a rule.
+  tested on the development partition, and did not replicate.
+- H3, that the pattern follows whether a system generates or inherits its
+  waveform phase, was registered and run on the development partition. Its
+  direction held on all six development systems, but the registered pooled
+  test, with duplicated algorithms removed, gave p = 0.16. Not supported.
+- Per system, the ASYMMETRY is clearly positive on 4 of the 13 eval systems,
+  clearly negative on one (A19) and undecided on the other 8.
 
-| | where |
-|---|---|
-| the registered test and its outcome | `docs/PREREGISTRATION.md` |
-| how far the result reaches, by clustering and by statistic | `docs/ROBUSTNESS.md` |
-| the resampling and band edge test | `docs/BAND-EDGE.md` |
-| the split, registered and run | `docs/PREREGISTRATION-BANDEDGE.md` |
-| the errors made and caught along the way | `docs/RESOURCES.md` |
+## Where to read next
+
+**Current** documents state results as they stand. **Records** are kept for
+the history of how the result was reached, and say so at the top.
+
+| document | what it is | |
+|---|---|---|
+| [`report/phonophase.pdf`](report/phonophase.pdf) | the four page report with figures | current |
+| [`docs/PREREGISTRATION.md`](docs/PREREGISTRATION.md) | H1 as registered, its falsifiers and its outcome | current |
+| [`docs/ROBUSTNESS.md`](docs/ROBUSTNESS.md) | how far H1 reaches, by clustering and by statistic | current |
+| [`docs/BAND-EDGE.md`](docs/BAND-EDGE.md) | the resampling and band edge test that left the cause undecided | current |
+| [`docs/PREREGISTRATION-BANDEDGE.md`](docs/PREREGISTRATION-BANDEDGE.md) | the band edge split, registered and run on dev | current |
+| [`docs/PREREGISTRATION-H3.md`](docs/PREREGISTRATION-H3.md) | H3, registered, run, not supported | current |
+| [`docs/PREREGISTRATION-GRIFFINLIM.md`](docs/PREREGISTRATION-GRIFFINLIM.md) | the positive control that can tell phase from envelope; not yet run | current |
+| [`docs/PREREGISTRATION-ADDENDUM.md`](docs/PREREGISTRATION-ADDENDUM.md) | corrections to the H1 registration's wording and estimator | current |
+| [`docs/SCOPE.md`](docs/SCOPE.md) | what is in and out of scope, and why | current |
+| [`docs/RESOURCES.md`](docs/RESOURCES.md) | what each idea rests on, its status, and nine ways this measurement goes wrong | current |
+| [`docs/WORKING-PROTOCOL.md`](docs/WORKING-PROTOCOL.md) | the method standard a claim here has to meet | current |
+| [`results/PROVENANCE.md`](results/PROVENANCE.md) | where each shipped table came from | current |
+| [`docs/H2-DESIGN.md`](docs/H2-DESIGN.md) | the cross lingual design draft | record |
+| [`docs/RESEARCH.md`](docs/RESEARCH.md) | the opening design memo | record |
+| [`docs/PLAN.md`](docs/PLAN.md) | the original phased plan | record |
 
 ## What comes next
 
@@ -173,6 +205,8 @@ confirmatory pass on a Colab GPU.
 
 ## Tests
 
+Each test builds data whose answer is known by construction.
+
 ```bash
 pytest tests/              # after pip install -e ".[dev]"
 ./scripts/run_tests.sh     # no pytest required
@@ -193,23 +227,10 @@ notebooks/         Colab confirmatory run
 
 ## Contributing
 
-Issues and pull requests are welcome. Branch from `main`, add tests built on
-data whose answer is known by construction, and open a pull request. CI runs
-the suite on every one.
-
-The bar is unusual and is the reason anything here can be trusted:
-
-- Every claim ships with the command that produced it.
-- Pre-registration is binding. A new idea found in data already seen is a new
-  registration, tested on data that had no part in forming it.
-- Undecided is not rejected, and it is not confirmed.
-- Every bootstrap is clustered. Report the size of an effect, not only whether
-  its interval clears zero.
-- No best of many comparisons.
-
-Trying to break a claim is a welcome contribution. The falsifiers are written
-down in the registration documents, and a clean negative gets written up as
-one.
+Issues and pull requests are welcome, and trying to break a claim is the most
+useful kind: there are issue templates for a number that does not reproduce
+and for a challenged claim. How to set up, the standard a claim has to meet
+and how to send a change are in [`CONTRIBUTING.md`](CONTRIBUTING.md).
 
 ## Citing
 
