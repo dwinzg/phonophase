@@ -393,6 +393,14 @@ paragraph above has two errors, recorded here rather than edited.
 - "An `ASYM` of H1's size, +0.048" uses the LEVEL. H1's `ASYM` is +0.063. At
   the corrected half-width it would still be detectable, with an expected lower
   bound near +0.033, but not comfortably.
+- Note, 2026-10-15. "0.010 to 0.017 per category" is also from before the
+  current estimator. `scripts/analyse_slices.py --table
+  results/eval_slices.csv.gz` prints per category intervals on
+  `SEP(mgd_hf_std, ·)`, clustered by utterance, with half-widths of 0.011
+  (FRICATIVES) to 0.020 (APPROXIMANTS) across the five categories of the
+  test other than AFFRICATES, and 0.039 for AFFRICATES. Scaled by 1.73
+  that is about 0.019 to 0.034 per category at 1000 pairs, and about 0.067 for
+  AFFRICATES, which is a further reason the floor rule above may drop it.
 
 Consequence for the thresholds: the size below which a null `ASYM` is
 underpowered is extrapolated at about +0.03, not +0.02. The registered rule
