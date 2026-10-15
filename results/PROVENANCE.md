@@ -17,5 +17,9 @@ The aligner is `facebook/wav2vec2-lv-60-espeak-cv-ft`, pinned in
 `scripts/slice_and_probe.py` to revision
 `ae45363bf3413b374fecd9dc8bc1df0e24c3b7f4` for new runs. The revision used
 for the shipped tables was not recorded; their phone timings are kept in the
-alignment files above, so nothing here depends on rerunning the model. Library versions that reproduce every number
+alignment files above, so nothing here depends on rerunning the model. The
+Hugging Face mirror is pinned the same way, to revision
+`e904f130e44a900cb7e444405d6b9edff30a5d19`, for new runs; the revision the eval
+table was streamed from was not recorded, but the rebuild from the official
+FLACs above shows the audio matches. Library versions that reproduce every number
 are in `constraints.txt`.

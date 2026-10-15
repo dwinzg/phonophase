@@ -107,6 +107,10 @@ MODEL_ID = "facebook/wav2vec2-lv-60-espeak-cv-ft"
 # main branch as of 2026-10, which loads and aligns. The shipped tables do not
 # depend on it: results/band_edge_*alignment.csv.gz hold their phone timings.
 MODEL_REVISION = "ae45363bf3413b374fecd9dc8bc1df0e24c3b7f4"
+# The ASVspoof 2019 LA mirror on the Hugging Face Hub, pinned for the same
+# reason. As with the model, the revision the eval table was made from was not
+# recorded; this one was current on 2026-10-14.
+HF_DATASET_REVISION = "e904f130e44a900cb7e444405d6b9edff30a5d19"
 SR = 16000
 FRAME_SEC = 0.02      # wav2vec2 emits one frame per 20ms
 MARGIN_SEC = 0.02
@@ -357,6 +361,8 @@ def main():
                          "Avoids the host rate limiting that makes the direct "
                          "download fail from Colab")
     ap.add_argument("--hf-split", default="test")
+    ap.add_argument("--hf-revision", default=HF_DATASET_REVISION,
+                    help="Hub commit of --hf-dataset; pinned so the audio cannot change")
     ap.add_argument("--protocol", default=None,
                     help="protocol file supplying attack ids, which the HF "
                          "mirrors do not carry. Defaults to the copy shipped in "
@@ -443,7 +449,9 @@ def run_from_hf(args, segs):
     which also keeps the selection identical to every other route since it
     feeds the same select_balanced.
     """
-    from datasets import load_dataset
+    import io
+
+    from datasets import Audio, load_dataset
 
     protocol = args.protocol or DEFAULT_EVAL_PROTOCOL
     if not os.path.exists(protocol):
@@ -464,7 +472,12 @@ def run_from_hf(args, segs):
           f"{len(remaining) - n_bona} spoof")
     print("streaming, so only the shards containing wanted rows are pulled")
 
-    ds = load_dataset(args.hf_dataset, split=args.hf_split, streaming=True)
+    ds = load_dataset(args.hf_dataset, split=args.hf_split, streaming=True,
+                      revision=args.hf_revision)
+    # Raw bytes, decoded here with soundfile. From datasets 4 the decoded form
+    # is a torchcodec object rather than a dict, so this works on every version
+    # and needs no extra decoder.
+    ds = ds.cast_column("audio", Audio(decode=False))
 
     def items():
         for row in ds:
@@ -472,8 +485,10 @@ def run_from_hf(args, segs):
             if utt not in remaining:
                 continue
             attack, label = remaining[utt]
-            # Audio arrives decoded, so nothing is written to disk at any point.
-            yield (row["audio"], utt, attack, "en", args.hf_dataset, label,
+            # Decoded in memory, so nothing is written to disk at any point.
+            array, sr = sf.read(io.BytesIO(row["audio"]["bytes"]))
+            yield ({"array": array, "sampling_rate": sr}, utt, attack, "en",
+                   args.hf_dataset, label,
                    speaker_for(utt, speaker_map))
 
     run(items(), args, segs, total=len(remaining), audio_is_array=True)

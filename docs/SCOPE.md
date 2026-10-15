@@ -1,13 +1,12 @@
 # Scope
 
-Set 2026-09-18, after the decision not to import the UBC ARC files. That
-decision is what makes this document necessary, because it changes what the
-project can honestly claim.
+Set 2026-09-18, revised 2026-10-14. It says what the project can honestly
+claim, and what it deliberately leaves out.
 
 > **Status, 2026-10-08.** The question below is the one this project set out
 > with, and it presupposes more than has been shown. The pattern it predicts was
 > confirmed. That the pattern is a *phase artifact of synthesis* was not: a
-> sample rate conversion with no synthesis in it reproduces it, and a magnitude
+> low quality sample rate conversion with no synthesis in it reproduces it, and a magnitude
 > statistic tracks it. See `docs/BAND-EDGE.md` and `docs/ROBUSTNESS.md`. Read
 > "the phase artifact" below as "the pattern", and its cause as open.
 
@@ -26,11 +25,11 @@ That question is already answered here, and the answer is no, not on its own.
 statistic at 0.60 detects nothing useful, and AASIST-L reaches 0.99% EER with
 85,000 parameters, so the detection framing is closed either way.
 
-What is interesting is not the level, it is the **asymmetry**. The artifact is
-not spread evenly through speech. It concentrates in sonorants, nasals,
-approximants and steady vowels, and is close to absent in plosives. That
-structure is the finding. It was read here as what a mechanism looks like; see
-the status note above for why no mechanism is claimed now.
+What is interesting is not the level, it is the **asymmetry**. Relative to a
+cepstral statistic, upper band group delay dispersion separates the classes
+more in sonorants (nasals, approximants, steady vowels) than in obstruents.
+That structure is the finding. It was read here as what a mechanism looks like;
+see the status note above for why no mechanism is claimed now.
 
 ### It is not "generalise to all languages"
 
@@ -50,23 +49,22 @@ them". It is falsifiable in a single additional language, which is H2.
 
 ### What each outcome means
 
-**H2 positive.** The artifact is articulatory. That explains cross lingual
-transfer mechanically rather than empirically, and it predicts which classes
-carry the signal in a language nobody has labelled data for. That is the useful
-version of this work.
+**H2 positive.** The pattern is indexed to how sounds are produced, not to
+which language produces them. That would predict which classes carry the signal
+in a language nobody has labelled data for. A cause would still need the
+griffin_lim control (`docs/PREREGISTRATION-GRIFFINLIM.md`).
 
 **H2 negative.** The effect was English, or corpus specific, and the sonorant
 result is a local fact about ASVspoof rather than about speech. Worth reporting
 plainly, and it closes the line cleanly.
 
-### A warning the existing data already gives
+### What the existing data already says about variation
 
-Within English, the sonorant advantage holds in only **8 of 13** attacks and
-reverses on A08, A13, A16 and A19. So the effect does not even generalise across
-synthesis systems in one language. Expect H2 to be partial at best. Anyone
-setting out to show it holds everywhere is going to be disappointed, and should
-instead be asking which systems and which languages break it, because that is
-where the mechanism actually is.
+Per system, the ASYMMETRY is clearly positive on 4 of the 13 eval attacks,
+clearly negative on one (A19) and undecided on the other 8
+(`docs/ROBUSTNESS.md`). It varies across synthesis systems within one language,
+so H2 should be expected to be partial, and the useful question is which
+systems and languages depart from it.
 
 ## What the project is
 
@@ -82,8 +80,9 @@ eval with 85,000 parameters. Nothing here competes with that, and chasing it
 means grinding against well resourced labs on their benchmark for a marginal
 gain. See `docs/RESEARCH.md` section 4.
 
-What this project claims is a measurement, and only what it can reproduce. `mgd_hf_std` separates bonafide
-from spoofed speech more strongly in sonorants than in obstruents, confirmed on
+What this project claims is a measurement, and only what it can reproduce.
+Relative to a cepstral statistic, `mgd_hf_std` separates bonafide from spoofed
+speech more strongly in sonorants than in obstruents, confirmed on
 held out attacks under a pre-registered test. That is small and narrow, but it
 is real, and it is the only thing here that anyone else can verify.
 
@@ -95,7 +94,7 @@ decides whether this is a mechanism or an English artifact.
 
 **The instrument.** `phonophase.stats`, `phonophase.probe`, `scripts/phoneme_probe.py`,
 `scripts/slice_and_probe.py`, `scripts/analyse_slices.py`. Corpus agnostic
-through the manifest route, 78 tests. Useful to anyone measuring where a signal
+through the manifest route, and tested. Useful to anyone measuring where a signal
 lives across phoneme classes, whatever their detector.
 
 **The methodology cautions.** Every one was verified here and every one is a
@@ -120,9 +119,7 @@ Competing on ASVspoof EER.
 
 Zero shot cross lingual detection. Taken by Kim et al. 2026.
 
-Building a Bengali detector.
-
-Importing anything from UBC ARC.
+Building a detector for any language.
 
 ## On adding machine learning methods
 
@@ -162,9 +159,10 @@ the mechanism holds, which is what H2 and H3 decide.
 1. H1, confirmed. Done.
 2. H2 on one or two additional languages via MLAAD. One Colab run, tooling
    already supports it through `--manifest` and `--by-language`.
-3. The attack heterogeneity question. The sonorant advantage holds in 8 of 13
-   attacks and reverses on A08, A13, A16 and A19. Which systems break it, and
-   what they share, is the most interesting loose thread.
+3. The attack heterogeneity question. The ASYMMETRY is clearly positive on 4
+   of 13 eval attacks, clearly negative on A19 and undecided on 8. H3, that
+   waveform provenance explains it, was registered, run and not supported
+   (`docs/PREREGISTRATION-H3.md`).
 4. Write up, including the methodology cautions and whatever H2 returns.
 5. The instrument, documented for use on other corpora.
 
@@ -175,8 +173,7 @@ work whether H2 is positive or negative, and it is reachable.
 
 Anything past that, phoneme conditioned fusion, data efficiency curves, more
 corpora, is a second project. Do not start it before this one is finished. The
-standing risk on an open ended project is drift, and this repository has already
-changed direction three times.
+standing risk on an open ended project is drift.
 
 ## Out of the repository by design
 

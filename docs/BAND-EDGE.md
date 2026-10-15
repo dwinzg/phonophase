@@ -7,20 +7,102 @@ are seg=run. Tooling is `scripts/band_edge.py`, tests in
 
 ## The question
 
-`docs/PREREGISTRATION-GRIFFINLIM.md` records that on real speech, with no
-synthesis anywhere, a 16 to 22.05 to 16 kHz round trip applied to one arm
-separates the arms on `mgd_hf_std` at 0.576 folded and leaves
-`mfcc_frame_spread` at 0.508, and that resampler choice alone gives 0.592
-against 0.504. That is phase selective and inside H1's own range. The registered
-confound control partials out high frequency energy and tilt, which is about
-level, and an anti-alias filter would be expected to change group delay near
-the band edge. The filters themselves were not characterised.
+Can a band edge or resampling difference between bonafide and spoofed audio
+account for H1? An anti-alias filter would be expected to change group delay
+near the band edge, and the registered confound control partials out high
+frequency energy and tilt, which is about level, not about filters. Neither
+the corpus's filters nor any resampler's had been characterised.
 
-So: can a band edge or resampling difference between bonafide and spoofed audio
-account for H1? H1 is the ASYMMETRY, the phase minus magnitude advantage in
-sonorants minus the same in obstruents, +0.063 [+0.045, +0.080]. The LEVEL, the
-sonorant advantage alone, is +0.048. Both are reported throughout and neither
-is called "the effect".
+H1 is the ASYMMETRY, the phase minus magnitude advantage in sonorants minus the
+same in obstruents, +0.063 [+0.045, +0.080]. The LEVEL, the sonorant advantage
+alone, is +0.048. Both are reported throughout and neither is called "the
+effect".
+
+The prompt was a pair of bare separations on German M-AILABS speech recorded
+in `docs/PREREGISTRATION-GRIFFINLIM.md` (0.576 and 0.592 on `mgd_hf_std`,
+against about 0.50 on `mfcc_frame_spread`, for real speech against itself after
+a resampling round trip). Those are not H1's quantity, and whether that audio
+was rounded back to 16 bit is not recorded. On this corpus the comparable soxr
+HQ figure exists only in float: rounded to 16 bit, as every file in the corpus
+is, it vanishes (M3a). The contrast that decides the first decision rule (R1,
+below) uses a different resampler, soxr LQ, and survives rounding.
+
+**Key to labels.** M1 describes where the band edges sit in each file. M2 asks
+whether the per attack ASYMMETRY tracks them. M3 applies treatments to the
+audio: M3a is bonafide against treated bonafide, M3b the identical treatment on
+both classes, M3c the dose. The lowercase treatment labels b1 (a resampling
+round trip on every file), b2 (one identical low pass) and b3 (a sub band
+redefinition of the statistic) belong to this document only. They are unrelated
+to B1 and B2 in `docs/PREREGISTRATION-BANDEDGE.md`, which name the full band
+and hard edged attack pools of the later registered test on the development
+partition.
+
+## What this changes about H1, and what it does not
+
+The reading of everything below, placed first.
+
+**H1's signature is not specific to synthesis.** A low quality sample rate
+round trip applied to genuine speech reproduces the LEVEL and the ASYMMETRY at
+the size the eval comparison shows. The first rule was written to detect exactly
+this and it fires. No articulatory or phase reconstruction mechanism can be
+asserted for H1 on the strength of the eval result.
+
+**The eval ASYMMETRY is nonetheless not that artifact, as far as these
+equalisers can tell.** One identical low pass at 6900 Hz on both arms takes the
+planted soxr LQ ASYMMETRY from +0.059 to +0.001 [-0.017, +0.018]. The same low
+pass leaves the eval ASYMMETRY at +0.061 [+0.042, +0.078]. About a quarter of
+the band the statistic reads is then stopband, so the sturdier figure is the
+one restricted to 4000 to 6500 Hz, +0.046 [+0.028, +0.064], which still clears
+half of the unmodified value. The two also behave
+differently in LEVEL: under the low pass the planted difference grows to +0.130
+in every category alike, and the eval LEVEL stays at +0.048. So whatever
+separates bonafide from spoofed speech in the corpus, it is not a soxr LQ style
+roll off, and it is not something above 6.9 kHz.
+
+**What the low pass cannot rule out** is a difference in spectral shape below
+its cutoff that is not a simple roll off. The nine attacks without a hard edge
+are still separable from bonafide on edge slope, AUC 0.31 to 0.71. And spectral
+tilt, a magnitude statistic, shows the same sonorant over obstruent pattern as
+`mgd_hf_std` both before and after the low pass: with `hf_lf_tilt` as the
+comparator the ASYMMETRY is +0.006 [-0.005, +0.032] on the low passed table
+(`docs/ROBUSTNESS.md` has the unmodified figure). An account in which H1
+reflects how the spectral envelope of synthetic speech differs in the upper
+band, with nothing particular to phase, is consistent with everything here.
+
+**Exploratory, eval only, and not replicated on the development partition:
+pooled over four hard edged eval attacks, the ASYMMETRY did not survive
+equalisation.** The split was chosen after seeing the data, is not uniform within the four, and
+depends on which attacks are pooled. And on these four the unmodified ASYMMETRY
+was never a phase effect in sonorants: `mgd_hf_std` separates no better than
+`mfcc_frame_spread` in any sonorant or obstruent category, and the ASYMMETRY is
+positive only because the magnitude statistic separates obstruents better
+still. It was a hypothesis for a new registration on a partition that had no
+part in forming it.
+
+**That registration has been run, and the split does not replicate.**
+`docs/PREREGISTRATION-BANDEDGE.md` fixed the test on the development partition
+before its audio was read. Three of its six attacks are hard edged. Pooled over
+those three the ASYMMETRY is +0.120 unmodified and +0.105 [+0.083, +0.125]
+after the same low pass, which is the registered refutation. Pooled over the
+three full band attacks it is +0.091 and +0.089. So the split is not carried
+into any statement of H1, and on the full band attacks the ASYMMETRY keeps its
+size under equalisation on a second partition.
+
+That verdict is narrower than it sounds. The hard edged pool is positive only
+because of A01; A04 and A06 have a negative ASYMMETRY that the low pass moves
+toward zero. Pooled over all six attacks the low pass lowers the ASYMMETRY by
+0.033 [0.027, 0.039]. So the treatment is not inert there. At this cutoff the three hard edged
+attacks are the ones that move, in both directions, which is three against
+three and not a rule: the full band pool moves at 6500 and 7300 Hz, and two
+of the four hard edged eval attacks do not move with an interval excluding
+zero. The outcome section of
+the registration has the detail and the sensitivity checks.
+
+Taken together: H1 stands as an observation made under pre-registration. Its
+cause is undecided. A band limiting artifact of one kind reproduces it and is
+ruled out for the eval comparison; a spectral envelope account is not ruled
+out; an account specific to phase has no support that the envelope account does
+not share.
 
 ## Decision rules, fixed before any intervention was run
 
@@ -97,71 +179,9 @@ not a statement about each of the four. Taken singly only A07 loses its
 ASYMMETRY with an interval excluding zero; A08 keeps it; A19's was negative and
 moves toward zero. The movement is on the obstruent side and leans on the
 affricate cell, 32 to 60 spoofed slices per attack. The split was chosen after
-seeing M1 and M2, so this is exploratory and is not a test.
-
-## What this changes about H1, and what it does not
-
-**H1's signature is not specific to synthesis.** A low quality sample rate
-round trip applied to genuine speech reproduces the LEVEL and the ASYMMETRY at
-the size the eval comparison shows. The first rule was written to detect exactly
-this and it fires. No articulatory or phase reconstruction mechanism can be
-asserted for H1 on the strength of the eval result.
-
-**The eval ASYMMETRY is nonetheless not that artifact, as far as these
-equalisers can tell.** One identical low pass at 6900 Hz on both arms takes the
-planted soxr LQ ASYMMETRY from +0.059 to +0.001 [-0.017, +0.018]. The same low
-pass leaves the eval ASYMMETRY at +0.061 [+0.042, +0.078]. About a quarter of
-the band the statistic reads is then stopband, so the sturdier figure is the
-one restricted to 4000 to 6500 Hz, +0.046 [+0.028, +0.064], which still clears
-half of the unmodified value. The two also behave
-differently in LEVEL: under the low pass the planted difference grows to +0.130
-in every category alike, and the eval LEVEL stays at +0.048. So whatever
-separates bonafide from spoofed speech in the corpus, it is not a soxr LQ style
-roll off, and it is not something above 6.9 kHz.
-
-**What the low pass cannot rule out** is a difference in spectral shape below
-its cutoff that is not a simple roll off. The nine attacks without a hard edge
-are still separable from bonafide on edge slope, AUC 0.31 to 0.71. And spectral
-tilt, a magnitude statistic, shows the same sonorant over obstruent pattern as
-`mgd_hf_std` both before and after the low pass: with `hf_lf_tilt` as the
-comparator the ASYMMETRY is +0.006 [-0.005, +0.032] on the low passed table
-(`docs/ROBUSTNESS.md` has the unmodified figure). An account in which H1
-reflects how the spectral envelope of synthetic speech differs in the upper
-band, with nothing particular to phase, is consistent with everything here.
-
-**Pooled over four attacks, the ASYMMETRY does not survive equalisation.** The
-split was chosen after seeing the data, is not uniform within the four, and
-depends on which attacks are pooled. And on these four the unmodified ASYMMETRY
-was never a phase effect in sonorants: `mgd_hf_std` separates no better than
-`mfcc_frame_spread` in any sonorant or obstruent category, and the ASYMMETRY is
-positive only because the magnitude statistic separates obstruents better
-still. It was a hypothesis for a new registration on a partition that had no
-part in forming it.
-
-**That registration has been run, and the split does not replicate.**
-`docs/PREREGISTRATION-BANDEDGE.md` fixed the test on the development partition
-before its audio was read. Three of its six attacks are hard edged. Pooled over
-those three the ASYMMETRY is +0.120 unmodified and +0.105 [+0.083, +0.125]
-after the same low pass, which is the registered refutation. Pooled over the
-three full band attacks it is +0.091 and +0.089. So the split is not carried
-into any statement of H1, and on the full band attacks the ASYMMETRY keeps its
-size under equalisation on a second partition.
-
-That verdict is narrower than it sounds. The hard edged pool is positive only
-because of A01; A04 and A06 have a negative ASYMMETRY that the low pass moves
-toward zero. Pooled over all six attacks the low pass lowers the ASYMMETRY by
-0.033 [0.027, 0.039]. So the treatment is not inert there. At this cutoff the three hard edged
-attacks are the ones that move, in both directions, which is three against
-three and not a rule: the full band pool moves at 6500 and 7300 Hz, and two
-of the four hard edged eval attacks do not move with an interval excluding
-zero. The outcome section of
-the registration has the detail and the sensitivity checks.
-
-Taken together: H1 stands as an observation made under pre-registration. Its
-cause is undecided. A band limiting artifact of one kind reproduces it and is
-ruled out for the eval comparison; a spectral envelope account is not ruled
-out; an account specific to phase has no support that the envelope account does
-not share.
+seeing M1 and M2, so this is exploratory and is not a test. Registered and run
+on the development partition, it did not replicate (see the reading above and
+`docs/PREREGISTRATION-BANDEDGE.md`).
 
 ## Calibration
 
@@ -315,12 +335,13 @@ rows of this table are `r1 soxr_lq pcm16` and the `PC` row ending
 `librosa.resample` at its default returns samples identical to soxr HQ, so it
 has no row of its own.
 
-The soxr LEVEL of +0.083 exceeds H1's +0.048, and it is in every category, so
-the soxr round trip reproduces the phase selective separation and almost none
-of the ASYMMETRY. Rounding the round tripped audio back to 16 bit, which is
-what a file on disk carries, removes the LEVEL and turns the ASYMMETRY negative.
-The effect of a soxr HQ round trip therefore lives largely below the 16 bit
-noise floor of the original files.
+In float, the soxr HQ round trip gives a LEVEL of +0.083, above H1's +0.048
+and in every category, with almost none of the ASYMMETRY (+0.008). Rounded
+back to 16 bit, which is what a file on disk carries, the same round trip gives
+a LEVEL of -0.003 and an ASYMMETRY of -0.028. The float figure compares float
+output with 16 bit originals, a contrast the corpus does not contain; the
+effect of a soxr HQ round trip lives largely below the 16 bit noise floor of
+the original files.
 
 ### M3c, dose
 
@@ -414,7 +435,10 @@ both statistics at 0.500 the reflection is the whole of what is left.
 
 Chosen after M1 and M2 had been seen, on the M1 descriptors alone: A07, A08,
 A16 and A19 are the attacks whose bw40 and edge slope AUCs are below 0.05.
-Exploratory.
+Exploratory, on eval only. The split was then registered and tested on the
+development partition, where it did not replicate
+(`docs/PREREGISTRATION-BANDEDGE.md`); everything in this section describes
+eval and is not a statement about hard edged attacks in general.
 
 | ASYMMETRY, bonafide against | A07 A08 A16 A19 | the other nine |
 |---|---|---|
@@ -438,10 +462,11 @@ LEVEL against the four is -0.018 [-0.037, +0.007] unmodified and stays within
 0.01 of that under every treatment of the audio. LEVEL against the nine is +0.078
 [+0.065, +0.090].
 
-Against the nine attacks that reach Nyquist, the ASYMMETRY sits in 4000 to
-6500 Hz, clear of every edge measured, and no treatment moves it. Against the
-four with a hard edge, the ASYMMETRY sits above 6500 Hz and every treatment
-that removes the edge removes it.
+On eval, against the nine attacks that reach Nyquist, the ASYMMETRY sits in
+4000 to 6500 Hz, clear of every edge measured, and no treatment moves it.
+Against the four with a hard edge, the ASYMMETRY sits above 6500 Hz and every
+treatment that removes the edge removes it. This pattern was selected after
+seeing eval and did not replicate on the development partition.
 
 The four are not uniform. Per attack, low pass and 16 bit, same draw:
 
@@ -484,8 +509,9 @@ is not a mean of per attack AUCs.
 6. **Does the conclusion survive a defensible change of definition?** R2 quiet
    survives float against 16 bit, two equalisers, and a sub band clear of the
    edges. R1 depends on the resampler: it fires at full size with soxr LQ and
-   not with soxr HQ or resample_poly once the output is 16 bit. The subset finding survives three valid equalisers and the sub
-   band redefinition, and is not uniform across the four attacks.
+   not with soxr HQ or resample_poly once the output is 16 bit. The eval subset finding survives three valid equalisers and the
+   sub band redefinition, is not uniform across the four attacks, and did not
+   replicate on the development partition.
 7. **Is undecided being reported as refuted?** R1 fires and R2 is quiet, and
    the cause of H1 is reported as undecided. R3 is reported as not detected at
    stated power.

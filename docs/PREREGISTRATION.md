@@ -4,6 +4,9 @@
 > passed on the held out eval partition, at full power, on both segmentations.
 > Details at the end of this document, including a heterogeneity caveat that
 > qualifies the result.
+>
+> *Note, 2026-10-14: three conditions were decided on 2026-09-18; condition 4
+> was first evaluated on 2026-09-19.*
 
 
 Written 2026-09-18, **before** any additional data was sliced or examined.
@@ -24,6 +27,10 @@ strongly in **sonorants** (nasals, approximants, steady vowels) than in
 phase structure that a vocoder has to reconstruct. Obstruents are aperiodic, so
 phase is close to random in genuine speech too and there is little structure for
 a synthesis artifact to disturb.
+
+Note, 2026-10-14: rule R1 of `docs/BAND-EDGE.md` fired, and its registered
+consequence is that no mechanism is stated for H1. The paragraph above is kept
+as registered and is not a current claim.
 
 **H2, conditional on H1.** If the artifact is articulatory rather than
 linguistic, H1 holds in a language absent from training.
@@ -100,6 +107,13 @@ source utterance.
 The hypothesis is therefore confound controlled, cluster robust and FDR
 surviving, and fails only on power. It is not refuted.
 
+Note, 2026-10-14: "confound controlled" refers to the HF energy and tilt
+partialling above, on the pilot. Against `hf_lf_tilt` as the comparator in place
+of `mfcc_frame_spread`, the eval ASYMMETRY is +0.009 [-0.003, +0.033], not
+distinguishable from zero (`docs/ROBUSTNESS.md`). The confirmed statement is
+about `mgd_hf_std` against cepstral dispersion, not against every magnitude
+statistic.
+
 ## Additional risk introduced by the segmentation fix
 
 The effect above was measured on fixed 60ms windows. The slicer now emits real
@@ -166,6 +180,14 @@ Per category separation of `mgd_hf_std`, seg=run.
 The two segmentations agree to within 0.002, so the effect is not an artifact
 of how the audio was cut. That control was built in precisely because the pilot
 effect was measured on fixed windows.
+
+Note, 2026-10-14: the sentence above overstates the control. On
+`results/eval_slices.csv.gz`, 72.9 per cent of slices have numerically identical
+`mgd_hf_std` under seg=run and seg=window, the two correlate at 0.988, and 89.4
+per cent of seg=run slices are a single frame. The two segmentations are largely
+the same data, so their agreement rules out a coding difference between the two
+paths and little more. It is not evidence that the effect is independent of how
+the audio was cut; that needs forced alignment.
 
 ## Condition 4, run 2026-09-19
 
@@ -264,16 +286,19 @@ no mechanism is stated for H1. Against a spectral tilt comparator the
 ASYMMETRY is +0.009 [-0.003, +0.033], so "phase" here means one group delay
 statistic against one cepstral statistic.
 
-**The effect is small.** Separation runs 0.51 to 0.60 and the sonorant advantage
-is 0.048. This is a statement about where phase information concentrates, not a
-detector. A single statistic at 0.60 is nowhere near useful on its own.
-
-**It is heterogeneous across attacks.** Scoring each attack against the full
-bonafide pool, the sonorant advantage holds in **8 of 13** attacks, mean +0.031,
-ranging from +0.183 on A14 to −0.109 on A08. It reverses on A08, A13, A16 and
-A19. So this is a tendency across synthesis systems, not a property of all of
-them, and pooling hides that. Which systems break the pattern, and why, is the
-obvious next question and a mechanistic lead.
+> **Superseded, kept for the record** (marked 2026-10-14; see the correction
+> of 2026-10-09 above).
+>
+> **The effect is small.** Separation runs 0.51 to 0.60 and the sonorant advantage
+> is 0.048. This is a statement about where phase information concentrates, not a
+> detector. A single statistic at 0.60 is nowhere near useful on its own.
+>
+> **It is heterogeneous across attacks.** Scoring each attack against the full
+> bonafide pool, the sonorant advantage holds in **8 of 13** attacks, mean +0.031,
+> ranging from +0.183 on A14 to −0.109 on A08. It reverses on A08, A13, A16 and
+> A19. So this is a tendency across synthesis systems, not a property of all of
+> them, and pooling hides that. Which systems break the pattern, and why, is the
+> obvious next question and a mechanistic lead.
 
 **VOWELS_MOVING was not in the pre-registered sonorant group** but lands at
 0.581, squarely with the sonorants. Diphthongs are phonetically sonorants, so

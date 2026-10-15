@@ -82,7 +82,9 @@ confirmed as an observation and not as a phase artifact.
 
 **Status: superseded.** Do not repeat this wording.
 
-The sonority and voicing analysis (`scripts/sonority_voicing.py`) crossed sonority against voicing on the same data. The **ladder** is the
+The sonority and voicing analysis (`scripts/sonority_voicing.py`) crossed sonority against voicing on the same data. Every number it prints is
+the bare separation of `mgd_hf_std`; it contains no magnitude statistic, so the
+ladder is **not** H1's phase minus magnitude quantity. The **ladder** is the
 robust part: separation runs 0.576, 0.547, 0.515 across [+son,+voi],
 [-son,+voi] and [-son,-voi], both steps clear of zero, on both segmentations and
 under a silence control. Voiced obstruents sit between sonorants and voiceless
@@ -110,8 +112,15 @@ measure the difference between the domains. See section 4.
 
 ### Phase and magnitude carry complementary information
 
-**Status: supported, and independently corroborated.** The best grounded idea
-here.
+**Status: undecided.** An earlier version of this page called it supported.
+
+Two things undercut it. Against the magnitude statistic `hf_lf_tilt` in place
+of `mfcc_frame_spread`, the asymmetry is +0.009 [-0.003, +0.033]
+(`docs/ROBUSTNESS.md`), so it depends on which magnitude statistic is the
+comparator. And a low quality resampler on genuine speech alone reproduces H1's
+signature (`docs/BAND-EDGE.md`, rule R1), so the asymmetry need not reflect
+anything particular to phase. The phase reading is not supported; its cause is
+undecided.
 
 Ours: the asymmetry above, which is by construction a phase minus magnitude
 quantity. Theirs: MOSAIC (arXiv:2607.04314, July 2026) reports that phase and
@@ -138,7 +147,9 @@ bootstrap interval excludes zero but holds the systems fixed and so cannot speak
 about systems outside the corpus.
 
 **Falsifier, registered:** `docs/PREREGISTRATION-H3.md`, on the dev partition
-A01 to A06, which has never been sliced.
+A01 to A06. It has since been sliced (`results/dev_slices.csv.gz`) and H3 run:
+the direction held on dev, but the registered pooled test returned **not
+supported**.
 
 **Known counterexample inside the group:** A17 inherits natural phase and shows a
 clear positive asymmetry, +0.070.
@@ -175,9 +186,11 @@ that system: A11 is Tacotron 2 with Griffin-Lim. Its asymmetry is +0.034 with an
 interval spanning zero, and it is beaten by A09 Vocaine at +0.218 and A14
 STRAIGHT at +0.122, both classical parametric source filter vocoders.
 
-`docs/H2-DESIGN.md` names MLAAD's `griffin_lim` a positive control on this
-reasoning. That should not be relied on until a check of MLAAD's metadata settles what the MLAAD system
-actually is.
+`docs/H2-DESIGN.md` named MLAAD's `griffin_lim` a positive control on this
+reasoning. What the MLAAD system is has since been checked: it reconstructs
+from the magnitude of the real M-AILABS recording its `original_file` names,
+and its test is registered in `docs/PREREGISTRATION-GRIFFINLIM.md`, not yet
+run.
 
 **Alternative worth registering rather than asserting:** the operative variable
 may be parametric excitation modelling rather than phase reconstruction as such.
@@ -207,7 +220,7 @@ not been checked and must not be relied on.
 
 | corpus | status | serves | licence | verified |
 |---|---|---|---|---|
-| ASVspoof 2019 LA | in use | H1, confirmed. H3, dev partition unsliced | Open Data Commons Attribution | yes |
+| ASVspoof 2019 LA | in use | H1, confirmed. H3, run on the dev partition, not supported | Open Data Commons Attribution | yes |
 | M-AILABS | in use | the genuine side for H2 | modified BSD 3 clause | yes |
 | ASVspoof 2021 LA / DF | planned | replication under codec and channel effects | ODC-By v1.0 | yes |
 | MLAAD | candidate | H2, 18 systems span 4 languages at 1000 utterances each | CC-BY-NC 4.0 | yes |
@@ -369,7 +382,8 @@ local mistake. This is the most portable thing the project has produced.
 3. **Per file normalisation** dividing out the dispersion being measured. Per
    file z scoring forces every utterance to unit variance.
 4. **Fixed width windows around CTC peaks described as phoneme segments.** They
-   are not segments, and 89 percent of ours are a single 60 ms frame.
+   are not segments, and 89 percent of ours are a single 20 ms frame,
+   widened by a 20 ms margin either side to 60 ms.
 5. **Best of many compared against best of many.** Selecting the best phase
    statistic and comparing it to the best magnitude statistic turned zero of six
    into four of six.
@@ -405,7 +419,9 @@ slices are numerically identical. That agreement rules out a coding difference
 between the two paths and nothing more. A real segmentation test needs forced
 alignment.
 
-**Tone.** 91 tone marked symbols are dropped, excluding every tonal language.
+**Tone.** A trailing tone digit is stripped before parsing and read by
+`phonology.parse_tone`, so tonal languages are no longer excluded, but tone is
+not yet a feature: they are measured on segments only.
 
 **Full readings of two papers.** MOSAIC and *Phonetically Explainable* are the
 two closest to this work and both are currently fetched summaries.

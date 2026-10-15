@@ -17,6 +17,11 @@ magnitude statistic `mfcc_frame_spread` is larger in sonorants than in
 obstruents, on ASVspoof 2019 LA eval, under pre-registration. The effect is
 small. Separations run 0.51 to 0.60 and the asymmetry is 0.048.
 
+Note, 2026-10-14, before any `griffin_lim` audio has been measured: 0.048 is
+the LEVEL, `ADV_son`, not the asymmetry. H1's ASYMMETRY on eval, seg=run, is
++0.063 [+0.045, +0.080] (re-derived with `scripts/analyse_slices.py --table
+results/eval_slices.csv.gz`; also `docs/PREREGISTRATION.md`, Outcome).
+
 Every result in this repository so far has the same shape: a phase statistic
 beats a magnitude statistic by a little, on audio where the synthetic side
 differs from the genuine side in **everything at once**, speaker, sentence,
@@ -45,7 +50,7 @@ Verified independently for this document, on files and metadata on disk:
 | log-mel identity against its own source | r 0.9958 to 0.9976, against a null of 0.514 to 0.582 for unrelated real pairs | re-derived on 4 pairs |
 | the waveform is **not** inherited | max abs cross-correlation 0.131 to 0.336 at best lag | re-derived on 4 pairs |
 | `griffin_lim` exists only for M-AILABS languages | de, en, es, fr, it, pl, ru, uk, and no others of the 54 | repository tree |
-| access | gated, and the project's credential reads `fake/` | `meta.csv` and audio fetched |
+| access | gated; access granted and `fake/` readable (redacted 2026-10-14: an account detail removed, meaning unchanged) | `meta.csv` and audio fetched |
 
 Two things came out of that re-derivation that the design has to carry.
 
@@ -373,6 +378,30 @@ ASVspoof's, 7.44 s mean, so per-utterance information is greater and the true
 precision may be better than this scaling; that is a reason not to claim the
 number is exact, not a reason to assume it is better.
 
+Note, 2026-10-14, before any `griffin_lim` audio has been measured. The
+paragraph above has two errors, recorded here rather than edited.
+
+- The 0.009 half-width is the LEVEL interval from the superseded per-category
+  estimator, [+0.039, +0.057]. Under the shared draw estimator now used for
+  every published H1 interval, the eval LEVEL on seg=run is +0.0479 [+0.0347,
+  +0.0609], half-width 0.013, and the ASYMMETRY, which is the quantity `ASYM`
+  is, is +0.0630 [+0.0451, +0.0795], half-width 0.017 (both from the table in
+  `docs/PREREGISTRATION.md`, "Condition 4"; the script re-run today prints the
+  same to three places). Scaled by the square root of 2995/1000, 1.73, the
+  extrapolated half-width at 1000 pairs is about 0.023 on `ADV_son` and about
+  0.030 on `ASYM`, not 0.016.
+- "An `ASYM` of H1's size, +0.048" uses the LEVEL. H1's `ASYM` is +0.063. At
+  the corrected half-width it would still be detectable, with an expected lower
+  bound near +0.033, but not comfortably.
+
+Consequence for the thresholds: the size below which a null `ASYM` is
+underpowered is extrapolated at about +0.03, not +0.02. The registered rule
+under "Undecided is not refuted" keys on the half-width actually measured, so
+it is applied as written with the measured half-width; the +0.02 and +0.03
+figures are both only pre-run estimates of it. This extrapolation carries the
+same caveats as the one above: the pairing here is within utterance and the
+utterances are longer, so it is a scale, not a prediction.
+
 ## Statistical discipline, fixed in advance
 
 Answers to the standing questions in `docs/WORKING-PROTOCOL.md`, settled here
@@ -400,6 +429,15 @@ the underpowered region at 1000 pairs.
 `seg=window`, exactly as H1's confirmatory run did, and both are reported. On
 ASVspoof they agreed to 0.002. A result that appears on one and not the other is
 reported as segmentation-dependent and is not claimed.
+
+Note, 2026-10-14: that agreement is weak evidence. On
+`results/eval_slices.csv.gz`, 72.9 per cent of slices have numerically identical
+`mgd_hf_std` under the two segmentations, the two correlate at 0.988, and 89.4
+per cent of seg=run slices are a single frame (re-derived today with pandas on
+that table). Agreement between them rules out a coding difference between the
+two paths and little more; it does not show that a result is independent of how
+the audio was cut. The rule above stands as registered: disagreement still
+disqualifies a claim, but agreement is not to be reported as a control.
 
 **Direction is read, not assumed.** Folded separation hides direction, so the
 sign of the unfolded AUC is reported for every cell alongside it, and F4 is

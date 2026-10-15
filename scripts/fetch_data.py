@@ -68,7 +68,10 @@ def download(url: str, dest: str) -> None:
     print("use scripts/export_audio_subset.py from a machine that already holds")
     print("the corpus and take the --manifest route instead.")
     result = subprocess.run(
-        ["curl", "-L", "-C", "-", "--fail", "--progress-bar", "-o", dest, url]
+        # HTTPS only, redirects included, so a redirect cannot downgrade it.
+        ["curl", "-L", "--proto", "=https", "--proto-redir", "=https",
+         "--connect-timeout", "30", "-C", "-", "--fail", "--progress-bar",
+         "-o", dest, url]
     )
     if result.returncode != 0:
         if result.returncode == 22:
@@ -100,6 +103,8 @@ def main() -> None:
     ap.add_argument("--dataset", help="registry key to fetch")
     ap.add_argument("--out", default="data", help="destination directory")
     ap.add_argument("--no-extract", action="store_true")
+    ap.add_argument("--allow-unverified", action="store_true",
+                    help="unpack an archive the registry has no checksum for")
     ap.add_argument("--licence-checked", action="store_true",
                     help="confirm you have read the licence for an unverified entry")
     args = ap.parse_args()
@@ -155,6 +160,14 @@ def main() -> None:
         if got != entry["md5"]:
             raise SystemExit(f"checksum mismatch\n  expected {entry['md5']}\n  got      {got}")
         print("  checksum ok")
+
+    elif not args.no_extract and not args.allow_unverified:
+        # An unverified archive is never unpacked by default: a corrupt resume
+        # or a tampered mirror would otherwise become the corpus silently.
+        raise SystemExit(
+            f"{args.dataset} has no published checksum in configs/datasets.yaml, so\n"
+            f"{dest} was downloaded but not unpacked. Check it against the host's\n"
+            "listing, then rerun with --allow-unverified to unpack it.")
 
     if not args.no_extract:
         extract(dest, args.out)

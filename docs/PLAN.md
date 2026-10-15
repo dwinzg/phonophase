@@ -1,8 +1,16 @@
 # Plan
 
+> **A historical plan. Note added 2026-10-14.** Written 2026-09-18 and kept as
+> a record of how the work was sequenced. Phase 1 has since run: H1 is confirmed
+> as an observation on ASVspoof 2019 LA eval (`docs/PREREGISTRATION.md`), and
+> its cause is undecided, because a low quality resampler on genuine speech
+> alone reproduces its signature (`docs/BAND-EDGE.md`, rule R1). No mechanism
+> may be stated for it, so the articulatory reading in Phase 2 is a hypothesis
+> only. Phase 3's phoneme conditioned fusion is out of scope (`docs/SCOPE.md`).
+
 Written 2026-09-18. Framing is analysis, decided in `docs/RESEARCH.md` section 4.
 
-Push discipline. Work stays local and is committed per step. A phase is pushed
+**Push discipline**, project practice. Work stays local and is committed per step. A phase is pushed
 only once its verification passes. Steps within a phase are grouped because
 they share a verification, not because they happened at the same time.
 
@@ -48,7 +56,7 @@ six categories, with intervals clear of chance and surviving FDR.
 | VOWELS_MOVING | mfcc_std | 0.666 | [0.562, 0.758] | 0.008 | spoof higher |
 
 The three strongest are all sonorants, all on the same statistic, all in the
-Spectral Collapse direction with bonafide carrying greater phase dispersion.
+direction the predecessor project called Spectral Collapse, with bonafide carrying greater phase dispersion.
 
 **This is exploratory and cannot be claimed.** It was selected after seeing the
 data. The pre-registered test does not support it. The correct next move is to
@@ -112,7 +120,8 @@ the question a practitioner actually has, and nobody currently answers it.
 
 7. **Gates.** dev versus eval, the channel ablation, and the silence check. Run
    these before any model claim. Each can close a direction.
-8. **Phoneme conditioned fusion.** Weight channels by what phases 1 and 2
+8. **Phoneme conditioned fusion.** Out of scope (`docs/SCOPE.md`); kept as
+   originally planned. Weight channels by what phases 1 and 2
    measured rather than by tuning. Compare against naive equal weighting on
    identical data. The claim is beating our own ablation arms, not AASIST.
 
@@ -140,7 +149,7 @@ fusion`.**
 
 ---
 
-## What I would not do
+## Out of scope for this plan
 
 Chase ASVspoof leaderboard performance. Covered in `docs/RESEARCH.md` section 4.
 
