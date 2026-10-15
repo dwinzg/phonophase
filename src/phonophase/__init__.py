@@ -18,6 +18,6 @@ See docs/SCOPE.md for what is in scope, and docs/PREREGISTRATION.md for the
 confirmed result and its caveats.
 """
 
-__version__ = "0.1.0"
+__version__ = "0.1.1"
 
 __all__ = ["config", "corpus", "features", "metrics", "phonology", "probe", "stats"]
