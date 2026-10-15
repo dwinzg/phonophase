@@ -11,7 +11,7 @@ licence.
 | `band_edge_alignment.csv.gz`, `band_edge_dev_alignment.csv.gz` | `scripts/band_edge.py align`: the aligner's phone timings per utterance, so slicing can be rerun without the model | used for both rebuilds above |
 | `band_edge_descriptors.csv.gz`, `band_edge_dev_descriptors.csv.gz` | `scripts/band_edge.py describe` | `docs/BAND-EDGE.md` |
 | `band_edge_summary.csv` | the `band_edge.py` measurements, one row per command, as quoted in `docs/BAND-EDGE.md` and `docs/PREREGISTRATION-BANDEDGE.md` | |
-| `report_numbers.csv` | entered from the commands cited in its `source` column | `tests/test_report_numbers.py` checks each value lies in its interval and the headline row against the published value; the commands themselves are not rerun by the tests |
+| `report_numbers.csv` | entered from the commands cited in its `source` column | `tests/test_report_numbers.py` regenerates the 18 point estimates of the clustering and pair figures from `eval_slices.csv.gz`; the intervals, and the resampler and split rows, which need treated audio, are checked only for lying inside their interval |
 
 The aligner is `facebook/wav2vec2-lv-60-espeak-cv-ft`, pinned in
 `scripts/slice_and_probe.py` to revision
