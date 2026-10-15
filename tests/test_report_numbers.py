@@ -140,6 +140,23 @@ def test_the_figure_point_estimates_regenerate_from_the_shipped_table():
     assert checked == 18, checked
 
 
+def test_the_slice_counts_the_report_quotes():
+    """report/phonophase.tex, Method: 64,693 test slices, 4,303 diphthongs, 89% one frame."""
+    import gzip
+
+    test, diphthongs, one, run = 0, 0, 0, 0
+    with gzip.open(os.path.join(ROOT, "results", "eval_slices.csv.gz"), "rt") as fh:
+        for r in csv.DictReader(fh):
+            if r["seg"] != "run":
+                continue
+            run += 1
+            one += r["n_frames"] == "1"
+            test += r["category"] in SONORANTS + OBSTRUENTS
+            diphthongs += r["category"] == "VOWELS_MOVING"
+    assert (test, diphthongs) == (64693, 4303)
+    assert round(100 * one / run) == 89
+
+
 if __name__ == "__main__":
     from _runner import main
     main(globals(), "test_report_numbers")
