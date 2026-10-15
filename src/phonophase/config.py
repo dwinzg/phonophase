@@ -1,13 +1,8 @@
 """
 Configuration loading.
 
-Kept in the package so nothing here depends on src/utils.py, which is legacy
-and due to be replaced by whatever comes back from the cluster.
-
 Paths in config.yaml are relative to the repository root, so resolve_path
-anchors them rather than relying on the caller's working directory. That was a
-real failure mode. 05_train.py calls load_config("config.yaml") with a bare
-relative path, which breaks whenever a job does not start in the root.
+anchors them rather than relying on the caller's working directory.
 """
 
 from __future__ import annotations

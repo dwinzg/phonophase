@@ -1,19 +1,16 @@
-# ==========================================
-# PhonoPhase configuration
-# ==========================================
+# Where the ASVspoof 2019 LA corpus lives, relative to the repository root, and
+# the feature settings phonophase.features.FusedFeatureExtractor.from_config reads.
+# The slice tables in results/ do not depend on this file.
 
 paths:
-  # Raw Data
   audio_train: "data/LA/ASVspoof2019_LA_train/flac"
   protocol_train: "data/LA/ASVspoof2019_LA_cm_protocols/ASVspoof2019.LA.cm.train.trn.txt"
-  
+
   audio_dev: "data/LA/ASVspoof2019_LA_dev/flac"
   protocol_dev: "data/LA/ASVspoof2019_LA_cm_protocols/ASVspoof2019.LA.cm.dev.trl.txt"
 
-  # The eval partition was missing entirely, which is why no code path here
-  # could ever score it. train and dev both hold attacks A01 to A06. eval holds
-  # A07 to A19, none of them seen in training, so it is the only partition that
-  # measures generalisation. Report on this one.
+  # train and dev hold attacks A01 to A06; eval holds A07 to A19, none seen in
+  # training, so it is the partition that measures generalisation.
   audio_eval: "data/LA/ASVspoof2019_LA_eval/flac"
   protocol_eval: "data/LA/ASVspoof2019_LA_cm_protocols/ASVspoof2019.LA.cm.eval.trl.txt"
 
@@ -21,34 +18,9 @@ paths:
   # countermeasure scores alone.
   asv_scores_dev: "data/LA/ASVspoof2019_LA_asv_scores/ASVspoof2019.LA.asv.dev.gi.trl.scores.txt"
   asv_scores_eval: "data/LA/ASVspoof2019_LA_asv_scores/ASVspoof2019.LA.asv.eval.gi.trl.scores.txt"
-  
-  # Outputs
-  fused_features_dir: "data/processed_fused"
-  log_dir: "results/logs"
-  checkpoint_dir: "results/models"
 
 features:
-  # Acoustic Parameters
   sample_rate: 16000
   n_fft: 512
   hop_length: 128
   n_mfcc: 40
-  
-  # Neural Tensor Dimensions
-  # Models require uniform input sizes. 4.0 seconds covers most ASVspoof utterances.
-  max_duration_sec: 4.0  
-
-training:
-  # Hyperparameters
-  batch_size: 32
-  epochs: 50
-  learning_rate: 0.0005
-  weight_decay: 0.0001
-  
-  # Addressing the 1:9 Class Imbalance (Bonafide : Spoof)
-  # This tells the loss function to punish errors on Bonafide 9x harder.
-  class_weights: [9.0, 1.0] 
-  
-  # Dataloader Efficiency (Ideal for cluster processing)
-  num_workers: 4
-  pin_memory: true
