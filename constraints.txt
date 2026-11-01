@@ -21,4 +21,4 @@ ipython==9.17.1
 # pinned in scripts/slice_and_probe.py.
 torch==2.14.0
 transformers==5.17.0
-datasets==5.0.1
+datasets==5.1.0
