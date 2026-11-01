@@ -19,6 +19,6 @@ pytest==9.1.1
 ipython==9.17.1
 # Alignment pass only (pip install -e ".[align]"), with the model revision
 # pinned in scripts/slice_and_probe.py.
-torch==2.14.0
+torch==2.14.1
 transformers==5.17.0
 datasets==5.0.1
