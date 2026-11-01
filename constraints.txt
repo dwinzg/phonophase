@@ -15,7 +15,7 @@ panphon==0.22.2
 PyYAML==6.0.3
 tqdm==4.70.1
 matplotlib==3.11.2
-pytest==9.1.1
+pytest==9.2.0
 ipython==9.17.1
 # Alignment pass only (pip install -e ".[align]"), with the model revision
 # pinned in scripts/slice_and_probe.py.
